@@ -19,6 +19,19 @@ def get_rk(path):
     rk_dll.Rhol.restype = ctypes.c_double
     return rk_dll
 
+def get_srk(path):
+    srk_dll = ctypes.CDLL(path, winmode=0)
+    srk_dll.SetFluid.argtypes = (ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double)
+    srk_dll.TPflash.argtypes = (ctypes.c_double, ctypes.c_double)
+    srk_dll.Tflash.argtypes = (ctypes.c_double, )
+    srk_dll.Temperature.restype = ctypes.c_double
+    srk_dll.Pressure.restype = ctypes.c_double
+    srk_dll.Density.restype = ctypes.c_double
+    srk_dll.Ps.restype = ctypes.c_double
+    srk_dll.Rhog.restype = ctypes.c_double
+    srk_dll.Rhol.restype = ctypes.c_double
+    return srk_dll
+
 def main():
     return 0
 
