@@ -1,0 +1,14 @@
+
+# 忽略目录
+bin
+build
+
+# 忽略
+*.pyc
+*.dll
+*.cmd
+*.pdf
+*.docx
+*.xlsx
+*.pptx
+

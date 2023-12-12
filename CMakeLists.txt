@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.24.1)
+project(thermolib VERSION 0.1)
+include_directories(${PROJECT_SOURCE_DIR})
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+add_subdirectory(src)
+add_executable(${PROJECT_NAME} src/main.cpp)
+target_link_libraries(${PROJECT_NAME} rk)

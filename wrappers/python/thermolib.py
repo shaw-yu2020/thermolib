@@ -1,0 +1,27 @@
+'''
+Copyright[2022]
+Author: ygl
+Email: ygl_2020@stu.xjtu.edu.cn
+'''
+
+import ctypes
+
+def get_rk(path):
+    rk_dll = ctypes.CDLL(path, winmode=0)
+    rk_dll.SetFluid.argtypes = (ctypes.c_double, ctypes.c_double, ctypes.c_double)
+    rk_dll.TPflash.argtypes = (ctypes.c_double, ctypes.c_double)
+    rk_dll.Tflash.argtypes = (ctypes.c_double, )
+    rk_dll.Temperature.restype = ctypes.c_double
+    rk_dll.Pressure.restype = ctypes.c_double
+    rk_dll.Density.restype = ctypes.c_double
+    rk_dll.Ps.restype = ctypes.c_double
+    rk_dll.Rhog.restype = ctypes.c_double
+    rk_dll.Rhol.restype = ctypes.c_double
+    return rk_dll
+
+def main():
+    return 0
+
+if __name__ == '__main__':
+    main()
+
