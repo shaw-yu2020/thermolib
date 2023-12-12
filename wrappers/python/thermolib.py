@@ -45,6 +45,19 @@ def get_pr(path):
     pr_dll.Rhol.restype = ctypes.c_double
     return pr_dll
 
+def get_vtpryw(path):
+    vtpryw_dll = ctypes.CDLL(path, winmode=0)
+    vtpryw_dll.SetFluid.argtypes = (ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double)
+    vtpryw_dll.TPflash.argtypes = (ctypes.c_double, ctypes.c_double)
+    vtpryw_dll.Tflash.argtypes = (ctypes.c_double, )
+    vtpryw_dll.Temperature.restype = ctypes.c_double
+    vtpryw_dll.Pressure.restype = ctypes.c_double
+    vtpryw_dll.Density.restype = ctypes.c_double
+    vtpryw_dll.Ps.restype = ctypes.c_double
+    vtpryw_dll.Rhog.restype = ctypes.c_double
+    vtpryw_dll.Rhol.restype = ctypes.c_double
+    return vtpryw_dll
+
 def main():
     return 0
 
