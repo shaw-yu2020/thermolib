@@ -1,0 +1,11 @@
+[package]
+name = "thermolib"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/shaw-yu2020/thermolib"
+description = "An open-source library for the calculation of fluid properties"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
