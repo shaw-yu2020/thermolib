@@ -174,7 +174,7 @@ impl Flash for Pr {
         let mut ps = (ps_min + ps_max) / 2.0;
         loop {
             if counter == 1000 {
-                return Err(MyErr::new("divergece"));
+                return Err(MyErr::new("divergence"));
             } else {
                 counter += 1;
             }

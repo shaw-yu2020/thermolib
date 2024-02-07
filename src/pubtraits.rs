@@ -30,17 +30,6 @@ pub trait Prop {
     fn T(&self) -> Result<f64, MyErr>; // 温度
     fn rho(&self) -> Result<f64, MyErr>; // 密度
     fn p(&self) -> Result<f64, MyErr>; // 压力
-                                       /*
-                                       fn Z(&self) -> Result<f64, MyErr>; // 压缩因子
-                                       fn cv(&self) -> Result<f64, MyErr>; // 定容比热
-                                       fn cp(&self) -> Result<f64, MyErr>; // 定压比热
-                                       fn w(&self) -> Result<f64, MyErr>; // 声速
-                                       fn u(&self) -> Result<f64, MyErr>; // 比内能
-                                       fn h(&self) -> Result<f64, MyErr>; // 比焓
-                                       fn s(&self) -> Result<f64, MyErr>; // 比熵
-                                       fn a(&self) -> Result<f64, MyErr>; // 比亥姆霍兹能
-                                       fn g(&self) -> Result<f64, MyErr>; // 比吉布斯能
-                                       */
     fn ps(&self) -> Result<f64, MyErr>; // 饱和蒸汽压
     fn rhogs(&self) -> Result<f64, MyErr>; // 饱和气相密度
     fn rhols(&self) -> Result<f64, MyErr>; // 饱和液相密度
