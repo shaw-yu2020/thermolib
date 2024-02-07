@@ -181,6 +181,7 @@ impl Flash for Pr {
             self.calc_AB(T, ps);
             lnfp = self.calc_diff_lnfpgl();
             if lnfp.abs() < 1E-6 {
+                self.is_single_phase = true; // t_flash 得到两相区
                 return Ok(());
             } else if lnfp * lnfp_pmin < 0.0 {
                 ps_max = ps;
