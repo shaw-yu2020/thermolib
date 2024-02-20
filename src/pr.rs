@@ -56,18 +56,6 @@ impl Pr {
         fluid.tp_flash(273.15, 0.1E6).unwrap();
         fluid
     }
-    pub fn set_fluid(&mut self, Tc: f64, pc: f64, R: f64, omega: f64) {
-        *self = Pr {
-            Tc,
-            pc,
-            R,
-            kappa: 0.37464 + 1.54226 * omega - 0.26992 * omega.powi(2),
-            ac: 0.45724 * R.powi(2) * Tc.powi(2) / pc,
-            bc: 0.07780 * R * Tc / pc,
-            ..zero_fluid()
-        };
-        self.tp_flash(273.15, 0.1E6).unwrap();
-    }
     fn calc_AB(&mut self, T: f64, p: f64) {
         self.T = T;
         self.P = p;
