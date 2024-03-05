@@ -1,6 +1,7 @@
 use super::ancillary_equations::SaturatedLiquidDensityEquation;
 use super::ancillary_equations::SaturatedVaporDensityEquation;
 use super::ancillary_equations::VaporPressureEquation;
+use super::ideal_helmholtz_equation::IdealHelmholtzEquation;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
@@ -21,6 +22,7 @@ struct ReducingParameters {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HelmholtzPure {
     r_paras: ReducingParameters,
+    alpha0: IdealHelmholtzEquation,
     ps: VaporPressureEquation,
     rhogs: SaturatedVaporDensityEquation,
     rhols: SaturatedLiquidDensityEquation,
