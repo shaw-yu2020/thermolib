@@ -77,7 +77,7 @@ impl Pr {
             let Y1 = A * b + 1.5 * (-B + Delta.sqrt());
             let Y2 = A * b + 1.5 * (-B - Delta.sqrt());
             self.Z = (-b - (Y1.cbrt() + Y2.cbrt())) / 3.0;
-            return true;
+            true
         } else if Delta < 0.0 {
             // Delta<0 方程有三个不相等的实根 舍弃中间根！！
             let theta3 = ((2.0 * A * b - 3.0 * B) / (2.0 * A * A.sqrt())).acos() / 3.0;
@@ -113,12 +113,10 @@ impl Pr {
     fn calc_diff_lnfpgl(&mut self) -> f64 {
         if !self.calc_root() {
             self.calc_lnfp(self.Zg) - self.calc_lnfp(self.Zl)
+        } else if self.Z < self.Zc {
+            -self.calc_lnfp(self.Z) // 液相异号
         } else {
-            if self.Z < self.Zc {
-                -self.calc_lnfp(self.Z) // 液相异号
-            } else {
-                self.calc_lnfp(self.Z) // 气相同号
-            }
+            self.calc_lnfp(self.Z) // 气相同号
         }
     }
 }

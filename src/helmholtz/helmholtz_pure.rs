@@ -29,13 +29,13 @@ pub struct HelmholtzPure {
 }
 pub fn read_json(path_json: &str) -> HelmholtzPure {
     let path = Path::new(path_json);
-    let mut file = match File::open(&path) {
+    let mut file = match File::open(path) {
         Ok(file) => file,
         Err(why) => {
-            print!("couldn't open {}: {:?}\n", path.display(), why);
+            println!("couldn't open {}: {:?}", path.display(), why);
             let path_thermolib = Path::new(env!("CARGO_MANIFEST_DIR"));
             let path = path_thermolib.join("res").join(path_json);
-            print!("search {}\n", path.display());
+            println!("search {}", path.display());
             match File::open(&path) {
                 Ok(file) => file,
                 Err(why) => panic!("couldn't open {}: {:?}", path.display(), why),
