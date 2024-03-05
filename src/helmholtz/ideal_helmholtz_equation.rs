@@ -1,4 +1,4 @@
-use super::AlphaDtauDdelta;
+use super::AlphaDtauDdeltaPlus;
 use serde::{Deserialize, Serialize};
 ///
 /// 理想气体亥姆霍兹方程
@@ -70,12 +70,12 @@ pub struct IdealHelmholtzEquation {
 }
 impl IdealHelmholtzEquation {
     #[allow(non_snake_case)]
-    pub fn calc(&self, dd: AlphaDtauDdelta, tau: f64, delta: f64, Tr: f64) -> f64 {
+    pub fn calc(&self, dd: AlphaDtauDdeltaPlus, tau: f64, delta: f64, Tr: f64) -> f64 {
         let mut alpha0dd = 0.0;
         match dd {
-            AlphaDtauDdelta::D01 => alpha0dd = 1.0 / delta,
-            AlphaDtauDdelta::D02 => alpha0dd = -1.0 / delta.powi(2),
-            AlphaDtauDdelta::D00 => {
+            AlphaDtauDdeltaPlus::D01 => alpha0dd = 1.0 / delta,
+            AlphaDtauDdeltaPlus::D02 => alpha0dd = -1.0 / delta.powi(2),
+            AlphaDtauDdeltaPlus::D00 => {
                 alpha0dd += self.a_1 + self.a_tau * tau + self.a_lntau * tau.ln() + delta.ln();
                 for term in self.poly_terms.iter() {
                     alpha0dd += term.calc(Dtau::D0, tau, Tr);
@@ -84,7 +84,7 @@ impl IdealHelmholtzEquation {
                     alpha0dd += term.calc(Dtau::D0, tau, Tr);
                 }
             }
-            AlphaDtauDdelta::D10 => {
+            AlphaDtauDdeltaPlus::D10 => {
                 alpha0dd += self.a_tau + self.a_lntau / tau;
                 for term in self.poly_terms.iter() {
                     alpha0dd += term.calc(Dtau::D1, tau, Tr);
@@ -93,7 +93,7 @@ impl IdealHelmholtzEquation {
                     alpha0dd += term.calc(Dtau::D1, tau, Tr);
                 }
             }
-            AlphaDtauDdelta::D20 => {
+            AlphaDtauDdeltaPlus::D20 => {
                 alpha0dd += -self.a_lntau / tau.powi(2);
                 for term in self.poly_terms.iter() {
                     alpha0dd += term.calc(Dtau::D2, tau, Tr);
