@@ -51,7 +51,7 @@ pub fn read_json(path_json: &str) -> HelmholtzPure {
 }
 impl HelmholtzPure {
     #[allow(non_snake_case)]
-    fn calc(&self, tp: ThermoProp, T: f64, D: f64) -> f64 {
+    pub fn calc(&self, tp: ThermoProp, T: f64, D: f64) -> f64 {
         let tau = self.Tc / T;
         let delta = D / self.Dc;
         match tp {
