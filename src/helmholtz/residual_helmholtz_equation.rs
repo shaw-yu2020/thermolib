@@ -62,7 +62,8 @@ impl ResidualGaussianTerm {
         let gt = self.n
             * delta.powf(self.d)
             * tau.powf(self.t)
-            * (-self.eta * (delta - self.epsilon).powi(2) - self.beta * (tau - self.gamma).powi(2));
+            * (-self.eta * (delta - self.epsilon).powi(2) - self.beta * (tau - self.gamma).powi(2))
+                .exp();
         match dd {
             AlphaDD::D00 => gt,
             AlphaDD::D01 => (self.d - 2.0 * self.eta * delta * (delta - self.epsilon)) * gt,
