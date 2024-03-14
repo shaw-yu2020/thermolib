@@ -22,21 +22,21 @@ impl std::fmt::Display for MyErr {
 // 迭代计算
 #[allow(non_snake_case)]
 pub trait Flash {
-    fn t_flash(&mut self, T: f64) -> Result<(), MyErr>
+    fn t_flash(&mut self, _T: f64) -> Result<(), MyErr>
     // 饱和温度
     where
         Self: Debug,
     {
         Err(MyErr::new(&format!("no implementation for {:?}", self)))
     }
-    fn td_flash(&mut self, T: f64, D: f64) -> Result<(), MyErr>
+    fn td_flash(&mut self, _T: f64, _rho: f64) -> Result<(), MyErr>
     // 温度密度
     where
         Self: Debug,
     {
         Err(MyErr::new(&format!("no implementation for {:?}", self)))
     }
-    fn tp_flash(&mut self, T: f64, p: f64) -> Result<(), MyErr>
+    fn tp_flash(&mut self, _T: f64, _p: f64) -> Result<(), MyErr>
     // 温度压力
     where
         Self: Debug,
@@ -63,6 +63,27 @@ pub trait Prop {
     }
     fn p(&self) -> Result<f64, MyErr>
     // 压力
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
+    fn cv(&self) -> Result<f64, MyErr>
+    // 定容比热
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
+    fn cp(&self) -> Result<f64, MyErr>
+    // 定压比热
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
+    fn w(&self) -> Result<f64, MyErr>
+    // 声速
     where
         Self: Debug,
     {

@@ -17,8 +17,6 @@ pub enum AlpharDD {
 }
 // 流体的热力学物性
 pub enum ThermoProp {
-    T,  // 温度
-    D,  // 密度
     Z,  // 压缩因子
     P,  // 压力
     CV, // 定容比热

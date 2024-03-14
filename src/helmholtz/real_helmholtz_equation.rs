@@ -24,8 +24,6 @@ impl RealHelmholtzEquation {
         let tau = self.Tc / T;
         let delta = D / self.Dc;
         match tp {
-            ThermoProp::T => T,
-            ThermoProp::D => D,
             ThermoProp::Z => 1.0 + self.alphar.calc(AlpharDD::D01, tau, delta),
             ThermoProp::P => (D * self.R * T) * (1.0 + self.alphar.calc(AlpharDD::D01, tau, delta)),
             ThermoProp::CV => {
