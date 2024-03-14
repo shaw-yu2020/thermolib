@@ -2,7 +2,6 @@ use super::ancillary_equations::SaturatedLiquidDensityEquation;
 use super::ancillary_equations::SaturatedVaporDensityEquation;
 use super::ancillary_equations::VaporPressureEquation;
 use super::real_helmholtz_equation::RealHelmholtzEquation;
-use super::AlphaDD;
 use super::ThermoProp;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -18,6 +17,7 @@ pub struct HelmholtzPure {
     ps: VaporPressureEquation,
     rhogs: SaturatedVaporDensityEquation,
     rhols: SaturatedLiquidDensityEquation,
+    omega: f64, // 偏心因子
 }
 pub fn read_json(path_json: &str) -> HelmholtzPure {
     let path = Path::new(path_json);

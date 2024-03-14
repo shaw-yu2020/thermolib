@@ -5,17 +5,15 @@ pub enum Alpha0Dtau {
     D1, // 一阶导数 实际是：tau^(1)*Alpha0Dtau1
     D2, // 二阶导数 实际是：tau^(2)*Alpha0Dtau2
 }
-// 无量纲亥姆霍兹自由能 Alpha
-// 对无量纲温度 tau
-// 和无量纲密度 delta
-// 的偏导数
-pub enum AlphaDD {
-    D00, // 温度0 密度0
-    D01, // 温度0 密度1
-    D02, // 温度0 密度2
-    D10, // 温度1 密度0
-    D11, // 温度1 密度1
-    D20, // 温度2 密度0
+// 剩余气体无量纲亥姆霍兹自由能 Alphar
+// 对无量纲温度或无量纲密度的偏导数 D(tau)D(delta)
+pub enum AlpharDD {
+    D00, // 温度0 密度0 实际是：tau^(0)*delta^(0)*AlpharD(tau0)D(delta0)
+    D01, // 温度0 密度1 实际是：tau^(0)*delta^(1)*AlpharD(tau0)D(delta1)
+    D02, // 温度0 密度2 实际是：tau^(0)*delta^(2)*AlpharD(tau0)D(delta2)
+    D10, // 温度1 密度0 实际是：tau^(1)*delta^(0)*AlpharD(tau1)D(delta0)
+    D11, // 温度1 密度1 实际是：tau^(1)*delta^(1)*AlpharD(tau1)D(delta1)
+    D20, // 温度2 密度0 实际是：tau^(2)*delta^(0)*AlpharD(tau2)D(delta0)
 }
 // 流体的热力学物性
 pub enum ThermoProp {
