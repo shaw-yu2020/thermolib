@@ -29,8 +29,7 @@ pub struct HelmholtzPure {
 #[derive(Debug)]
 enum Phase {
     SINGLE { rho: f64 },                     // 密度
-    SATVAP { rhog: f64 },                    // 饱和气相密度
-    SATLIQ { rhol: f64 },                    // 饱和液相密度
+    SATRHO { rhog: f64, rhol: f64 },         // 饱和气相密度 饱和液相密度
     DOUBLE { rhog: f64, rhol: f64, x: f64 }, // 饱和气相密度 饱和液相密度 干度
 }
 fn default_phase() -> Phase {
@@ -66,40 +65,37 @@ impl Prop for HelmholtzPure {
     fn rho(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { rho } => Ok(rho),
-            Phase::SATVAP { rhog } => Ok(rhog),
-            Phase::SATLIQ { rhol } => Ok(rhol),
-            Phase::DOUBLE { x, rhog, rhol } => Ok(1.0 / (x / rhog + (1.0 - x) / rhol)),
+            Phase::DOUBLE { rhog, rhol, x } => Ok(1.0 / (x / rhog + (1.0 - x) / rhol)),
+            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no rho in saturation line"))),
         }
     }
     fn p(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::P, self.T, rho)),
-            Phase::SATVAP { rhog } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog)),
-            Phase::SATLIQ { rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhol)),
-            Phase::DOUBLE { x, rhog, rhol } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
                 + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol)),
+            Phase::SATRHO { rhog, rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog) / 2.0
+                + self.alpha.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn cv(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::CV, self.T, rho)),
-            Phase::SATVAP { rhog } => Ok(self.alpha.calc(ThermoProp::CV, self.T, rhog)),
-            Phase::SATLIQ { rhol } => Ok(self.alpha.calc(ThermoProp::CV, self.T, rhol)),
-            Phase::DOUBLE { x, rhog, rhol } => {
+            Phase::DOUBLE { rhog, rhol, x } => {
                 Ok(x * self.alpha.calc(ThermoProp::CV, self.T, rhog)
                     + (1.0 - x) * self.alpha.calc(ThermoProp::CV, self.T, rhol))
             }
+            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cv in saturation line"))),
         }
     }
     fn cp(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::CP, self.T, rho)),
-            Phase::SATVAP { rhog } => Ok(self.alpha.calc(ThermoProp::CP, self.T, rhog)),
-            Phase::SATLIQ { rhol } => Ok(self.alpha.calc(ThermoProp::CP, self.T, rhol)),
-            Phase::DOUBLE { x, rhog, rhol } => {
+            Phase::DOUBLE { rhog, rhol, x } => {
                 Ok(x * self.alpha.calc(ThermoProp::CP, self.T, rhog)
                     + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol))
             }
+            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cp in saturation line"))),
         }
     }
     fn w(&self) -> Result<f64, MyErr> {
@@ -111,25 +107,23 @@ impl Prop for HelmholtzPure {
     fn ps(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { .. } => Err(MyErr::new(&format!("no ps in single phase"))),
-            Phase::SATVAP { rhog } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog)),
-            Phase::SATLIQ { rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhol)),
-            Phase::DOUBLE { x, rhog, rhol } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
                 + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol)),
+            Phase::SATRHO { rhog, rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog) / 2.0
+                + self.alpha.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn rhogs(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { .. } => Err(MyErr::new(&format!("no rhogs in single phase"))),
-            Phase::SATVAP { rhog } => Ok(rhog),
-            Phase::SATLIQ { .. } => Err(MyErr::new(&format!("no rhogs in saturated liquid"))),
+            Phase::SATRHO { rhog, .. } => Ok(rhog),
             Phase::DOUBLE { rhog, .. } => Ok(rhog),
         }
     }
     fn rhols(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { .. } => Err(MyErr::new(&format!("no rhogs in single phase"))),
-            Phase::SATVAP { .. } => Err(MyErr::new(&format!("no rhogs in saturated vapor"))),
-            Phase::SATLIQ { rhol } => Ok(rhol),
+            Phase::SATRHO { rhol, .. } => Ok(rhol),
             Phase::DOUBLE { rhol, .. } => Ok(rhol),
         }
     }
