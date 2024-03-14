@@ -12,4 +12,3 @@ pub use pr::Pr;
 mod helmholtz;
 pub use helmholtz::read_json;
 pub use helmholtz::HelmholtzPure;
-pub use helmholtz::ThermoProp;
