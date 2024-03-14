@@ -29,6 +29,8 @@ pub enum ThermoProp {
 mod ancillary_equations;
 mod ideal_helmholtz_equation;
 mod residual_helmholtz_equation;
+// 实际气体亥姆霍兹方程
+mod real_helmholtz_equation;
 // 亥姆霍兹方程
 mod helmholtz_pure;
 pub use helmholtz_pure::read_json;
