@@ -3,7 +3,9 @@ use super::ancillary_equations::SaturatedVaporDensityEquation;
 use super::ancillary_equations::VaporPressureEquation;
 use super::real_helmholtz_equation::RealHelmholtzEquation;
 use super::ThermoProp;
+use crate::pubtraits::Flash;
 use crate::pubtraits::MyErr;
+use crate::pubtraits::Prop;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
@@ -35,3 +37,5 @@ pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
         Err(_) => Err(MyErr::new(&format!("no alpha(HelmholtzPure) in {}", path))),
     }
 }
+impl Flash for HelmholtzPure {}
+impl Prop for HelmholtzPure {}
