@@ -19,28 +19,18 @@ pub struct HelmholtzPure {
     rhols: SaturatedLiquidDensityEquation,
     omega: f64, // 偏心因子
 }
-pub fn read_json(path_json: &str) -> HelmholtzPure {
-    let path = Path::new(path_json);
-    let mut file = match File::open(&path) {
-        Ok(file) => file,
-        Err(why) => {
-            print!("couldn't open {}: {:?}\n", path.display(), why);
-            let path_thermolib = Path::new(env!("CARGO_MANIFEST_DIR"));
-            let path = path_thermolib.join("res").join(path_json);
-            print!("search {}\n", path.display());
-            match File::open(&path) {
-                Ok(file) => file,
-                Err(why) => panic!("couldn't open {}: {:?}", path.display(), why),
-            }
-        }
-    };
+pub fn read_json(path: &str) -> Option<HelmholtzPure> {
     let mut str_json = String::new();
-    match file.read_to_string(&mut str_json) {
-        Ok(_) => {
-            print!("{} contains:\n{}\n", path.display(), str_json);
-            println!("{} is loaded.", path.display())
-        }
-        Err(why) => panic!("couldn't read {}: {:?}", path.display(), why),
+    let _ = match File::open(&Path::new(path)) {
+        Ok(file) => file,
+        Err(_) => match File::open(&Path::new(env!("CARGO_MANIFEST_DIR")).join("res").join(path)) {
+            Ok(file) => file,
+            Err(_) => return None,
+        },
     }
-    serde_json::from_str(&str_json).unwrap()
+    .read_to_string(&mut str_json);
+    match serde_json::from_str(&str_json) {
+        Ok(hp) => Some(hp),
+        Err(_) => None,
+    }
 }
