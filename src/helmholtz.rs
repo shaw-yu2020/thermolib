@@ -1,3 +1,10 @@
+// 理想气体无量纲亥姆霍兹自由能 Alpha0
+// 对无量纲温度的导数 Dtau
+pub enum Alpha0Dtau {
+    D0, // 零阶导数 实际是：tau^(0)*Alpha0Dtau0 -ln(delta)
+    D1, // 一阶导数 实际是：tau^(1)*Alpha0Dtau1
+    D2, // 二阶导数 实际是：tau^(2)*Alpha0Dtau2
+}
 // 无量纲亥姆霍兹自由能 Alpha
 // 对无量纲温度 tau
 // 和无量纲密度 delta

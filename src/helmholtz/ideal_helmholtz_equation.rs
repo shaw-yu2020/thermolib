@@ -1,3 +1,4 @@
+use super::Alpha0Dtau;
 use super::AlphaDD;
 use serde::{Deserialize, Serialize};
 ///
@@ -16,18 +17,24 @@ struct IdealPolynomialTerm {
 }
 impl IdealPolynomialTerm {
     #[allow(non_snake_case)]
-    fn calc(&self, dtau: Dtau, tau: f64, Tr: f64) -> f64 {
+    fn calc(&self, dtau: &Alpha0Dtau, tau: f64, Tr: f64) -> f64 {
         match self.flag {
-            1 => match dtau {
-                Dtau::D0 => -self.a / tau.powf(self.t),
-                Dtau::D1 => self.a * self.t / tau.powf(self.t + 1.0),
-                Dtau::D2 => -self.a * self.t * (self.t + 1.0) / tau.powf(self.t + 2.0),
-            },
-            2 => match dtau {
-                Dtau::D0 => -self.a * Tr.powf(self.t) / self.t / (self.t + 1.0) / tau.powf(self.t),
-                Dtau::D1 => self.a * Tr.powf(self.t) / (self.t + 1.0) / tau.powf(self.t + 1.0),
-                Dtau::D2 => -self.a * Tr.powf(self.t) / tau.powf(self.t + 2.0),
-            },
+            1 => {
+                self.a / tau.powf(self.t)
+                    * match dtau {
+                        Alpha0Dtau::D0 => -1.0,
+                        Alpha0Dtau::D1 => self.t,
+                        Alpha0Dtau::D2 => -self.t * (self.t + 1.0),
+                    }
+            }
+            2 => {
+                self.a * Tr.powf(self.t) / tau.powf(self.t)
+                    * match dtau {
+                        Alpha0Dtau::D0 => -1.0 / self.t / (self.t + 1.0),
+                        Alpha0Dtau::D1 => 1.0 / (self.t + 1.0),
+                        Alpha0Dtau::D2 => -1.0,
+                    }
+            }
             _ => {
                 println!("no flag={} in ideal_polynomial_term\n", self.flag);
                 0.0
@@ -76,7 +83,7 @@ impl IdealHelmholtzEquation {
             AlphaDD::D00 => {
                 alpha0dd += self.a_1 + self.a_tau * tau + self.a_lntau * tau.ln() + delta.ln();
                 for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D0, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D0, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
                     alpha0dd += term.calc(Dtau::D0, tau, Tr);
@@ -87,7 +94,7 @@ impl IdealHelmholtzEquation {
             AlphaDD::D10 => {
                 alpha0dd += self.a_tau + self.a_lntau / tau;
                 for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D1, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D1, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
                     alpha0dd += term.calc(Dtau::D1, tau, Tr);
@@ -97,7 +104,7 @@ impl IdealHelmholtzEquation {
             AlphaDD::D20 => {
                 alpha0dd += -self.a_lntau / tau.powi(2);
                 for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D2, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D2, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
                     alpha0dd += term.calc(Dtau::D2, tau, Tr);
