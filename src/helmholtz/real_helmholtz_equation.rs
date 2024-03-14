@@ -2,6 +2,7 @@ use super::ideal_helmholtz_equation::IdealHelmholtzEquation;
 use super::residual_helmholtz_equation::ResidualHelmholtzEquation;
 use super::Alpha0Dtau;
 use super::AlpharDD;
+use super::PropPd;
 use super::ThermoProp;
 use serde::{Deserialize, Serialize};
 ///
@@ -89,6 +90,28 @@ impl RealHelmholtzEquation {
                         + (self.alpha0.calc(Alpha0Dtau::D0, tau, self.Tc) + delta.ln())
                         + self.alphar.calc(AlpharDD::D00, tau, delta)
                         + self.alphar.calc(AlpharDD::D01, tau, delta))
+            }
+        }
+    }
+    #[allow(non_snake_case)]
+    pub fn calc_pd(&self, pd: PropPd, T: f64, D: f64) -> f64 {
+        let tau = self.Tc / T;
+        let delta = D / self.Dc;
+        match pd {
+            PropPd::J => delta * (1.0 + self.alphar.calc(AlpharDD::D01, tau, delta)),
+            PropPd::K => {
+                self.alphar.calc(AlpharDD::D01, tau, delta)
+                    + self.alphar.calc(AlpharDD::D00, tau, delta)
+                    + delta.ln()
+            }
+            PropPd::Jdelta => {
+                1.0 + 2.0 * self.alphar.calc(AlpharDD::D01, tau, delta)
+                    + self.alphar.calc(AlpharDD::D02, tau, delta)
+            }
+            PropPd::Kdelta => {
+                2.0 * self.alphar.calc(AlpharDD::D01, tau, delta)
+                    + self.alphar.calc(AlpharDD::D02, tau, delta)
+                    + 1.0 / delta
             }
         }
     }

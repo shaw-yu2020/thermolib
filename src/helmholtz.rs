@@ -28,6 +28,13 @@ pub enum ThermoProp {
     A,  // 比亥姆霍兹能
     G,  // 比吉布斯能
 }
+// 流体的热力学物性的偏导数
+pub enum PropPd {
+    J,      // 用于饱和线的计算 参考[AKASAKA_2008]
+    K,      // 用于饱和线的计算 参考[AKASAKA_2008]
+    Jdelta, // 用于饱和线的计算 参考[AKASAKA_2008]
+    Kdelta, // 用于饱和线的计算 参考[AKASAKA_2008]
+}
 // 辅助方程
 mod ancillary_equations;
 mod ideal_helmholtz_equation;

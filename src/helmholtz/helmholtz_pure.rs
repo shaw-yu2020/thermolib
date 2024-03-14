@@ -52,6 +52,10 @@ pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
 }
 impl Flash for HelmholtzPure {
     #[allow(non_snake_case)]
+    fn t_flash(&mut self, _T: f64) -> Result<(), MyErr> {
+        Ok(())
+    }
+    #[allow(non_snake_case)]
     fn td_flash(&mut self, T: f64, rho: f64) -> Result<(), MyErr> {
         self.T = T;
         self.phase = Phase::SINGLE { rho };
