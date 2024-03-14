@@ -1,14 +1,8 @@
 use super::Alpha0Dtau;
-use super::AlphaDD;
 use serde::{Deserialize, Serialize};
 ///
 /// 理想气体亥姆霍兹方程
 ///
-enum Dtau {
-    D0, // 对无量纲温度的零阶导数
-    D1, // 对无量纲温度的一阶导数
-    D2, // 对无量纲温度的二阶导数
-}
 #[derive(Serialize, Deserialize, Debug)]
 struct IdealPolynomialTerm {
     flag: i32,
@@ -78,40 +72,25 @@ pub struct IdealHelmholtzEquation {
 }
 impl IdealHelmholtzEquation {
     #[allow(non_snake_case)]
-    pub fn calc(&self, dd: AlphaDD, tau: f64, delta: f64, Tr: f64) -> f64 {
-        let mut alpha0dd = 0.0;
-        match dd {
-            AlphaDD::D00 => {
-                alpha0dd += self.a_1 + self.a_tau * tau + self.a_lntau * tau.ln() + delta.ln();
-                for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D0, tau, Tr);
-                }
-                for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D0, tau, Tr);
-                }
+    pub fn calc(&self, dtau: Alpha0Dtau, tau: f64, Tr: f64) -> f64 {
+        let mut alpha0d = 0.0;
+        match dtau {
+            Alpha0Dtau::D0 => {
+                alpha0d += self.a_1 + self.a_tau * tau + self.a_lntau * tau.ln();
             }
-            AlphaDD::D01 => alpha0dd = 1.0 / delta,
-            AlphaDD::D02 => alpha0dd = -1.0 / delta.powi(2),
-            AlphaDD::D10 => {
-                alpha0dd += self.a_tau + self.a_lntau / tau;
-                for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D1, tau, Tr);
-                }
-                for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D1, tau, Tr);
-                }
+            Alpha0Dtau::D1 => {
+                alpha0d += self.a_tau * tau + self.a_lntau;
             }
-            AlphaDD::D11 => alpha0dd = 0.0,
-            AlphaDD::D20 => {
-                alpha0dd += -self.a_lntau / tau.powi(2);
-                for term in self.poly_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D2, tau, Tr);
-                }
-                for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(&Alpha0Dtau::D2, tau, Tr);
-                }
+            Alpha0Dtau::D2 => {
+                alpha0d += -self.a_lntau;
             }
         };
-        alpha0dd
+        for term in self.poly_terms.iter() {
+            alpha0d += term.calc(&dtau, tau, Tr);
+        }
+        for term in self.pe_terms.iter() {
+            alpha0d += term.calc(&dtau, tau, Tr);
+        }
+        alpha0d
     }
 }

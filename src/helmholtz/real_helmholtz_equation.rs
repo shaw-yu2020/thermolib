@@ -1,5 +1,6 @@
 use super::ideal_helmholtz_equation::IdealHelmholtzEquation;
 use super::residual_helmholtz_equation::ResidualHelmholtzEquation;
+use super::Alpha0Dtau;
 use super::AlphaDD;
 use super::ThermoProp;
 use serde::{Deserialize, Serialize};
@@ -33,12 +34,12 @@ impl RealHelmholtzEquation {
             ThermoProp::P => (D * self.R * T) * (1.0 + self.alphar.calc(AlphaDD::D01, tau, delta)),
             ThermoProp::CV => {
                 self.R
-                    * (-tau.powi(2) * self.alpha0.calc(AlphaDD::D20, tau, delta, self.Tc)
+                    * (-tau.powi(2) * self.alpha0.calc(Alpha0Dtau::D2, tau, self.Tc)
                         - self.alphar.calc(AlphaDD::D20, tau, delta))
             }
             ThermoProp::CP => {
                 self.R
-                    * ((-tau.powi(2) * self.alpha0.calc(AlphaDD::D20, tau, delta, self.Tc)
+                    * ((-tau.powi(2) * self.alpha0.calc(Alpha0Dtau::D2, tau, self.Tc)
                         - self.alphar.calc(AlphaDD::D20, tau, delta))
                         + (1.0 + self.alphar.calc(AlphaDD::D01, tau, delta)
                             - self.alphar.calc(AlphaDD::D11, tau, delta))
@@ -58,37 +59,37 @@ impl RealHelmholtzEquation {
                     + (1.0 + self.alphar.calc(AlphaDD::D01, tau, delta)
                         - self.alphar.calc(AlphaDD::D11, tau, delta))
                     .powi(2)
-                        / (-tau.powi(2) * self.alpha0.calc(AlphaDD::D20, tau, delta, self.Tc)
+                        / (-tau.powi(2) * self.alpha0.calc(Alpha0Dtau::D2, tau, self.Tc)
                             - self.alphar.calc(AlphaDD::D20, tau, delta))))
             .sqrt(),
             ThermoProp::S => {
                 self.R
-                    * (tau * self.alpha0.calc(AlphaDD::D10, tau, delta, self.Tc)
+                    * (tau * self.alpha0.calc(Alpha0Dtau::D1, tau, self.Tc)
                         + self.alphar.calc(AlphaDD::D10, tau, delta)
-                        - self.alpha0.calc(AlphaDD::D00, tau, delta, self.Tc)
+                        - (self.alpha0.calc(Alpha0Dtau::D0, tau, self.Tc) + delta.ln())
                         - self.alphar.calc(AlphaDD::D00, tau, delta))
             }
             ThermoProp::U => {
                 (self.R * T)
-                    * (tau * self.alpha0.calc(AlphaDD::D10, tau, delta, self.Tc)
+                    * (tau * self.alpha0.calc(Alpha0Dtau::D1, tau, self.Tc)
                         + self.alphar.calc(AlphaDD::D10, tau, delta))
             }
             ThermoProp::H => {
                 (self.R * T)
                     * (1.0
-                        + tau * self.alpha0.calc(AlphaDD::D10, tau, delta, self.Tc)
+                        + tau * self.alpha0.calc(Alpha0Dtau::D1, tau, self.Tc)
                         + self.alphar.calc(AlphaDD::D10, tau, delta)
                         + self.alphar.calc(AlphaDD::D01, tau, delta))
             }
             ThermoProp::A => {
                 (self.R * T)
-                    * (self.alpha0.calc(AlphaDD::D00, tau, delta, self.Tc)
+                    * ((self.alpha0.calc(Alpha0Dtau::D0, tau, self.Tc) + delta.ln())
                         + self.alphar.calc(AlphaDD::D00, tau, delta))
             }
             ThermoProp::G => {
                 (self.R * T)
                     * (1.0
-                        + self.alpha0.calc(AlphaDD::D00, tau, delta, self.Tc)
+                        + (self.alpha0.calc(Alpha0Dtau::D0, tau, self.Tc) + delta.ln())
                         + self.alphar.calc(AlphaDD::D00, tau, delta)
                         + self.alphar.calc(AlphaDD::D01, tau, delta))
             }
