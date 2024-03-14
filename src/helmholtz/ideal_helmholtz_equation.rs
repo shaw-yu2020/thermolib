@@ -50,7 +50,7 @@ struct IdealPlankEinsteinTerm {
 }
 impl IdealPlankEinsteinTerm {
     #[allow(non_snake_case)]
-    fn calc(&self, dtau: Dtau, tau: f64, Tr: f64) -> f64 {
+    fn calc(&self, dtau: &Alpha0Dtau, tau: f64, Tr: f64) -> f64 {
         let b = match self.flag {
             1 => self.b,
             2 => self.b / Tr,
@@ -60,11 +60,12 @@ impl IdealPlankEinsteinTerm {
             }
         };
         let exp_bitau = (-b * tau).exp();
-        match dtau {
-            Dtau::D0 => self.v * (1.0 - exp_bitau).ln(),
-            Dtau::D1 => self.v * b * exp_bitau / (1.0 - exp_bitau),
-            Dtau::D2 => -self.v * b.powi(2) * exp_bitau / (1.0 - exp_bitau).powi(2),
-        }
+        self.v
+            * match dtau {
+                Alpha0Dtau::D0 => (1.0 - exp_bitau).ln(),
+                Alpha0Dtau::D1 => exp_bitau * tau * b / (1.0 - exp_bitau),
+                Alpha0Dtau::D2 => -exp_bitau * (tau * b / (1.0 - exp_bitau)).powi(2),
+            }
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -86,7 +87,7 @@ impl IdealHelmholtzEquation {
                     alpha0dd += term.calc(&Alpha0Dtau::D0, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D0, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D0, tau, Tr);
                 }
             }
             AlphaDD::D01 => alpha0dd = 1.0 / delta,
@@ -97,7 +98,7 @@ impl IdealHelmholtzEquation {
                     alpha0dd += term.calc(&Alpha0Dtau::D1, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D1, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D1, tau, Tr);
                 }
             }
             AlphaDD::D11 => alpha0dd = 0.0,
@@ -107,7 +108,7 @@ impl IdealHelmholtzEquation {
                     alpha0dd += term.calc(&Alpha0Dtau::D2, tau, Tr);
                 }
                 for term in self.pe_terms.iter() {
-                    alpha0dd += term.calc(Dtau::D2, tau, Tr);
+                    alpha0dd += term.calc(&Alpha0Dtau::D2, tau, Tr);
                 }
             }
         };
