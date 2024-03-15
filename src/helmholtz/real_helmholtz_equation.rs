@@ -121,4 +121,16 @@ impl RealHelmholtzEquation {
             }
         }
     }
+    #[allow(non_snake_case)]
+    pub fn ps(&self, T: f64) -> f64 {
+        self.ps.calc(T, self.Tc, self.Pc)
+    }
+    #[allow(non_snake_case)]
+    pub fn rhogs(&self, T: f64) -> f64 {
+        self.rhogs.calc(T, self.Tc, self.Dc)
+    }
+    #[allow(non_snake_case)]
+    pub fn rhols(&self, T: f64) -> f64 {
+        self.rhols.calc(T, self.Tc, self.Dc)
+    }
 }
