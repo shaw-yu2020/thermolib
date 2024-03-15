@@ -1,6 +1,3 @@
-use super::ancillary_equations::SaturatedLiquidDensityEquation;
-use super::ancillary_equations::SaturatedVaporDensityEquation;
-use super::ancillary_equations::VaporPressureEquation;
 use super::real_helmholtz_equation::RealHelmholtzEquation;
 use super::ThermoProp;
 use crate::pubtraits::Flash;
@@ -16,10 +13,8 @@ use std::path::Path;
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HelmholtzPure {
-    alpha: RealHelmholtzEquation,
-    ps: VaporPressureEquation,
-    rhogs: SaturatedVaporDensityEquation,
-    rhols: SaturatedLiquidDensityEquation,
+    #[serde(alias = "helmholtz")]
+    alpha: RealHelmholtzEquation, // 状态方程模型
     omega: f64, // 偏心因子
     #[serde(skip, default = "default_phase")]
     phase: Phase, // 记录相态
@@ -50,9 +45,20 @@ pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
         Err(_) => Err(MyErr::new(&format!("no alpha(HelmholtzPure) in {}", path))),
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_read_json() {
+        let so2: HelmholtzPure = read_json("SO2.json").expect("no SO2");
+        let serialized = serde_json::to_string_pretty(&so2).unwrap();
+        println!("serialized = {}", serialized);
+        println!("read_json pass!");
+    }
+}
 impl Flash for HelmholtzPure {
     #[allow(non_snake_case)]
-    fn t_flash(&mut self, _T: f64) -> Result<(), MyErr> {
+    fn t_flash(&mut self, Ts: f64) -> Result<(), MyErr> {
         Ok(())
     }
     #[allow(non_snake_case)]

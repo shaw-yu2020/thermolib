@@ -1,3 +1,6 @@
+use super::ancillary_equations::SaturatedLiquidDensityEquation;
+use super::ancillary_equations::SaturatedVaporDensityEquation;
+use super::ancillary_equations::VaporPressureEquation;
 use super::ideal_helmholtz_equation::IdealHelmholtzEquation;
 use super::residual_helmholtz_equation::ResidualHelmholtzEquation;
 use super::Alpha0Dtau;
@@ -18,6 +21,9 @@ pub struct RealHelmholtzEquation {
     M: f64,  // 摩尔质量
     alpha0: IdealHelmholtzEquation,
     alphar: ResidualHelmholtzEquation,
+    ps: VaporPressureEquation,
+    rhogs: SaturatedVaporDensityEquation,
+    rhols: SaturatedLiquidDensityEquation,
 }
 impl RealHelmholtzEquation {
     #[allow(non_snake_case)]
