@@ -14,7 +14,7 @@ use std::path::Path;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HelmholtzPure {
     #[serde(alias = "helmholtz")]
-    alpha: RealHelmholtzEquation, // 状态方程模型
+    eos: RealHelmholtzEquation, // 状态方程模型
     omega: f64, // 偏心因子
     #[serde(skip, default = "default_phase")]
     phase: Phase, // 记录相态
@@ -81,46 +81,42 @@ impl Prop for HelmholtzPure {
     }
     fn p(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::P, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
-                + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol)),
-            Phase::SATRHO { rhog, rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog) / 2.0
-                + self.alpha.calc(ThermoProp::P, self.T, rhol) / 2.0),
+            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::P, self.T, rho)),
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
+            Phase::SATRHO { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
+                + self.eos.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn cv(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::CV, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => {
-                Ok(x * self.alpha.calc(ThermoProp::CV, self.T, rhog)
-                    + (1.0 - x) * self.alpha.calc(ThermoProp::CV, self.T, rhol))
-            }
+            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::CV, self.T, rho)),
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CV, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::CV, self.T, rhol)),
             Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cv in saturation line"))),
         }
     }
     fn cp(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::CP, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => {
-                Ok(x * self.alpha.calc(ThermoProp::CP, self.T, rhog)
-                    + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol))
-            }
+            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::CP, self.T, rho)),
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CP, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
             Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cp in saturation line"))),
         }
     }
     fn w(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.alpha.calc(ThermoProp::W, self.T, rho)),
+            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::W, self.T, rho)),
             _ => Err(MyErr::new(&format!("no speed of sound in double phase"))),
         }
     }
     fn ps(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::SINGLE { .. } => Err(MyErr::new(&format!("no ps in single phase"))),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.alpha.calc(ThermoProp::P, self.T, rhog)
-                + (1.0 - x) * self.alpha.calc(ThermoProp::P, self.T, rhol)),
-            Phase::SATRHO { rhog, rhol } => Ok(self.alpha.calc(ThermoProp::P, self.T, rhog) / 2.0
-                + self.alpha.calc(ThermoProp::P, self.T, rhol) / 2.0),
+            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
+            Phase::SATRHO { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
+                + self.eos.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn rhogs(&self) -> Result<f64, MyErr> {
