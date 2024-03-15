@@ -19,7 +19,7 @@ pub struct HelmholtzPure {
     omega: f64, // 偏心因子
     #[serde(skip, default = "default_phase")]
     phase: Phase, // 记录相态
-    #[serde(skip)]
+    #[serde(skip, default)]
     T: f64, // 记录温度
 }
 #[derive(Debug)]
@@ -103,9 +103,38 @@ impl Flash for HelmholtzPure {
     }
     #[allow(non_snake_case)]
     fn td_flash(&mut self, T: f64, rho: f64) -> Result<(), MyErr> {
-        self.T = T;
-        self.phase = Phase::SINGLE { rho };
-        Ok(())
+        // 检查是否位于单相区
+        if T >= self.eos.Tc() || rho <= 0.85 * self.eos.rhogs(T) || rho >= 1.05 * self.eos.rhols(T)
+        {
+            self.phase = Phase::SINGLE { rho };
+            self.T = T;
+            return Ok(());
+        }
+        // 计算饱和线 判断是否位于两相区
+        if let Err(why) = self.t_flash(T) {
+            return Err(why);
+        } else {
+            match self.phase {
+                Phase::SATRHO { rhog, rhol } => {
+                    if rho < rhog || rho > rhol {
+                        // 单相区
+                        self.phase = Phase::SINGLE { rho };
+                        // self.T = T;  // 温度在饱和线计算过程时就已经设置 所以可以省略
+                        return Ok(());
+                    } else {
+                        // 两相区
+                        self.phase = Phase::DOUBLE {
+                            rhog,
+                            rhol,
+                            x: (1.0 / rho - 1.0 / rhol) / (1.0 / rhog + 1.0 / rhol),
+                        };
+                        // self.T = T;  // 温度在饱和线计算过程时就已经设置 所以可以省略
+                        return Ok(());
+                    }
+                }
+                _ => return Err(MyErr::new(&format!("shit-code int td_flash."))),
+            }
+        }
     }
 }
 impl Prop for HelmholtzPure {
@@ -194,5 +223,12 @@ mod tests {
             }
         }
         println!("t_flash pass!");
+        match so2.td_flash(350.0, 10000.0) {
+            Ok(()) => println!("PS={}", so2.ps().expect("no ps")),
+            Err(_) => {
+                println!("error occured in t_flash.");
+            }
+        }
+        println!("td_flash pass!");
     }
 }

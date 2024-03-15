@@ -140,6 +140,10 @@ impl RealHelmholtzEquation {
         self.rhols.calc(T, self.Tc, self.Dc)
     }
     #[allow(non_snake_case)]
+    pub fn Tc(&self) -> f64 {
+        self.Tc
+    }
+    #[allow(non_snake_case)]
     pub fn Dc(&self) -> f64 {
         self.Dc
     }
