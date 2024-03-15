@@ -1,4 +1,5 @@
 use super::real_helmholtz_equation::RealHelmholtzEquation;
+use super::PropPd;
 use super::ThermoProp;
 use crate::pubtraits::Flash;
 use crate::pubtraits::MyErr;
@@ -45,21 +46,60 @@ pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
         Err(_) => Err(MyErr::new(&format!("no alpha(HelmholtzPure) in {}", path))),
     }
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_read_json() {
-        let so2: HelmholtzPure = read_json("SO2.json").expect("no SO2");
-        let serialized = serde_json::to_string_pretty(&so2).unwrap();
-        println!("serialized = {}", serialized);
-        println!("read_json pass!");
-    }
-}
 impl Flash for HelmholtzPure {
     #[allow(non_snake_case)]
     fn t_flash(&mut self, Ts: f64) -> Result<(), MyErr> {
-        Ok(())
+        // Reference [AKASAKA_2008]
+        // Newton-Raphson algorithm
+        let rhoc = self.eos.Dc();
+        let mut rhog: f64;
+        let mut rhol: f64;
+        let mut Jg: f64;
+        let mut Jl: f64;
+        let mut Kg: f64;
+        let mut Kl: f64;
+        let mut DJg: f64;
+        let mut DJl: f64;
+        let mut DKg: f64;
+        let mut DKl: f64;
+        let mut Delta: f64;
+        let mut is_conv: bool;
+        for factor in 0..10 {
+            rhog = self.eos.rhogs(Ts) * (1.0 - (factor as f64) / 10.0);
+            rhol = self.eos.rhols(Ts) * (1.0 + (factor as f64) / 10.0);
+            loop {
+                if rhog.is_nan()  // 检查异常结果 NAN
+                    || rhol.is_nan()  // 检查异常结果 NAN
+                    || self.eos.calc_pd(PropPd::Prho, Ts, rhog) <= 0.0
+                    || self.eos.calc_pd(PropPd::Prho, Ts, rhol) <= 0.0
+                {
+                    is_conv = false;
+                    break; // 计算发散 结束循环
+                }
+                Jg = self.eos.calc_pd(PropPd::J, Ts, rhog);
+                Jl = self.eos.calc_pd(PropPd::J, Ts, rhol);
+                Kg = self.eos.calc_pd(PropPd::K, Ts, rhog);
+                Kl = self.eos.calc_pd(PropPd::K, Ts, rhol);
+                if ((Kg - Kl).abs() + (Jg - Jl).abs()) < 1E-8 {
+                    // 收敛判据 1E-8 参考[AKASAKA_2008]
+                    is_conv = true;
+                    break; // 计算收敛 结束循环
+                }
+                DJg = self.eos.calc_pd(PropPd::Jdelta, Ts, rhog);
+                DJl = self.eos.calc_pd(PropPd::Jdelta, Ts, rhol);
+                DKg = self.eos.calc_pd(PropPd::Kdelta, Ts, rhog);
+                DKl = self.eos.calc_pd(PropPd::Kdelta, Ts, rhol);
+                Delta = DJg * DKl - DJl * DKg;
+                rhog += ((Kg - Kl) * DJl - (Jg - Jl) * DKl) / Delta * rhoc;
+                rhol += ((Kg - Kl) * DJg - (Jg - Jl) * DKg) / Delta * rhoc;
+            }
+            if is_conv {
+                self.phase = Phase::SATRHO { rhog, rhol };
+                self.T = Ts;
+                return Ok(());
+            }
+        }
+        Err(MyErr::new(&format!("t({})_flash failed!", Ts)))
     }
     #[allow(non_snake_case)]
     fn td_flash(&mut self, T: f64, rho: f64) -> Result<(), MyErr> {
@@ -132,5 +172,27 @@ impl Prop for HelmholtzPure {
             Phase::SATRHO { rhol, .. } => Ok(rhol),
             Phase::DOUBLE { rhol, .. } => Ok(rhol),
         }
+    }
+}
+// 单元测试
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {
+        let mut so2: HelmholtzPure = read_json("SO2.json").expect("no SO2");
+        let serialized = serde_json::to_string_pretty(&so2).unwrap();
+        println!("serialized = {}", serialized);
+        println!("read_json pass!");
+        for t in 197..432 {
+            match so2.t_flash(t as f64) {
+                Ok(()) => println!("Ts={}\tPs={}", t, so2.ps().unwrap()),
+                Err(_) => {
+                    println!("error occured in {}K.", t);
+                    break;
+                }
+            }
+        }
+        println!("t_flash pass!");
     }
 }

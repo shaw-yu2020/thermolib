@@ -119,6 +119,12 @@ impl RealHelmholtzEquation {
                     + self.alphar.calc(AlpharDD::D02, tau, delta)
                     + 1.0 / delta
             }
+            PropPd::Prho => {
+                (self.R * T)
+                    * (1.0
+                        + 2.0 * self.alphar.calc(AlpharDD::D01, tau, delta)
+                        + self.alphar.calc(AlpharDD::D02, tau, delta))
+            }
         }
     }
     #[allow(non_snake_case)]
@@ -132,5 +138,9 @@ impl RealHelmholtzEquation {
     #[allow(non_snake_case)]
     pub fn rhols(&self, T: f64) -> f64 {
         self.rhols.calc(T, self.Tc, self.Dc)
+    }
+    #[allow(non_snake_case)]
+    pub fn Dc(&self) -> f64 {
+        self.Dc
     }
 }

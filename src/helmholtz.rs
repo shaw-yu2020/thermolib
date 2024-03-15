@@ -34,6 +34,7 @@ pub enum PropPd {
     K,      // 用于饱和线的计算 参考[AKASAKA_2008]
     Jdelta, // 用于饱和线的计算 参考[AKASAKA_2008]
     Kdelta, // 用于饱和线的计算 参考[AKASAKA_2008]
+    Prho,   // 等温度条件下 压力对密度的偏导数
 }
 // 辅助方程
 mod ancillary_equations;
