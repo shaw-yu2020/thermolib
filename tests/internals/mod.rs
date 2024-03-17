@@ -32,5 +32,9 @@ pub fn verify_fluid(fluid: &mut thermolib::HelmholtzPure, values: &Vec<Verificat
         compare_eq(value.CV, fluid.cv().unwrap());
         compare_eq(value.CP, fluid.cp().unwrap());
         compare_eq(value.W, fluid.w().unwrap());
+        if value.P > 0.0 {
+            fluid.tp_flash(value.T, value.P).unwrap();
+            compare_eq(value.D, fluid.rho().unwrap());
+        }
     }
 }
