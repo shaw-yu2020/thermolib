@@ -147,4 +147,12 @@ impl RealHelmholtzEquation {
     pub fn Dc(&self) -> f64 {
         self.Dc
     }
+    #[allow(non_snake_case)]
+    pub fn Pc(&self) -> f64 {
+        self.Pc
+    }
+    #[allow(non_snake_case)]
+    pub fn R(&self) -> f64 {
+        self.R
+    }
 }

@@ -136,6 +136,51 @@ impl Flash for HelmholtzPure {
             }
         }
     }
+    #[allow(non_snake_case)]
+    fn tp_flash(&mut self, T: f64, p: f64) -> Result<(), MyErr> {
+        let phase: char;
+        let ps = self.eos.ps(T);
+        if T >= self.eos.Tc() {
+            phase = 's'; // 超临界区
+        } else if p < 0.95 * ps {
+            phase = 'g' // 气相区
+        } else if p > 1.05 * ps {
+            phase = 'l'; // 液相区
+        } else {
+            if let Err(why) = self.t_flash(T) {
+                return Err(why);
+            } else {
+                let ps = self.ps().unwrap();
+                if p < ps {
+                    phase = 'g';
+                } else {
+                    phase = 'l';
+                }
+            }
+        }
+        let mut rho =
+            calc_density_from_pr(T, p, self.eos.Tc(), self.eos.Pc(), self.eos.R(), self.omega);
+        if phase == 'g' {
+            rho = rho.min(self.eos.rhogs(T));
+        }
+        if phase == 'l' {
+            rho = rho.max(self.eos.rhols(T));
+        }
+        let mut p_0: f64;
+        let mut p_rho: f64;
+        loop {
+            p_0 = self.eos.calc(ThermoProp::P, T, rho) - p;
+            if (p_0 / p).abs() < 1E-9 {
+                // 收敛判据猜：1E-9
+                break;
+            } else {
+                p_rho = self.eos.calc_pd(PropPd::Prho, T, rho);
+                rho -= p_0 / p_rho; // 进行迭代
+            }
+        }
+        self.phase = Phase::SINGLE { rho };
+        Ok(())
+    }
 }
 impl Prop for HelmholtzPure {
     fn T(&self) -> Result<f64, MyErr> {
