@@ -14,7 +14,7 @@ use std::path::Path;
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HelmholtzPure {
-    #[serde(alias = "helmholtz")]
+    #[serde(rename = "helmholtz")]
     eos: RealHelmholtzEquation, // 状态方程模型
     omega: f64, // 偏心因子
     #[serde(skip, default = "default_phase")]
