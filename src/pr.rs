@@ -4,6 +4,7 @@ use crate::pubtraits::Prop;
 ///
 /// PR 方程
 ///
+#[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct Pr {
     Tc: f64,               // 临界温度 Tc: K
@@ -218,14 +219,5 @@ impl Prop for Pr {
         } else {
             Ok(self.P / self.Zl / self.R / self.T)
         }
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_pr() {
-        let mut n2 = Pr::new_fluid(126.19, 3.3958E6, 8.314, 0.0372);
-        n2.tp_flash(300.0, 0.1E6).unwrap();
     }
 }

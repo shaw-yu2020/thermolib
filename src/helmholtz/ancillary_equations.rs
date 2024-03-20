@@ -23,7 +23,7 @@ pub struct VaporPressureEquation {
 impl VaporPressureEquation {
     #[allow(non_snake_case)]
     pub fn calc(&self, T: f64, Tr: f64, pr: f64) -> f64 {
-        let theta = T / Tr;
+        let theta = 1.0 - T / Tr;
         let mut p_pr = 0.0;
         pr * (match self.flag {
             1 => {
@@ -47,7 +47,7 @@ pub struct SaturatedVaporDensityEquation {
 impl SaturatedVaporDensityEquation {
     #[allow(non_snake_case)]
     pub fn calc(&self, T: f64, Tr: f64, rhor: f64) -> f64 {
-        let theta = T / Tr;
+        let theta = 1.0 - T / Tr;
         let mut rho_rhor = 0.0;
         rhor * (match self.flag {
             1 => {
@@ -80,7 +80,7 @@ pub struct SaturatedLiquidDensityEquation {
 impl SaturatedLiquidDensityEquation {
     #[allow(non_snake_case)]
     pub fn calc(&self, T: f64, Tr: f64, rhor: f64) -> f64 {
-        let theta = T / Tr;
+        let theta = 1.0 - T / Tr;
         let mut rho_rhor = 0.0;
         rhor * (match self.flag {
             1 => {
