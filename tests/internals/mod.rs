@@ -1,6 +1,8 @@
-/// 
+///
 /// 内部测试模块
-/// 
+///
+use thermolib::Flash;
+use thermolib::Prop;
 fn compare_eq(f64_short: f64, f64_long: f64) {
     let string_short = f64_short.to_string();
     let length = match string_short.rfind(".") {
@@ -23,23 +25,16 @@ pub struct VerificationValue {
 pub fn new_value(T: f64, D: f64, P: f64, CV: f64, CP: f64, W: f64) -> VerificationValue {
     VerificationValue { T, D, P, CV, CP, W }
 }
-pub fn verify_fluid(fluid: &thermolib::HelmholtzPure, values: &Vec<VerificationValue>) {
+pub fn verify_fluid(fluid: &mut thermolib::HelmholtzPure, values: &Vec<VerificationValue>) {
     for value in values.iter() {
-        compare_eq(
-            value.P,
-            fluid.calc(thermolib::ThermoProp::P, value.T, value.D),
-        );
-        compare_eq(
-            value.CV,
-            fluid.calc(thermolib::ThermoProp::CV, value.T, value.D),
-        );
-        compare_eq(
-            value.CP,
-            fluid.calc(thermolib::ThermoProp::CP, value.T, value.D),
-        );
-        compare_eq(
-            value.W,
-            fluid.calc(thermolib::ThermoProp::W, value.T, value.D),
-        );
+        fluid.td_flash(value.T, value.D).unwrap();
+        compare_eq(value.P, fluid.p().unwrap());
+        compare_eq(value.CV, fluid.cv().unwrap());
+        compare_eq(value.CP, fluid.cp().unwrap());
+        compare_eq(value.W, fluid.w().unwrap());
+        if value.P > 0.0 {
+            fluid.tp_flash(value.T, value.P).unwrap();
+            compare_eq(value.D, fluid.rho().unwrap());
+        }
     }
 }
