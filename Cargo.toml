@@ -11,3 +11,8 @@ description = "An open-source library for the calculation of fluid properties"
 [dependencies]
 serde_json = "1.0.110"
 serde = { version = "1.0.195", features = ["derive"] }
+pyo3 = "0.20.0"
+
+[lib]
+name = "thermolib"
+crate-type = ["cdylib", "rlib"]
