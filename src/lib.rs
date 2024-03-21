@@ -10,5 +10,4 @@ mod pr;
 pub use pr::Pr;
 // Helmholtz 方程
 mod helmholtz;
-pub use helmholtz::read_json;
 pub use helmholtz::HelmholtzPure;

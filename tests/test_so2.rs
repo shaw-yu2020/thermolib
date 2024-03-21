@@ -4,7 +4,8 @@
 mod internals;
 #[test]
 fn test_so2() {
-    let mut so2: thermolib::HelmholtzPure = thermolib::read_json("SO2.json").expect("no SO2.json");
+    let mut so2: thermolib::HelmholtzPure =
+        thermolib::HelmholtzPure::read_json("SO2.json").expect("no SO2.json");
     let vec_vvs = vec![
         // 第一个数据点 来自GAO2016
         internals::new_value(250.0, 23600.0, 12295580.4, 53.1514, 86.0982, 1130.24),

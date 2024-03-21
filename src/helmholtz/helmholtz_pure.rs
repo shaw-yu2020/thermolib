@@ -31,19 +31,23 @@ enum Phase {
 fn default_phase() -> Phase {
     Phase::SINGLE { rho: 1.0 }
 }
-pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
-    let mut str_json = String::new();
-    let _ = match File::open(&Path::new(path)) {
-        Ok(file) => file,
-        Err(_) => match File::open(&Path::new(env!("CARGO_MANIFEST_DIR")).join("res").join(path)) {
+impl HelmholtzPure {
+    pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
+        let mut str_json = String::new();
+        let _ = match File::open(&Path::new(path)) {
             Ok(file) => file,
-            Err(_) => return Err(MyErr::new(&format!("couldn't find {}", path))),
-        },
-    }
-    .read_to_string(&mut str_json);
-    match serde_json::from_str(&str_json) {
-        Ok(hp) => Ok(hp),
-        Err(_) => Err(MyErr::new(&format!("no alpha(HelmholtzPure) in {}", path))),
+            Err(_) => {
+                match File::open(&Path::new(env!("CARGO_MANIFEST_DIR")).join("res").join(path)) {
+                    Ok(file) => file,
+                    Err(_) => return Err(MyErr::new(&format!("couldn't find {}", path))),
+                }
+            }
+        }
+        .read_to_string(&mut str_json);
+        match serde_json::from_str(&str_json) {
+            Ok(hp) => Ok(hp),
+            Err(_) => Err(MyErr::new(&format!("no alpha(HelmholtzPure) in {}", path))),
+        }
     }
 }
 impl Flash for HelmholtzPure {
@@ -303,7 +307,7 @@ mod tests {
     use super::*;
     #[test]
     fn test() {
-        let mut so2: HelmholtzPure = read_json("SO2.json").expect("no SO2");
+        let mut so2: HelmholtzPure = HelmholtzPure::read_json("SO2.json").expect("no SO2");
         let serialized = serde_json::to_string_pretty(&so2).unwrap();
         println!("serialized = {}", serialized);
         println!("read_json pass!");

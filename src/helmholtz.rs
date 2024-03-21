@@ -44,5 +44,4 @@ mod residual_helmholtz_equation;
 mod real_helmholtz_equation;
 // 亥姆霍兹方程
 mod helmholtz_pure;
-pub use helmholtz_pure::read_json;
 pub use helmholtz_pure::HelmholtzPure;
