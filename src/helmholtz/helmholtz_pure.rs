@@ -24,20 +24,20 @@ pub struct HelmholtzPure {
 }
 #[derive(Debug)]
 enum Phase {
-    SINGLE { rho: f64 },                     // 密度
-    SATRHO { rhog: f64, rhol: f64 },         // 饱和气相密度 饱和液相密度
-    DOUBLE { rhog: f64, rhol: f64, x: f64 }, // 饱和气相密度 饱和液相密度 干度
+    Single { rho: f64 },                     // 密度
+    SatRho { rhog: f64, rhol: f64 },         // 饱和气相密度 饱和液相密度
+    Double { rhog: f64, rhol: f64, x: f64 }, // 饱和气相密度 饱和液相密度 干度
 }
 fn default_phase() -> Phase {
-    Phase::SINGLE { rho: 1.0 }
+    Phase::Single { rho: 1.0 }
 }
 impl HelmholtzPure {
     pub fn read_json(path: &str) -> Result<HelmholtzPure, MyErr> {
         let mut str_json = String::new();
-        let _ = match File::open(&Path::new(path)) {
+        let _ = match File::open(Path::new(path)) {
             Ok(file) => file,
             Err(_) => {
-                match File::open(&Path::new(env!("CARGO_MANIFEST_DIR")).join("res").join(path)) {
+                match File::open(Path::new(env!("CARGO_MANIFEST_DIR")).join("res").join(path)) {
                     Ok(file) => file,
                     Err(_) => return Err(MyErr::new(&format!("couldn't find {}", path))),
                 }
@@ -98,7 +98,7 @@ impl Flash for HelmholtzPure {
                 rhol += ((Kg - Kl) * DJg - (Jg - Jl) * DKg) / Delta * rhoc;
             }
             if is_conv {
-                self.phase = Phase::SATRHO { rhog, rhol };
+                self.phase = Phase::SatRho { rhog, rhol };
                 self.T = Ts;
                 return Ok(());
             }
@@ -110,33 +110,33 @@ impl Flash for HelmholtzPure {
         // 检查是否位于单相区
         if T >= self.eos.Tc() || rho <= 0.85 * self.eos.rhogs(T) || rho >= 1.05 * self.eos.rhols(T)
         {
-            self.phase = Phase::SINGLE { rho };
+            self.phase = Phase::Single { rho };
             self.T = T;
             return Ok(());
         }
         // 计算饱和线 判断是否位于两相区
         if let Err(why) = self.t_flash(T) {
-            return Err(why);
+            Err(why)
         } else {
             match self.phase {
-                Phase::SATRHO { rhog, rhol } => {
+                Phase::SatRho { rhog, rhol } => {
                     if rho < rhog || rho > rhol {
                         // 单相区
-                        self.phase = Phase::SINGLE { rho };
+                        self.phase = Phase::Single { rho };
                         // self.T = T;  // 温度在饱和线计算过程时就已经设置 所以可以省略
-                        return Ok(());
+                        Ok(())
                     } else {
                         // 两相区
-                        self.phase = Phase::DOUBLE {
+                        self.phase = Phase::Double {
                             rhog,
                             rhol,
                             x: (1.0 / rho - 1.0 / rhol) / (1.0 / rhog + 1.0 / rhol),
                         };
                         // self.T = T;  // 温度在饱和线计算过程时就已经设置 所以可以省略
-                        return Ok(());
+                        Ok(())
                     }
                 }
-                _ => return Err(MyErr::new(&format!("shit-code int td_flash."))),
+                _ => Err(MyErr::new("shit-code in td_flash.")),
             }
         }
     }
@@ -150,16 +150,14 @@ impl Flash for HelmholtzPure {
             phase = 'g' // 气相区
         } else if p > 1.05 * ps {
             phase = 'l'; // 液相区
+        } else if let Err(why) = self.t_flash(T) {
+            return Err(why);
         } else {
-            if let Err(why) = self.t_flash(T) {
-                return Err(why);
+            let ps = self.ps().unwrap();
+            if p < ps {
+                phase = 'g';
             } else {
-                let ps = self.ps().unwrap();
-                if p < ps {
-                    phase = 'g';
-                } else {
-                    phase = 'l';
-                }
+                phase = 'l';
             }
         }
         let mut rho =
@@ -182,7 +180,7 @@ impl Flash for HelmholtzPure {
                 rho -= p_0 / p_rho; // 进行迭代
             }
         }
-        self.phase = Phase::SINGLE { rho };
+        self.phase = Phase::Single { rho };
         Ok(())
     }
 }
@@ -192,63 +190,63 @@ impl Prop for HelmholtzPure {
     }
     fn rho(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(rho),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(1.0 / (x / rhog + (1.0 - x) / rhol)),
-            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no rho in saturation line"))),
+            Phase::Single { rho } => Ok(rho),
+            Phase::Double { rhog, rhol, x } => Ok(1.0 / (x / rhog + (1.0 - x) / rhol)),
+            Phase::SatRho { .. } => Err(MyErr::new("no rho in saturation line")),
         }
     }
     fn p(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::P, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::P, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
                 + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
-            Phase::SATRHO { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
+            Phase::SatRho { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
                 + self.eos.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn cv(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::CV, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CV, self.T, rhog)
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::CV, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CV, self.T, rhog)
                 + (1.0 - x) * self.eos.calc(ThermoProp::CV, self.T, rhol)),
-            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cv in saturation line"))),
+            Phase::SatRho { .. } => Err(MyErr::new("no cv in saturation line")),
         }
     }
     fn cp(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::CP, self.T, rho)),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CP, self.T, rhog)
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::CP, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::CP, self.T, rhog)
                 + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
-            Phase::SATRHO { .. } => Err(MyErr::new(&format!("no cp in saturation line"))),
+            Phase::SatRho { .. } => Err(MyErr::new("no cp in saturation line")),
         }
     }
     fn w(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { rho } => Ok(self.eos.calc(ThermoProp::W, self.T, rho)),
-            _ => Err(MyErr::new(&format!("no speed of sound in double phase"))),
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::W, self.T, rho)),
+            _ => Err(MyErr::new("no speed of sound in double phase")),
         }
     }
     fn ps(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { .. } => Err(MyErr::new(&format!("no ps in single phase"))),
-            Phase::DOUBLE { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
+            Phase::Single { .. } => Err(MyErr::new("no ps in single phase")),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::P, self.T, rhog)
                 + (1.0 - x) * self.eos.calc(ThermoProp::P, self.T, rhol)),
-            Phase::SATRHO { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
+            Phase::SatRho { rhog, rhol } => Ok(self.eos.calc(ThermoProp::P, self.T, rhog) / 2.0
                 + self.eos.calc(ThermoProp::P, self.T, rhol) / 2.0),
         }
     }
     fn rhogs(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { .. } => Err(MyErr::new(&format!("no rhogs in single phase"))),
-            Phase::SATRHO { rhog, .. } => Ok(rhog),
-            Phase::DOUBLE { rhog, .. } => Ok(rhog),
+            Phase::Single { .. } => Err(MyErr::new("no rhogs in single phase")),
+            Phase::SatRho { rhog, .. } => Ok(rhog),
+            Phase::Double { rhog, .. } => Ok(rhog),
         }
     }
     fn rhols(&self) -> Result<f64, MyErr> {
         match self.phase {
-            Phase::SINGLE { .. } => Err(MyErr::new(&format!("no rhogs in single phase"))),
-            Phase::SATRHO { rhol, .. } => Ok(rhol),
-            Phase::DOUBLE { rhol, .. } => Ok(rhol),
+            Phase::Single { .. } => Err(MyErr::new("no rhogs in single phase")),
+            Phase::SatRho { rhol, .. } => Ok(rhol),
+            Phase::Double { rhol, .. } => Ok(rhol),
         }
     }
 }

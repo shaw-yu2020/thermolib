@@ -18,7 +18,7 @@ pub struct NewModel {
 }
 enum Models {
     PR(Pr),
-    HELMHOLTZ(HelmholtzPure),
+    HP(Box<HelmholtzPure>),
 }
 #[pymethods] // PYTHON 方法
 impl NewModel {
@@ -29,9 +29,9 @@ impl NewModel {
                 model: (Models::PR(Pr::new_fluid(430.64, 7.884E6, 8.314462618, 0.2557))),
             },
             "HELMHOLTZ" => NewModel {
-                model: (Models::HELMHOLTZ(
+                model: (Models::HP(Box::new(
                     HelmholtzPure::read_json("SO2.json").expect("no SO2.json"),
-                )),
+                ))),
             },
             _ => {
                 println!("error input, use default = PR(SO2).");
@@ -43,42 +43,45 @@ impl NewModel {
     }
     #[allow(non_snake_case)]
     fn t_flash(&mut self, T: f64) -> PyResult<()> {
-        Ok(match &mut self.model {
+        match &mut self.model {
             Models::PR(model) => model.t_flash(T).expect("REASON"),
-            Models::HELMHOLTZ(model) => model.t_flash(T).expect("REASON"),
-        })
+            Models::HP(model) => model.t_flash(T).expect("REASON"),
+        };
+        Ok(())
     }
     #[allow(non_snake_case)]
     fn td_flash(&mut self, T: f64, rho: f64) -> PyResult<()> {
-        Ok(match &mut self.model {
+        match &mut self.model {
             Models::PR(model) => model.td_flash(T, rho).expect("REASON"),
-            Models::HELMHOLTZ(model) => model.td_flash(T, rho).expect("REASON"),
-        })
+            Models::HP(model) => model.td_flash(T, rho).expect("REASON"),
+        };
+        Ok(())
     }
     #[allow(non_snake_case)]
     fn tp_flash(&mut self, T: f64, p: f64) -> PyResult<()> {
-        Ok(match &mut self.model {
+        match &mut self.model {
             Models::PR(model) => model.tp_flash(T, p).expect("REASON"),
-            Models::HELMHOLTZ(model) => model.tp_flash(T, p).expect("REASON"),
-        })
+            Models::HP(model) => model.tp_flash(T, p).expect("REASON"),
+        };
+        Ok(())
     }
     #[allow(non_snake_case)]
     fn T(&self) -> f64 {
         match &self.model {
             Models::PR(model) => model.T().expect("REASON"),
-            Models::HELMHOLTZ(model) => model.T().expect("REASON"),
+            Models::HP(model) => model.T().expect("REASON"),
         }
     }
     fn rho(&self) -> f64 {
         match &self.model {
             Models::PR(model) => model.rho().expect("REASON"),
-            Models::HELMHOLTZ(model) => model.rho().expect("REASON"),
+            Models::HP(model) => model.rho().expect("REASON"),
         }
     }
     fn p(&self) -> f64 {
         match &self.model {
             Models::PR(model) => model.p().expect("REASON"),
-            Models::HELMHOLTZ(model) => model.p().expect("REASON"),
+            Models::HP(model) => model.p().expect("REASON"),
         }
     }
 }
