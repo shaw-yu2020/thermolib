@@ -226,6 +226,30 @@ impl Prop for HelmholtzPure {
             _ => Err(MyErr::new("no speed of sound in double phase")),
         }
     }
+    fn s(&self) -> Result<f64, MyErr> {
+        match self.phase {
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::S, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::S, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::S, self.T, rhol)),
+            Phase::SatRho { .. } => Err(MyErr::new("no s in saturation line")),
+        }
+    }
+    fn u(&self) -> Result<f64, MyErr> {
+        match self.phase {
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::U, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::U, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::U, self.T, rhol)),
+            Phase::SatRho { .. } => Err(MyErr::new("no u in saturation line")),
+        }
+    }
+    fn h(&self) -> Result<f64, MyErr> {
+        match self.phase {
+            Phase::Single { rho } => Ok(self.eos.calc(ThermoProp::H, self.T, rho)),
+            Phase::Double { rhog, rhol, x } => Ok(x * self.eos.calc(ThermoProp::H, self.T, rhog)
+                + (1.0 - x) * self.eos.calc(ThermoProp::H, self.T, rhol)),
+            Phase::SatRho { .. } => Err(MyErr::new("no h in saturation line")),
+        }
+    }
     fn ps(&self) -> Result<f64, MyErr> {
         match self.phase {
             Phase::Single { .. } => Err(MyErr::new("no ps in single phase")),

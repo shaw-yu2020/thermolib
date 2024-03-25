@@ -17,7 +17,6 @@ pub enum AlpharDD {
 }
 // 流体的热力学物性
 pub enum ThermoProp {
-    Z,  // 压缩因子
     P,  // 压力
     CV, // 定容比热
     CP, // 定压比热
@@ -25,8 +24,6 @@ pub enum ThermoProp {
     S,  // 比熵
     U,  // 比内能
     H,  // 比焓
-    A,  // 比亥姆霍兹能
-    G,  // 比吉布斯能
 }
 // 流体的热力学物性的偏导数
 pub enum PropPd {

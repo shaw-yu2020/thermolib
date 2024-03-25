@@ -89,6 +89,27 @@ pub trait Prop {
     {
         Err(MyErr::new(&format!("no implementation for {:?}", self)))
     }
+    fn s(&self) -> Result<f64, MyErr>
+    // 比熵
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
+    fn u(&self) -> Result<f64, MyErr>
+    // 比内能
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
+    fn h(&self) -> Result<f64, MyErr>
+    // 比焓
+    where
+        Self: Debug,
+    {
+        Err(MyErr::new(&format!("no implementation for {:?}", self)))
+    }
     fn ps(&self) -> Result<f64, MyErr>
     // 饱和蒸汽压
     where
