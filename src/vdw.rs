@@ -212,9 +212,9 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn test_vdw() {
-        let Tc: f64 = 430.64;
-        let pc = 7886600.0;
-        let M = 64.064;
+        let Tc: f64 = 430.64; // K
+        let pc = 7886600.0; // Pa
+        let M = 0.064064; // kg/mol
         let mut SO2 = Vdw::new(Tc, pc, M);
         let Tmin = (0.7 * Tc).floor() as i32;
         let Tmax = Tc.ceil() as i32;
