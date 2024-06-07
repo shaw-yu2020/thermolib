@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 fn hello() -> PyResult<String> {
     Ok(String::from("Hello, Rust And Python."))
 }
+use crate::Rk;
 use crate::Vdw;
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -11,5 +12,6 @@ use crate::Vdw;
 pub fn pylib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hello, m)?)?;
     m.add_class::<Vdw>()?;
+    m.add_class::<Rk>()?;
     Ok(())
 }

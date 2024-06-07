@@ -11,3 +11,6 @@ mod python;
 /// Vdw EOS
 mod vdw;
 pub use vdw::Vdw;
+/// Rk EOS
+mod rk;
+pub use rk::Rk;
