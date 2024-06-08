@@ -17,3 +17,6 @@ pub use rk::Rk;
 /// Srk EOS
 mod srk;
 pub use srk::Srk;
+/// Pr EOS
+mod pr;
+pub use pr::Pr;

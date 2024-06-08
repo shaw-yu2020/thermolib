@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # pylint: disable=E
-from thermolib import hello, Vdw, Rk, Srk
+from thermolib import hello, Vdw, Rk, Srk, Pr
 
 print("test_hello:", hello())
 
@@ -24,6 +24,9 @@ rk.set_mass_unit()
 
 srk = Srk(TC, PC, OMEGA, M)
 srk.set_mass_unit()
+
+pr = Pr(TC, PC, OMEGA, M)
+pr.set_mass_unit()
 
 p_s = []
 rho_v = []
@@ -69,5 +72,20 @@ rho_l = np.array(rho_l)
 
 plt.plot(rho_v, p_s, color="blue")
 plt.plot(rho_l, p_s, color="blue")
+
+p_s = []
+rho_v = []
+rho_l = []
+for T in range(math.floor(0.7 * TC), math.ceil(TC)):
+    pr.t_flash(T)
+    p_s.append(pr.p())
+    rho_v.append(pr.rho_v())
+    rho_l.append(pr.rho_l())
+p_s = np.array(p_s)
+rho_v = np.array(rho_v)
+rho_l = np.array(rho_l)
+
+plt.plot(rho_v, p_s, color="yellow")
+plt.plot(rho_l, p_s, color="yellow")
 
 plt.show()

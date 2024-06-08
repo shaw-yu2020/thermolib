@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 fn hello() -> PyResult<String> {
     Ok(String::from("Hello, Rust And Python."))
 }
+use crate::Pr;
 use crate::Rk;
 use crate::Srk;
 use crate::Vdw;
@@ -15,5 +16,6 @@ pub fn pylib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Vdw>()?;
     m.add_class::<Rk>()?;
     m.add_class::<Srk>()?;
+    m.add_class::<Pr>()?;
     Ok(())
 }
