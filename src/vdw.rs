@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use pyo3::{pyclass, pymethods};
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum VdwErr {
@@ -9,11 +8,12 @@ enum VdwErr {
     TisTooMax,
     #[error("t_flash diverge")]
     NotConvForT,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
+    #[error("property not in single phase")]
+    NotInSinglePhase,
 }
+use pyo3::{pyclass, pymethods};
 /// Vdw EOS
 #[pyclass]
 #[allow(non_snake_case)]
@@ -88,7 +88,7 @@ impl Vdw {
 #[allow(non_snake_case)]
 impl Vdw {
     #[new]
-    pub fn new(Tc: f64, pc: f64, M: f64) -> Self {
+    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
         let R = 8.314462618;
         let Zc = 3.0 / 8.0;
         let mut vdw = Vdw {
@@ -97,8 +97,8 @@ impl Vdw {
             pc,
             R,
             M,
-            a: 27.0 * (R * Tc).powi(2) / 64.0 / pc,
-            b: R * Tc / 8.0 / pc,
+            a: 27.0 * (R * Tc).powi(2) / (64.0 * pc),
+            b: R * Tc / (8.0 * pc),
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -140,15 +140,11 @@ impl Vdw {
                 return Err(anyhow!(VdwErr::TisTooMax));
             }
         }
-        let mut counter = 0;
-        let mut ps = (ps_min + ps_max) / 2.0;
+        let mut ps;
         let mut lnfp;
-        loop {
-            if counter == 1000 {
-                return Err(anyhow!(VdwErr::NotConvForT));
-            } else {
-                counter += 1;
-            }
+        let mut counter = 0;
+        while counter <= 1000 {
+            ps = (ps_min + ps_max) / 2.0;
             self.p = ps;
             lnfp = self.calc_diff_lnfpvl();
             if lnfp.abs() < 1E-6 {
@@ -160,8 +156,9 @@ impl Vdw {
                 ps_min = ps;
                 lnfp_pmin = lnfp;
             }
-            ps = (ps_min + ps_max) / 2.0;
+            counter += 1;
         }
+        Err(anyhow!(VdwErr::NotConvForT))
     }
     pub fn tp_flash(&mut self, T: f64, p: f64) {
         self.T = T;
@@ -215,14 +212,15 @@ mod tests {
         let Tc: f64 = 430.64; // K
         let pc = 7886600.0; // Pa
         let M = 0.064064; // kg/mol
-        let mut SO2 = Vdw::new(Tc, pc, M);
+        let mut SO2 = Vdw::new_fluid(Tc, pc, M);
         let Tmin = (0.7 * Tc).floor() as i32;
         let Tmax = Tc.ceil() as i32;
         for T in Tmin..Tmax {
             if let Err(_) = SO2.t_flash(T as f64) {
-                println!("test_vdw panic at {}K", T);
+                // println!("test_vdw panic at {}K", T);
                 panic!();
             } else {
+                /*
                 println!(
                     "test_vdw t_flash() at {}K p_s={} rho_v={} rho_l={}",
                     SO2.T(),
@@ -230,6 +228,7 @@ mod tests {
                     SO2.rho_v().unwrap(),
                     SO2.rho_l().unwrap(),
                 );
+                 */
             }
         }
     }

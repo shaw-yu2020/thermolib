@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use pyo3::{pyclass, pymethods};
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum RkErr {
@@ -9,11 +8,12 @@ enum RkErr {
     TisTooMax,
     #[error("t_flash diverge")]
     NotConvForT,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
+    #[error("property not in single phase")]
+    NotInSinglePhase,
 }
+use pyo3::{pyclass, pymethods};
 /// Rk EOS
 #[pyclass]
 #[allow(non_snake_case)]
@@ -87,7 +87,7 @@ impl Rk {
 #[allow(non_snake_case)]
 impl Rk {
     #[new]
-    pub fn new(Tc: f64, pc: f64, M: f64) -> Self {
+    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
         let R = 8.314462618;
         let Zc = 1.0 / 3.0;
         let mut rk = Rk {
@@ -139,15 +139,11 @@ impl Rk {
                 return Err(anyhow!(RkErr::TisTooMax));
             }
         }
-        let mut counter = 0;
-        let mut ps = (ps_min + ps_max) / 2.0;
+        let mut ps;
         let mut lnfp;
-        loop {
-            if counter == 1000 {
-                return Err(anyhow!(RkErr::NotConvForT));
-            } else {
-                counter += 1;
-            }
+        let mut counter = 0;
+        while counter <= 1000 {
+            ps = (ps_min + ps_max) / 2.0;
             self.p = ps;
             lnfp = self.calc_diff_lnfpvl();
             if lnfp.abs() < 1E-6 {
@@ -159,8 +155,9 @@ impl Rk {
                 ps_min = ps;
                 lnfp_pmin = lnfp;
             }
-            ps = (ps_min + ps_max) / 2.0;
+            counter += 1;
         }
+        Err(anyhow!(RkErr::NotConvForT))
     }
     pub fn tp_flash(&mut self, T: f64, p: f64) {
         self.T = T;
@@ -214,14 +211,15 @@ mod tests {
         let Tc: f64 = 430.64; // K
         let pc = 7886600.0; // Pa
         let M = 0.064064; // kg/mol
-        let mut SO2 = Rk::new(Tc, pc, M);
+        let mut SO2 = Rk::new_fluid(Tc, pc, M);
         let Tmin = (0.7 * Tc).floor() as i32;
         let Tmax = Tc.ceil() as i32;
         for T in Tmin..Tmax {
             if let Err(_) = SO2.t_flash(T as f64) {
-                println!("test_rk panic at {}K", T);
+                // println!("test_rk panic at {}K", T);
                 panic!();
             } else {
+                /*
                 println!(
                     "test_rk t_flash() at {}K p_s={} rho_v={} rho_l={}",
                     SO2.T(),
@@ -229,6 +227,7 @@ mod tests {
                     SO2.rho_v().unwrap(),
                     SO2.rho_l().unwrap(),
                 );
+                 */
             }
         }
     }
