@@ -14,3 +14,6 @@ pub use vdw::Vdw;
 /// Rk EOS
 mod rk;
 pub use rk::Rk;
+/// Srk EOS
+mod srk;
+pub use srk::Srk;
