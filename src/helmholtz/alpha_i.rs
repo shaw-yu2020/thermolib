@@ -4,7 +4,9 @@ pub struct IdealHelmholtz {
     a_1: f64,
     a_tau: f64,
     a_lntau: f64,
+    #[serde(default)]
     poly_terms: Vec<PolynomialTerm>,
+    #[serde(default)]
     pe_terms: Vec<PlankEinsteinTerm>,
 }
 #[allow(non_snake_case)]
