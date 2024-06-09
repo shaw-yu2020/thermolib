@@ -20,3 +20,6 @@ pub use srk::Srk;
 /// Pr EOS
 mod pr;
 pub use pr::Pr;
+/// Helmholtz EOS
+mod helmholtz;
+pub use helmholtz::Helmholtz;
