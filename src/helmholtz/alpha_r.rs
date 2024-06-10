@@ -1,9 +1,12 @@
+use super::GkhTerm;
 use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct ResidualHelmholtz {
     poly_terms: Vec<PolynomialTerm>,
     exp_terms: Vec<ExponentialTerm>,
     gauss_terms: Vec<GaussianTerm>,
+    #[serde(default)]
+    gkh_terms: Vec<GkhTerm>,
 }
 impl ResidualHelmholtz {
     pub fn tau0delta0(&self, tau: f64, delta: f64) -> f64 {
@@ -18,6 +21,11 @@ impl ResidualHelmholtz {
                 .sum::<f64>()
             + self
                 .gauss_terms
+                .iter()
+                .map(|term| term.tau0delta0(tau, delta))
+                .sum::<f64>()
+            + self
+                .gkh_terms
                 .iter()
                 .map(|term| term.tau0delta0(tau, delta))
                 .sum::<f64>()
@@ -37,6 +45,11 @@ impl ResidualHelmholtz {
                 .iter()
                 .map(|term| term.tau0delta1(tau, delta))
                 .sum::<f64>()
+            + self
+                .gkh_terms
+                .iter()
+                .map(|term| term.tau0delta1(tau, delta))
+                .sum::<f64>()
     }
     pub fn tau0delta2(&self, tau: f64, delta: f64) -> f64 {
         self.poly_terms
@@ -50,6 +63,11 @@ impl ResidualHelmholtz {
                 .sum::<f64>()
             + self
                 .gauss_terms
+                .iter()
+                .map(|term| term.tau0delta2(tau, delta))
+                .sum::<f64>()
+            + self
+                .gkh_terms
                 .iter()
                 .map(|term| term.tau0delta2(tau, delta))
                 .sum::<f64>()
@@ -69,6 +87,11 @@ impl ResidualHelmholtz {
                 .iter()
                 .map(|term| term.tau1delta0(tau, delta))
                 .sum::<f64>()
+            + self
+                .gkh_terms
+                .iter()
+                .map(|term| term.tau1delta0(tau, delta))
+                .sum::<f64>()
     }
     pub fn tau1delta1(&self, tau: f64, delta: f64) -> f64 {
         self.poly_terms
@@ -85,6 +108,11 @@ impl ResidualHelmholtz {
                 .iter()
                 .map(|term| term.tau1delta1(tau, delta))
                 .sum::<f64>()
+            + self
+                .gkh_terms
+                .iter()
+                .map(|term| term.tau1delta1(tau, delta))
+                .sum::<f64>()
     }
     pub fn tau2delta0(&self, tau: f64, delta: f64) -> f64 {
         self.poly_terms
@@ -98,6 +126,11 @@ impl ResidualHelmholtz {
                 .sum::<f64>()
             + self
                 .gauss_terms
+                .iter()
+                .map(|term| term.tau2delta0(tau, delta))
+                .sum::<f64>()
+            + self
+                .gkh_terms
                 .iter()
                 .map(|term| term.tau2delta0(tau, delta))
                 .sum::<f64>()

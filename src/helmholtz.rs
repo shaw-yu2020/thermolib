@@ -4,6 +4,8 @@ mod alpha_r;
 use alpha_r::ResidualHelmholtz;
 mod anc_eqn;
 use anc_eqn::{PsEqn, RholEqn, RhovEqn};
+mod assoc;
+use assoc::GkhTerm;
 mod rho_ini;
 use rho_ini::rho_pr;
 /// Helmholtz EOS

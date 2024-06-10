@@ -5,9 +5,15 @@ fn compare_eq(f64_short: f64, f64_long: f64) {
         return;
     } // check relative deviation.
     let string_short = f64_short.to_string();
-    let length = match string_short.rfind(".") {
+    let mut length = match string_short.rfind(".") {
         Some(index) => (string_short.len() - index - 1) as i32,
         None => 0,
+    };
+    if 0 == length && 0.0 != f64_short && 0.0 != f64_long {
+        while 0.0 == f64_short % 10_f64.powi(-length) {
+            length -= 1;
+        }
+        length += 1;
     };
     let round_long = (f64_long * 10_f64.powi(length)).round() / 10_f64.powi(length);
     assert_eq!(f64_short, round_long);
