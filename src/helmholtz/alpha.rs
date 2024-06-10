@@ -3,7 +3,9 @@ use super::{HelmholtzErr, Phase};
 use super::{IdealHelmholtz, ResidualHelmholtz};
 use super::{PsEqn, RholEqn, RhovEqn};
 use anyhow::anyhow;
+use pyo3::{pyclass, pymethods};
 use serde::Deserialize;
+#[pyclass]
 #[derive(Deserialize)]
 #[allow(non_snake_case)]
 pub struct Helmholtz {
@@ -20,35 +22,6 @@ pub struct Helmholtz {
     omega: f64,
     #[serde(skip, default)]
     phase: Phase,
-}
-impl Helmholtz {
-    /// read helmholtz equation of state from fluid.json file
-    pub fn read_json(path: &str) -> anyhow::Result<Helmholtz> {
-        let mut file_json: Option<std::fs::File>;
-        file_json = match std::fs::File::open(std::path::Path::new(path)) {
-            Ok(file) => Some(file),
-            Err(_) => None,
-        };
-        if file_json.is_none() {
-            file_json = match std::fs::File::open(
-                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("res")
-                    .join(path),
-            ) {
-                Ok(file) => Some(file),
-                Err(_) => None,
-            };
-        };
-        let mut file_json = file_json.ok_or(anyhow!(HelmholtzErr::NoJson))?;
-        let mut str_json = String::new();
-        let _ = std::io::Read::read_to_string(&mut file_json, &mut str_json);
-        let eos: Option<Helmholtz> = match serde_json::from_str(&str_json) {
-            Ok(eos) => Some(eos),
-            Err(_) => None,
-        };
-        let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
-        Ok(eos)
-    }
 }
 #[allow(non_snake_case)]
 impl Helmholtz {
@@ -111,9 +84,6 @@ impl Helmholtz {
                 - delta.ln()
                 - self.alphar.tau0delta0(tau, delta))
     }
-}
-#[allow(non_snake_case)]
-impl Helmholtz {
     fn J(&self, tau: f64, delta: f64) -> f64 {
         delta * (1.0 + self.alphar.tau0delta1(tau, delta))
     }
@@ -126,6 +96,38 @@ impl Helmholtz {
     fn Kdelta(&self, tau: f64, delta: f64) -> f64 {
         (2.0 * self.alphar.tau0delta1(tau, delta) + self.alphar.tau0delta2(tau, delta) + 1.0)
             / delta
+    }
+}
+#[pymethods]
+#[allow(non_snake_case)]
+impl Helmholtz {
+    /// read helmholtz equation of state from fluid.json file
+    #[new]
+    pub fn read_json(path: &str) -> anyhow::Result<Helmholtz> {
+        let mut file_json: Option<std::fs::File>;
+        file_json = match std::fs::File::open(std::path::Path::new(path)) {
+            Ok(file) => Some(file),
+            Err(_) => None,
+        };
+        if file_json.is_none() {
+            file_json = match std::fs::File::open(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("res")
+                    .join(path),
+            ) {
+                Ok(file) => Some(file),
+                Err(_) => None,
+            };
+        };
+        let mut file_json = file_json.ok_or(anyhow!(HelmholtzErr::NoJson))?;
+        let mut str_json = String::new();
+        let _ = std::io::Read::read_to_string(&mut file_json, &mut str_json);
+        let eos: Option<Helmholtz> = match serde_json::from_str(&str_json) {
+            Ok(eos) => Some(eos),
+            Err(_) => None,
+        };
+        let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
+        Ok(eos)
     }
     pub fn t_flash(&mut self, Ts: f64) -> anyhow::Result<()> {
         let tau = self.Tc / Ts;
@@ -247,9 +249,6 @@ impl Helmholtz {
         self.phase = Phase::One { T, rho };
         Ok(())
     }
-}
-#[allow(non_snake_case)]
-impl Helmholtz {
     pub fn T(&self) -> f64 {
         match self.phase {
             Phase::One { T, .. } => T,
