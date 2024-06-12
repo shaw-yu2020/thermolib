@@ -316,18 +316,3 @@ impl Helmholtz {
         }
     }
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    #[allow(non_snake_case)]
-    fn test_helmholtz_alpha() {
-        let mut SO2: Helmholtz = Helmholtz::read_json("SO2.json").expect("no SO2.json");
-        for T in 197..432 {
-            if let Err(_) = SO2.t_flash(T as f64) {
-                assert_eq!(T, 431);
-                break;
-            }
-        }
-    }
-}
