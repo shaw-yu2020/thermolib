@@ -129,6 +129,9 @@ impl Helmholtz {
         let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
         Ok(eos)
     }
+    pub fn td_unchecked(&mut self, T: f64, rho: f64) {
+        self.phase = Phase::One { T, rho }
+    }
     pub fn t_flash(&mut self, Ts: f64) -> anyhow::Result<()> {
         let tau = self.Tc / Ts;
         let delta_v0 = self.rhovs.calc(Ts, self.Tc, 1.0);
