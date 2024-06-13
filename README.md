@@ -4,6 +4,13 @@ thermolib
 
 An open-source library for the calculation of fluid properties.
 
+# Srk
+
+| Flash Calculation | Get Corresponding Properties |
+| :---: | :---: |
+| `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
+| `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
+
 # Pr
 
 | Flash Calculation | Get Corresponding Properties |
