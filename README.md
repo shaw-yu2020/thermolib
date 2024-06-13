@@ -18,6 +18,7 @@ let Tc: f64 = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Vdw::new_fluid(Tc, pc, M);
+let _ = SO2.set_mole_unit();
 
 if let Ok(_) = SO2.t_flash(273.15) {
     println!("T_s={}", SO2.T_s().unwrap());
