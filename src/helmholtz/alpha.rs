@@ -227,7 +227,7 @@ impl Helmholtz {
         } else if let Err(why) = self.t_flash(T) {
             return Err(why);
         } else {
-            let ps = self.p();
+            let ps = self.p_s().unwrap();
             if p < ps {
                 phase = 'v';
             } else {
@@ -252,18 +252,16 @@ impl Helmholtz {
         self.phase = Phase::One { T, rho };
         Ok(())
     }
-    pub fn T(&self) -> f64 {
+    pub fn T(&self) -> anyhow::Result<f64> {
         match self.phase {
-            Phase::One { T, .. } => T,
-            Phase::Two { Ts, .. } => Ts,
+            Phase::One { T, .. } => Ok(T),
+            Phase::Two { .. } => Err(anyhow!(HelmholtzErr::NotInTwoPhase)),
         }
     }
-    pub fn p(&self) -> f64 {
+    pub fn p(&self) -> anyhow::Result<f64> {
         match self.phase {
-            Phase::One { T, rho } => self.calc_p(T, rho),
-            Phase::Two { Ts, rhov, rhol, .. } => {
-                (self.calc_p(Ts, rhov) + self.calc_p(Ts, rhol)) / 2.0
-            }
+            Phase::One { T, rho } => Ok(self.calc_p(T, rho)),
+            Phase::Two { .. } => Err(anyhow!(HelmholtzErr::NotInTwoPhase)),
         }
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
@@ -303,6 +301,20 @@ impl Helmholtz {
             Phase::One { T, rho } => Ok(self.calc_s(T, rho)),
             Phase::Two { Ts, rhov, rhol, x } => {
                 Ok(x * self.calc_s(Ts, rhov) + (1.0 - x) * self.calc_s(Ts, rhol))
+            }
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        match self.phase {
+            Phase::One { .. } => Err(anyhow!(HelmholtzErr::NotInOnePhase)),
+            Phase::Two { Ts, .. } => Ok(Ts),
+        }
+    }
+    pub fn p_s(&self) -> anyhow::Result<f64> {
+        match self.phase {
+            Phase::One { .. } => Err(anyhow!(HelmholtzErr::NotInOnePhase)),
+            Phase::Two { Ts, rhov, rhol, x } => {
+                Ok(x * self.calc_p(Ts, rhov) + (1.0 - x) * self.calc_p(Ts, rhol))
             }
         }
     }
