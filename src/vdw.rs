@@ -175,17 +175,39 @@ impl Vdw {
             self.is_single_phase = true;
         }
     }
-    pub fn T(&self) -> f64 {
-        self.T
+    pub fn T(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.T)
+        } else {
+            Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
     }
-    pub fn p(&self) -> f64 {
-        self.p
+    pub fn p(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.p)
+        } else {
+            Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.p / (self.Z * self.R * self.T))
         } else {
             Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(VdwErr::NotInSinglePhase))
+        } else {
+            Ok(self.T)
+        }
+    }
+    pub fn p_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(VdwErr::NotInSinglePhase))
+        } else {
+            Ok(self.p)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
@@ -217,18 +239,7 @@ mod tests {
         let Tmax = Tc.ceil() as i32;
         for T in Tmin..Tmax {
             if let Err(_) = SO2.t_flash(T as f64) {
-                // println!("test_vdw panic at {}K", T);
                 panic!();
-            } else {
-                /*
-                println!(
-                    "test_vdw t_flash() at {}K p_s={} rho_v={} rho_l={}",
-                    SO2.T(),
-                    SO2.p(),
-                    SO2.rho_v().unwrap(),
-                    SO2.rho_l().unwrap(),
-                );
-                 */
             }
         }
     }
