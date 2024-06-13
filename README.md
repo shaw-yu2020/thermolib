@@ -14,7 +14,7 @@ An open-source library for the calculation of fluid properties.
 ```rust
 use thermolib::Vdw;
 
-let Tc: f64 = 430.64; // K
+let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Vdw::new_fluid(Tc, pc, M);
@@ -66,7 +66,7 @@ print("rho =", SO2.rho())
 ```rust
 use thermolib::Rk;
 
-let Tc: f64 = 430.64; // K
+let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Rk::new_fluid(Tc, pc, M);
@@ -95,7 +95,7 @@ SO2.set_mole_unit()
 ```rust
 use thermolib::Srk;
 
-let Tc: f64 = 430.64; // K
+let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let omega = 0.256;
 let M = 0.064064; // kg/mol
@@ -111,7 +111,7 @@ Tc = 430.64
 pc = 7886600
 omega = 0.256
 M = 0.064064
-SO2 = Srk(TC, PC, M)
+SO2 = Srk(Tc, Pc, omega, M)
 SO2.set_mole_unit()
 
 ```
@@ -126,11 +126,12 @@ SO2.set_mole_unit()
 ```rust
 use thermolib::Pr;
 
-let Tc: f64 = 430.64; // K
+let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let omega = 0.256;
 let M = 0.064064; // kg/mol
 let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
+let _ = SO2.set_mole_unit();
 
 ```
 
@@ -141,8 +142,8 @@ Tc = 430.64
 pc = 7886600
 omega = 0.256
 M = 0.064064
-
-SO2 = Pr(TC, PC, M)
+SO2 = Pr(Tc, Pc, omega, M)
+SO2.set_mole_unit()
 
 ```
 
