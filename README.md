@@ -41,6 +41,7 @@ Tc = 430.64
 pc = 7886600
 M = 0.064064
 SO2 = Vdw(Tc, pc, M)
+SO2.set_mole_unit()
 
 SO2.t_flash(273.15)
 print("T_s =", SO2.T_s())
@@ -69,6 +70,7 @@ let Tc: f64 = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Rk::new_fluid(Tc, pc, M);
+let _ = SO2.set_mole_unit();
 
 ```
 
@@ -79,6 +81,7 @@ Tc = 430.64
 pc = 7886600
 M = 0.064064
 SO2 = Rk(Tc, pc, M)
+SO2.set_mole_unit()
 
 ```
 

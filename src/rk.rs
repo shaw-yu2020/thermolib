@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum RkErr {
@@ -13,8 +12,27 @@ enum RkErr {
     #[error("property not in single phase")]
     NotInSinglePhase,
 }
+use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 /// Rk EOS
+/// ```
+/// use thermolib::Rk;
+/// let Tc = 430.64; // K
+/// let pc = 7886600.0; // Pa
+/// let M = 0.064064; // kg/mol
+/// let mut SO2 = Rk::new_fluid(Tc, pc, M);
+/// let _ = SO2.set_mole_unit();
+/// if let Ok(_) = SO2.t_flash(273.15) {
+///     println!("T_s={}", SO2.T_s().unwrap());
+///     println!("p_s={}", SO2.p_s().unwrap());
+///     println!("rho_v={}", SO2.rho_v().unwrap());
+///     println!("rho_l={}", SO2.rho_l().unwrap());
+/// }
+/// SO2.tp_flash(273.15, 0.1e6);
+/// println!("T={}", SO2.T().unwrap());
+/// println!("p={}", SO2.p().unwrap());
+/// println!("rho={}", SO2.rho().unwrap());
+/// ```
 #[pyclass]
 #[allow(non_snake_case)]
 pub struct Rk {
