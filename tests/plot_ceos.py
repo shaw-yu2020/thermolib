@@ -30,81 +30,81 @@ pr.set_mass_unit()
 
 fig, (ax1, ax2) = plt.subplots(2, 1)
 
-t = []
-p = []
+t_s = []
+p_s = []
 rho_v = []
 rho_l = []
 for T in range(math.floor(0.7 * TC), math.ceil(TC)):
     vdw.t_flash(T)
-    t.append(vdw.T())
-    p.append(vdw.p())
+    t_s.append(vdw.T_s())
+    p_s.append(vdw.p_s())
     rho_v.append(vdw.rho_v())
     rho_l.append(vdw.rho_l())
-t = np.array(t)
-p_s = np.array(p)
+t_s = np.array(t_s)
+p_s = np.array(p_s)
 rho_v = np.array(rho_v)
 rho_l = np.array(rho_l)
 
-ax1.plot(t, p, color="red", label="Vdw")
-ax2.plot(rho_v, p, color="red", label="Vdw")
-ax2.plot(rho_l, p, color="red")
+ax1.plot(t_s, p_s, color="red", label="Vdw")
+ax2.plot(rho_v, p_s, color="red", label="Vdw")
+ax2.plot(rho_l, p_s, color="red")
 
-t = []
-p = []
+t_s = []
+p_s = []
 rho_v = []
 rho_l = []
 for T in range(math.floor(0.7 * TC), math.ceil(TC)):
     rk.t_flash(T)
-    t.append(rk.T())
-    p.append(rk.p())
+    t_s.append(rk.T_s())
+    p_s.append(rk.p_s())
     rho_v.append(rk.rho_v())
     rho_l.append(rk.rho_l())
-t = np.array(t)
-p = np.array(p)
+t_s = np.array(t_s)
+p_s = np.array(p_s)
 rho_v = np.array(rho_v)
 rho_l = np.array(rho_l)
 
-ax1.plot(t, p, color="yellow", label="Rk")
-ax2.plot(rho_v, p, color="yellow", label="Rk")
-ax2.plot(rho_l, p, color="yellow")
+ax1.plot(t_s, p_s, color="yellow", label="Rk")
+ax2.plot(rho_v, p_s, color="yellow", label="Rk")
+ax2.plot(rho_l, p_s, color="yellow")
 
-t = []
-p = []
+t_s = []
+p_s = []
 rho_v = []
 rho_l = []
 for T in range(math.floor(0.7 * TC), math.ceil(TC)):
     srk.t_flash(T)
-    t.append(srk.T())
-    p.append(srk.p())
+    t_s.append(srk.T_s())
+    p_s.append(srk.p_s())
     rho_v.append(srk.rho_v())
     rho_l.append(srk.rho_l())
-t = np.array(t)
-p = np.array(p)
+t_s = np.array(t_s)
+p_s = np.array(p_s)
 rho_v = np.array(rho_v)
 rho_l = np.array(rho_l)
 
-ax1.plot(t, p, color="blue", label="Srk")
-ax2.plot(rho_v, p, color="blue", label="Srk")
-ax2.plot(rho_l, p, color="blue")
+ax1.plot(t_s, p_s, color="blue", label="Srk")
+ax2.plot(rho_v, p_s, color="blue", label="Srk")
+ax2.plot(rho_l, p_s, color="blue")
 
-t = []
-p = []
+t_s = []
+p_s = []
 rho_v = []
 rho_l = []
 for T in range(math.floor(0.7 * TC), math.ceil(TC)):
     pr.t_flash(T)
-    t.append(pr.T())
-    p.append(pr.p())
+    t_s.append(pr.T_s())
+    p_s.append(pr.p_s())
     rho_v.append(pr.rho_v())
     rho_l.append(pr.rho_l())
-t = np.array(t)
-p = np.array(p)
+t_s = np.array(t_s)
+p_s = np.array(p_s)
 rho_v = np.array(rho_v)
 rho_l = np.array(rho_l)
 
-ax1.plot(t, p, color="green", label="Pr")
-ax2.plot(rho_v, p, color="green", label="Pr")
-ax2.plot(rho_l, p, color="green")
+ax1.plot(t_s, p_s, color="green", label="Pr")
+ax2.plot(rho_v, p_s, color="green", label="Pr")
+ax2.plot(rho_l, p_s, color="green")
 
 ax1.set_xlabel("temperature K")
 ax1.set_ylabel("pressure Pa")
