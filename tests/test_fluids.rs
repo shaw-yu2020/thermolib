@@ -64,7 +64,7 @@ impl Value {
     pub fn test(&self, fluid: &mut Helmholtz) {
         // test td_flash
         fluid.td_flash(self.T, self.rho).unwrap();
-        compare_eq(self.p, fluid.p());
+        compare_eq(self.p, fluid.p().unwrap());
         compare_eq(self.cv, fluid.cv().unwrap());
         compare_eq(self.cp, fluid.cp().unwrap());
         compare_eq(self.w, fluid.w().unwrap());

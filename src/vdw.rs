@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum VdwErr {
@@ -13,8 +12,27 @@ enum VdwErr {
     #[error("property not in single phase")]
     NotInSinglePhase,
 }
+use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 /// Vdw EOS
+/// ```
+/// use thermolib::Vdw;
+/// let Tc = 430.64; // K
+/// let pc = 7886600.0; // Pa
+/// let M = 0.064064; // kg/mol
+/// let mut SO2 = Vdw::new_fluid(Tc, pc, M);
+/// let _ = SO2.set_mole_unit();
+/// if let Ok(_) = SO2.t_flash(273.15) {
+///     println!("T_s={}", SO2.T_s().unwrap());
+///     println!("p_s={}", SO2.p_s().unwrap());
+///     println!("rho_v={}", SO2.rho_v().unwrap());
+///     println!("rho_l={}", SO2.rho_l().unwrap());
+/// }
+/// SO2.tp_flash(273.15, 0.1e6);
+/// println!("T={}", SO2.T().unwrap());
+/// println!("p={}", SO2.p().unwrap());
+/// println!("rho={}", SO2.rho().unwrap());
+/// ```
 #[pyclass]
 #[allow(non_snake_case)]
 pub struct Vdw {
@@ -175,17 +193,39 @@ impl Vdw {
             self.is_single_phase = true;
         }
     }
-    pub fn T(&self) -> f64 {
-        self.T
+    pub fn T(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.T)
+        } else {
+            Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
     }
-    pub fn p(&self) -> f64 {
-        self.p
+    pub fn p(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.p)
+        } else {
+            Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.p / (self.Z * self.R * self.T))
         } else {
             Err(anyhow!(VdwErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(VdwErr::NotInSinglePhase))
+        } else {
+            Ok(self.T)
+        }
+    }
+    pub fn p_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(VdwErr::NotInSinglePhase))
+        } else {
+            Ok(self.p)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
@@ -217,18 +257,7 @@ mod tests {
         let Tmax = Tc.ceil() as i32;
         for T in Tmin..Tmax {
             if let Err(_) = SO2.t_flash(T as f64) {
-                // println!("test_vdw panic at {}K", T);
                 panic!();
-            } else {
-                /*
-                println!(
-                    "test_vdw t_flash() at {}K p_s={} rho_v={} rho_l={}",
-                    SO2.T(),
-                    SO2.p(),
-                    SO2.rho_v().unwrap(),
-                    SO2.rho_l().unwrap(),
-                );
-                 */
             }
         }
     }

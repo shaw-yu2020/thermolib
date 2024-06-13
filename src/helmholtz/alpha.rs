@@ -5,6 +5,27 @@ use super::{PsEqn, RholEqn, RhovEqn};
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 use serde::Deserialize;
+/// Helmholtz EOS
+/// ```
+/// use thermolib::Helmholtz;
+/// let mut SO2 = Helmholtz::read_json("SO2.json").expect("no SO2.json");
+/// if let Ok(_) = SO2.t_flash(273.15) {
+///     assert_eq!(273.15, (SO2.T_s().unwrap() * 1e2).round() / 1e2);
+///     assert_eq!(0.15549e6, (SO2.p_s().unwrap() / 1e1).round() * 1e1);
+///     assert_eq!(71.106, (SO2.rho_v().unwrap() * 1e3).round() / 1e3);
+///     assert_eq!(22403.0, (SO2.rho_l().unwrap() * 1e0).round() / 1e0);
+/// }
+/// if let Ok(_) = SO2.tp_flash(273.15, 0.1e6) {
+///     assert_eq!(273.15, (SO2.T().unwrap() * 1e2).round() / 1e2);
+///     assert_eq!(0.1e6, (SO2.p().unwrap() / 1e5).round() * 1e5);
+///     assert_eq!(45.093, (SO2.rho().unwrap() * 1e3).round() / 1e3);
+///     assert_eq!(31.953, (SO2.cv().unwrap() * 1e3).round() / 1e3);
+///     assert_eq!(41.478, (SO2.cp().unwrap() * 1e3).round() / 1e3);
+///     assert_eq!(209.41, (SO2.w().unwrap() * 1e2).round() / 1e2);
+///     assert_eq!(25375.0, (SO2.h().unwrap() * 1e0).round() / 1e0);
+///     assert_eq!(96.51, (SO2.s().unwrap() * 1e2).round() / 1e2);
+/// }
+/// ```
 #[pyclass]
 #[derive(Deserialize)]
 #[allow(non_snake_case)]
@@ -227,7 +248,7 @@ impl Helmholtz {
         } else if let Err(why) = self.t_flash(T) {
             return Err(why);
         } else {
-            let ps = self.p();
+            let ps = self.p_s().unwrap();
             if p < ps {
                 phase = 'v';
             } else {
@@ -252,18 +273,16 @@ impl Helmholtz {
         self.phase = Phase::One { T, rho };
         Ok(())
     }
-    pub fn T(&self) -> f64 {
+    pub fn T(&self) -> anyhow::Result<f64> {
         match self.phase {
-            Phase::One { T, .. } => T,
-            Phase::Two { Ts, .. } => Ts,
+            Phase::One { T, .. } => Ok(T),
+            Phase::Two { .. } => Err(anyhow!(HelmholtzErr::NotInTwoPhase)),
         }
     }
-    pub fn p(&self) -> f64 {
+    pub fn p(&self) -> anyhow::Result<f64> {
         match self.phase {
-            Phase::One { T, rho } => self.calc_p(T, rho),
-            Phase::Two { Ts, rhov, rhol, .. } => {
-                (self.calc_p(Ts, rhov) + self.calc_p(Ts, rhol)) / 2.0
-            }
+            Phase::One { T, rho } => Ok(self.calc_p(T, rho)),
+            Phase::Two { .. } => Err(anyhow!(HelmholtzErr::NotInTwoPhase)),
         }
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
@@ -303,6 +322,20 @@ impl Helmholtz {
             Phase::One { T, rho } => Ok(self.calc_s(T, rho)),
             Phase::Two { Ts, rhov, rhol, x } => {
                 Ok(x * self.calc_s(Ts, rhov) + (1.0 - x) * self.calc_s(Ts, rhol))
+            }
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        match self.phase {
+            Phase::One { .. } => Err(anyhow!(HelmholtzErr::NotInOnePhase)),
+            Phase::Two { Ts, .. } => Ok(Ts),
+        }
+    }
+    pub fn p_s(&self) -> anyhow::Result<f64> {
+        match self.phase {
+            Phase::One { .. } => Err(anyhow!(HelmholtzErr::NotInOnePhase)),
+            Phase::Two { Ts, rhov, rhol, x } => {
+                Ok(x * self.calc_p(Ts, rhov) + (1.0 - x) * self.calc_p(Ts, rhol))
             }
         }
     }
