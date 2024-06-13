@@ -100,6 +100,7 @@ let pc = 7886600.0; // Pa
 let omega = 0.256;
 let M = 0.064064; // kg/mol
 let mut SO2 = Srk::new_fluid(Tc, pc, omega, M);
+let _ = SO2.set_mole_unit();
 
 ```
 
@@ -110,8 +111,8 @@ Tc = 430.64
 pc = 7886600
 omega = 0.256
 M = 0.064064
-
 SO2 = Srk(TC, PC, M)
+SO2.set_mole_unit()
 
 ```
 
