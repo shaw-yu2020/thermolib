@@ -5,6 +5,7 @@ fn hello() -> PyResult<String> {
     Ok(String::from("Hello, Rust And Python."))
 }
 use crate::Helmholtz;
+use crate::LiquidMetal;
 use crate::Pr;
 use crate::Rk;
 use crate::Srk;
@@ -19,5 +20,6 @@ pub fn pylib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Srk>()?;
     m.add_class::<Pr>()?;
     m.add_class::<Helmholtz>()?;
+    m.add_class::<LiquidMetal>()?;
     Ok(())
 }
