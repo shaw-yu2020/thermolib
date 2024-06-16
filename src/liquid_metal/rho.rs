@@ -123,7 +123,8 @@ lazy_static! {
                 c0: 6979.0,
                 c1: -0.652
             }
-        )(
+        ),
+        (
             Metals::Hf,
             RhoParams {
                 Tm: 2500.0,
