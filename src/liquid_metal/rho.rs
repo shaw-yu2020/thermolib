@@ -25,6 +25,16 @@ impl RhoParams {
 lazy_static! {
     pub static ref METALS_TO_RHOPARAMS: HashMap<Metals, RhoParams> = HashMap::from([
         (
+            Metals::Al,
+            RhoParams {
+                Tm: 933.47,
+                Tmin: 933.0,
+                Tmax: 1190.0,
+                c0: 2377.23,
+                c1: -0.311
+            }
+        ),
+        (
             Metals::Ti,
             RhoParams {
                 Tm: 1941.0,
@@ -52,6 +62,16 @@ lazy_static! {
                 Tmax: 2503.0,
                 c0: 6097.1,
                 c1: -0.6536
+            }
+        ),
+        (
+            Metals::Fe,
+            RhoParams {
+                Tm: 1811.0,
+                Tmin: 1809.0,
+                Tmax: 2480.0,
+                c0: 7034.96,
+                c1: -0.926
             }
         ),
         (

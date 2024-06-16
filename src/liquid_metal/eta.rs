@@ -23,5 +23,26 @@ impl EtaParams {
     }
 }
 lazy_static! {
-    pub static ref METALS_TO_ETAPARAMS: HashMap<Metals, EtaParams> = HashMap::from([]);
+    pub static ref METALS_TO_ETAPARAMS: HashMap<Metals, EtaParams> = HashMap::from([
+        (
+            Metals::Al,
+            EtaParams {
+                Tmin: 933.0,
+                Tmax: 1270.0,
+                a0: -0.7324,
+                a1: 803.49,
+                eta0: 1.0,
+            },
+        ),
+        (
+            Metals::Fe,
+            EtaParams {
+                Tmin: 1809.0,
+                Tmax: 2480.0,
+                a0: -0.7209,
+                a1: 2694.85,
+                eta0: 1.0
+            }
+        ),
+    ]);
 }

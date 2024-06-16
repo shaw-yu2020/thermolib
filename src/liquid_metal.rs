@@ -76,9 +76,11 @@ impl LiquidMetal {
 }
 lazy_static! {
     static ref STRING_TO_METALS: HashMap<String, Metals> = HashMap::from([
+        (String::from("Al"), Metals::Al),
         (String::from("Ti"), Metals::Ti),
         (String::from("V"), Metals::V),
         (String::from("Cr"), Metals::Cr),
+        (String::from("Fe"), Metals::Fe),
         (String::from("Zr"), Metals::Zr),
         (String::from("Nb"), Metals::Nb),
         (String::from("Mo"), Metals::Mo),
@@ -89,9 +91,11 @@ lazy_static! {
 }
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub enum Metals {
+    Al, // 13
     Ti, // 22
     V,  // 23
     Cr, // 24
+    Fe, // 26
     Zr, // 40
     Nb, // 41
     Mo, // 42
@@ -101,9 +105,11 @@ pub enum Metals {
 }
 lazy_static! {
     static ref METALS_TO_STRING: HashMap<Metals, String> = HashMap::from([
+        (Metals::Al, String::from("Aluminum")),
         (Metals::Ti, String::from("Titanium")),
         (Metals::V, String::from("Vanadium")),
         (Metals::Cr, String::from("Chromium")),
+        (Metals::Fe, String::from("Iron")),
         (Metals::Zr, String::from("Zirconium")),
         (Metals::Nb, String::from("Niobium")),
         (Metals::Mo, String::from("Molybdenum")),
