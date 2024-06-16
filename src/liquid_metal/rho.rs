@@ -1,34 +1,29 @@
-use super::{LiquidMetal, LiquidMetalErr, Metals};
+use super::{LiquidMetalErr, Metals};
 use anyhow::anyhow;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 #[allow(non_snake_case)]
-impl LiquidMetal {
-    /// calculate density of liquid metals at 0.1 MPa
-    pub fn rho(&self, T: f64) -> anyhow::Result<f64> {
-        if let Some(params) = MAP.get(&self.metal) {
-            if T < params.Tmin {
-                Err(anyhow!(LiquidMetalErr::TisTooMin))
-            } else if T > params.Tmax {
-                Err(anyhow!(LiquidMetalErr::TisTooMax))
-            } else {
-                Ok(params.c0 + params.c1 * (T - params.Tm))
-            }
-        } else {
-            Err(anyhow!(LiquidMetalErr::NoProperty))
-        }
-    }
-}
-#[allow(non_snake_case)]
-struct RhoParams {
+pub struct RhoParams {
     Tm: f64,
     Tmin: f64,
     Tmax: f64,
     c0: f64,
     c1: f64,
 }
+#[allow(non_snake_case)]
+impl RhoParams {
+    pub fn calc(&self, T: f64) -> anyhow::Result<f64> {
+        if T < self.Tmin {
+            Err(anyhow!(LiquidMetalErr::TisTooMin))
+        } else if T > self.Tmax {
+            Err(anyhow!(LiquidMetalErr::TisTooMax))
+        } else {
+            Ok(self.c0 + self.c1 * (T - self.Tm))
+        }
+    }
+}
 lazy_static! {
-    static ref MAP: HashMap<Metals, RhoParams> = HashMap::from([
+    pub static ref METALS_TO_RHOPARAMS: HashMap<Metals, RhoParams> = HashMap::from([
         (
             Metals::Ti,
             RhoParams {

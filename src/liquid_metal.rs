@@ -17,6 +17,9 @@ enum LiquidMetalErr {
 mod eta;
 mod lambda;
 mod rho;
+use eta::METALS_TO_ETAPARAMS;
+use lambda::METALS_TO_LAMBDAPARAMS;
+use rho::METALS_TO_RHOPARAMS;
 /// liquid metal
 /// + Density
 /// + Thermal Conductivity
@@ -31,7 +34,7 @@ pub struct LiquidMetal {
 impl LiquidMetal {
     #[new]
     pub fn new_metal(name: &str) -> anyhow::Result<LiquidMetal> {
-        if let Some(metal) = MAP_SM.get(name) {
+        if let Some(metal) = STRING_TO_METALS.get(name) {
             Ok(Self {
                 metal: metal.clone(),
             })
@@ -40,24 +43,39 @@ impl LiquidMetal {
         }
     }
     pub fn full_name(&self) -> anyhow::Result<String> {
-        if let Some(metal) = MAP_MS.get(&self.metal) {
+        if let Some(metal) = METALS_TO_STRING.get(&self.metal) {
             Ok(metal.clone())
         } else {
             Err(anyhow!(LiquidMetalErr::NoLiquidMetal))
         }
     }
+    /// calculate density of liquid metals at 0.1 MPa
     pub fn calc_rho(&self, T: f64) -> anyhow::Result<f64> {
-        self.rho(T)
+        if let Some(rho_params) = METALS_TO_RHOPARAMS.get(&self.metal) {
+            rho_params.calc(T)
+        } else {
+            Err(anyhow!(LiquidMetalErr::NoProperty))
+        }
     }
+    /// calculate thermal conductivity of liquid metals at 0.1 MPa
     pub fn calc_lambda(&self, T: f64) -> anyhow::Result<f64> {
-        self.lambda(T)
+        if let Some(lambda_params) = METALS_TO_LAMBDAPARAMS.get(&self.metal) {
+            lambda_params.calc(T)
+        } else {
+            Err(anyhow!(LiquidMetalErr::NoProperty))
+        }
     }
+    /// calculate viscosity of liquid metals at 0.1 MPa
     pub fn calc_eta(&self, T: f64) -> anyhow::Result<f64> {
-        self.eta(T)
+        if let Some(eta_params) = METALS_TO_ETAPARAMS.get(&self.metal) {
+            eta_params.calc(T)
+        } else {
+            Err(anyhow!(LiquidMetalErr::NoProperty))
+        }
     }
 }
 lazy_static! {
-    static ref MAP_SM: HashMap<String, Metals> = HashMap::from([
+    static ref STRING_TO_METALS: HashMap<String, Metals> = HashMap::from([
         (String::from("Ti"), Metals::Ti),
         (String::from("V"), Metals::V),
         (String::from("Cr"), Metals::Cr),
@@ -82,7 +100,7 @@ pub enum Metals {
     W,  // 74
 }
 lazy_static! {
-    static ref MAP_MS: HashMap<Metals, String> = HashMap::from([
+    static ref METALS_TO_STRING: HashMap<Metals, String> = HashMap::from([
         (Metals::Ti, String::from("Titanium")),
         (Metals::V, String::from("Vanadium")),
         (Metals::Cr, String::from("Chromium")),

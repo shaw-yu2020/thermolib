@@ -1,26 +1,9 @@
-use super::{LiquidMetal, LiquidMetalErr, Metals};
+use super::{LiquidMetalErr, Metals};
 use anyhow::anyhow;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 #[allow(non_snake_case)]
-impl LiquidMetal {
-    /// calculate thermal conductivity of liquid metals at 0.1 MPa
-    pub fn lambda(&self, T: f64) -> anyhow::Result<f64> {
-        if let Some(params) = MAP.get(&self.metal) {
-            if T < params.Tmin {
-                Err(anyhow!(LiquidMetalErr::TisTooMin))
-            } else if T > params.Tmax {
-                Err(anyhow!(LiquidMetalErr::TisTooMax))
-            } else {
-                Ok(params.d0 + params.d1 * (T - params.Tm) + params.d2 * (T - params.Tm).powi(2))
-            }
-        } else {
-            Err(anyhow!(LiquidMetalErr::NoProperty))
-        }
-    }
-}
-#[allow(non_snake_case)]
-struct LambdaParams {
+pub struct LambdaParams {
     Tm: f64,
     Tmin: f64,
     Tmax: f64,
@@ -28,8 +11,20 @@ struct LambdaParams {
     d1: f64,
     d2: f64,
 }
+#[allow(non_snake_case)]
+impl LambdaParams {
+    pub fn calc(&self, T: f64) -> anyhow::Result<f64> {
+        if T < self.Tmin {
+            Err(anyhow!(LiquidMetalErr::TisTooMin))
+        } else if T > self.Tmax {
+            Err(anyhow!(LiquidMetalErr::TisTooMax))
+        } else {
+            Ok(self.d0 + self.d1 * (T - self.Tm) + self.d2 * (T - self.Tm).powi(2))
+        }
+    }
+}
 lazy_static! {
-    static ref MAP: HashMap<Metals, LambdaParams> = HashMap::from([
+    pub static ref METALS_TO_LAMBDAPARAMS: HashMap<Metals, LambdaParams> = HashMap::from([
         (
             Metals::Ti,
             LambdaParams {
