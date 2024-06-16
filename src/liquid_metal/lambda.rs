@@ -48,17 +48,6 @@ lazy_static! {
             },
         ),
         (
-            Metals::Cr,
-            LambdaParams {
-                Tm: 2180.0,
-                Tmin: 2186.0,
-                Tmax: 2198.0,
-                d0: 0.0,
-                d1: 0.0,
-                d2: 0.0
-            },
-        ),
-        (
             Metals::Zr,
             LambdaParams {
                 Tm: 2128.0,
