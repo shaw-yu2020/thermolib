@@ -75,6 +75,16 @@ lazy_static! {
             }
         ),
         (
+            Metals::Ni,
+            RhoParams {
+                Tm: 1728.0,
+                Tmin: 1728.0,
+                Tmax: 2500.0,
+                c0: 7861.0,
+                c1: -0.988
+            }
+        ),
+        (
             Metals::Cu,
             RhoParams {
                 Tm: 1357.77,
@@ -115,6 +125,16 @@ lazy_static! {
             }
         ),
         (
+            Metals::Ag,
+            RhoParams {
+                Tm: 1234.93,
+                Tmin: 1235.0,
+                Tmax: 1600.0,
+                c0: 9294.0,
+                c1: -0.877
+            }
+        ),
+        (
             Metals::Sn,
             RhoParams {
                 Tm: 505.08,
@@ -122,6 +142,16 @@ lazy_static! {
                 Tmax: 1950.0,
                 c0: 6979.0,
                 c1: -0.652
+            }
+        ),
+        (
+            Metals::Sb,
+            RhoParams {
+                Tm: 899.0,
+                Tmin: 900.0,
+                Tmax: 1300.0,
+                c0: 6467.0,
+                c1: -0.608
             }
         ),
         (
@@ -152,6 +182,26 @@ lazy_static! {
                 Tmax: 5818.0,
                 c0: 17146.4,
                 c1: -0.6769
+            }
+        ),
+        (
+            Metals::Pb,
+            RhoParams {
+                Tm: 600.61,
+                Tmin: 601.0,
+                Tmax: 2000.0,
+                c0: 10656.0,
+                c1: -1.239
+            }
+        ),
+        (
+            Metals::Bi,
+            RhoParams {
+                Tm: 544.55,
+                Tmin: 545.0,
+                Tmax: 1500.0,
+                c0: 10028.0,
+                c1: -1.213
             }
         )
     ]);
