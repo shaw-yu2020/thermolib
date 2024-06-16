@@ -44,5 +44,25 @@ lazy_static! {
                 eta0: 1.0
             }
         ),
+        (
+            Metals::Cu,
+            EtaParams {
+                Tmin: 1356.0,
+                Tmax: 1970.0,
+                a0: -0.422,
+                a1: 1393.4,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Sn,
+            EtaParams {
+                Tmin: 506.0,
+                Tmax: 1280.0,
+                a0: -0.408,
+                a1: 343.4,
+                eta0: 1.0
+            }
+        )
     ]);
 }

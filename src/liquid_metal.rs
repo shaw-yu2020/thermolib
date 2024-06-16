@@ -74,9 +74,11 @@ lazy_static! {
         (String::from("V"), Metals::V),
         (String::from("Cr"), Metals::Cr),
         (String::from("Fe"), Metals::Fe),
+        (String::from("Cu"), Metals::Cu),
         (String::from("Zr"), Metals::Zr),
         (String::from("Nb"), Metals::Nb),
         (String::from("Mo"), Metals::Mo),
+        (String::from("Sn"), Metals::Sn),
         (String::from("Hf"), Metals::Hf),
         (String::from("Ta"), Metals::Ta),
         (String::from("W"), Metals::W),
@@ -89,9 +91,11 @@ pub enum Metals {
     V,  // 23
     Cr, // 24
     Fe, // 26
+    Cu, // 29
     Zr, // 40
     Nb, // 41
     Mo, // 42
+    Sn, // 50
     Hf, // 72
     Ta, // 73
     W,  // 74

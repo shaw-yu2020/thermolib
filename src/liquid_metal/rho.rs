@@ -75,6 +75,16 @@ lazy_static! {
             }
         ),
         (
+            Metals::Cu,
+            RhoParams {
+                Tm: 1357.77,
+                Tmin: 1356.0,
+                Tmax: 2500.0,
+                c0: 7997.0,
+                c1: -0.819
+            }
+        ),
+        (
             Metals::Zr,
             RhoParams {
                 Tm: 2128.0,
@@ -105,6 +115,15 @@ lazy_static! {
             }
         ),
         (
+            Metals::Sn,
+            RhoParams {
+                Tm: 505.08,
+                Tmin: 506.0,
+                Tmax: 1950.0,
+                c0: 6979.0,
+                c1: -0.652
+            }
+        )(
             Metals::Hf,
             RhoParams {
                 Tm: 2500.0,
