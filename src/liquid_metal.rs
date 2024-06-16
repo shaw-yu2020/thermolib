@@ -21,9 +21,9 @@ use eta::METALS_TO_ETAPARAMS;
 use lambda::METALS_TO_LAMBDAPARAMS;
 use rho::METALS_TO_RHOPARAMS;
 /// liquid metal
-/// + Density
-/// + Thermal Conductivity
-/// + Viscosity
+/// + Density, unit: kg/m3
+/// + Thermal Conductivity, unit: W/m/K
+/// + Viscosity, unit: mPa*s
 #[pyclass]
 #[allow(non_snake_case)]
 pub struct LiquidMetal {
@@ -42,14 +42,7 @@ impl LiquidMetal {
             Err(anyhow!(LiquidMetalErr::NoLiquidMetal))
         }
     }
-    pub fn full_name(&self) -> anyhow::Result<String> {
-        if let Some(metal) = METALS_TO_STRING.get(&self.metal) {
-            Ok(metal.clone())
-        } else {
-            Err(anyhow!(LiquidMetalErr::NoLiquidMetal))
-        }
-    }
-    /// calculate density of liquid metals at 0.1 MPa
+    /// calculate density of liquid metals at 0.1 MPa, unit: kg/m3
     pub fn calc_rho(&self, T: f64) -> anyhow::Result<f64> {
         if let Some(rho_params) = METALS_TO_RHOPARAMS.get(&self.metal) {
             rho_params.calc(T)
@@ -57,7 +50,7 @@ impl LiquidMetal {
             Err(anyhow!(LiquidMetalErr::NoProperty))
         }
     }
-    /// calculate thermal conductivity of liquid metals at 0.1 MPa
+    /// calculate thermal conductivity of liquid metals at 0.1 MPa, unit: W/m/K
     pub fn calc_lambda(&self, T: f64) -> anyhow::Result<f64> {
         if let Some(lambda_params) = METALS_TO_LAMBDAPARAMS.get(&self.metal) {
             lambda_params.calc(T)
@@ -65,7 +58,7 @@ impl LiquidMetal {
             Err(anyhow!(LiquidMetalErr::NoProperty))
         }
     }
-    /// calculate viscosity of liquid metals at 0.1 MPa
+    /// calculate viscosity of liquid metals at 0.1 MPa, unit: mPa*s
     pub fn calc_eta(&self, T: f64) -> anyhow::Result<f64> {
         if let Some(eta_params) = METALS_TO_ETAPARAMS.get(&self.metal) {
             eta_params.calc(T)
@@ -102,19 +95,4 @@ pub enum Metals {
     Hf, // 72
     Ta, // 73
     W,  // 74
-}
-lazy_static! {
-    static ref METALS_TO_STRING: HashMap<Metals, String> = HashMap::from([
-        (Metals::Al, String::from("Aluminum")),
-        (Metals::Ti, String::from("Titanium")),
-        (Metals::V, String::from("Vanadium")),
-        (Metals::Cr, String::from("Chromium")),
-        (Metals::Fe, String::from("Iron")),
-        (Metals::Zr, String::from("Zirconium")),
-        (Metals::Nb, String::from("Niobium")),
-        (Metals::Mo, String::from("Molybdenum")),
-        (Metals::Hf, String::from("Hafnium")),
-        (Metals::Ta, String::from("Tantalum")),
-        (Metals::W, String::from("Tungsten"))
-    ]);
 }
