@@ -1,5 +1,5 @@
-use serde::Deserialize;
-#[derive(Deserialize)]
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Deserialize, Serialize)]
 pub struct GkhTerm {
     n: f64,
     d: f64,

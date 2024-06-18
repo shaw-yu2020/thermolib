@@ -4,7 +4,7 @@ use super::{IdealHelmholtz, ResidualHelmholtz};
 use super::{PsEqn, RholEqn, RhovEqn};
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 /// Helmholtz EOS
 /// ```
 /// use thermolib::Helmholtz;
@@ -27,7 +27,7 @@ use serde::Deserialize;
 /// }
 /// ```
 #[pyclass]
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct Helmholtz {
     alphai: IdealHelmholtz,
@@ -149,6 +149,18 @@ impl Helmholtz {
         };
         let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
         Ok(eos)
+    }
+    pub fn set_mole_unit(&mut self) {
+        if self.R > 10.0 {
+            self.R *= self.M;
+            self.rhoc /= self.M;
+        }
+    }
+    pub fn set_mass_unit(&mut self) {
+        if self.R < 10.0 {
+            self.R /= self.M;
+            self.rhoc *= self.M;
+        }
     }
     pub fn td_unchecked(&mut self, T: f64, rho: f64) {
         self.phase = Phase::One { T, rho }
