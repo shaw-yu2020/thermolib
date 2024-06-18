@@ -1,6 +1,6 @@
 use super::GkhTerm;
-use serde::Deserialize;
-#[derive(Deserialize)]
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ResidualHelmholtz {
     poly_terms: Vec<PolynomialTerm>,
     exp_terms: Vec<ExponentialTerm>,
@@ -136,7 +136,7 @@ impl ResidualHelmholtz {
                 .sum::<f64>()
     }
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct PolynomialTerm {
     n: f64,
     d: f64,
@@ -162,7 +162,7 @@ impl PolynomialTerm {
         self.n * delta.powf(self.d) * tau.powf(self.t) * self.t * (self.t - 1.0)
     }
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ExponentialTerm {
     n: f64,
     d: f64,
@@ -197,7 +197,7 @@ impl ExponentialTerm {
             * (self.t - 1.0)
     }
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct GaussianTerm {
     n: f64,
     d: f64,

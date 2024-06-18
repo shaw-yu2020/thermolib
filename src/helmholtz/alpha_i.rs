@@ -1,5 +1,5 @@
-use serde::Deserialize;
-#[derive(Deserialize)]
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IdealHelmholtz {
     a_1: f64,
     a_tau: f64,
@@ -51,7 +51,7 @@ impl IdealHelmholtz {
                 .sum::<f64>()
     }
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct PolynomialTerm {
     is_alpha: bool,
     a: f64,
@@ -81,7 +81,7 @@ impl PolynomialTerm {
         }
     }
 }
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct PlankEinsteinTerm {
     is_alpha: bool,
     v: f64,

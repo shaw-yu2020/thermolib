@@ -1,9 +1,9 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 /// Ancillary Equations
 /// + Vapor Pressure Equation
 /// + Saturated Vapor Density Equation
 /// + Saturated Liquid Density Equation
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AncEqnTerm {
     n: f64, // coefficient
     t: f64, // exponent
@@ -14,7 +14,7 @@ impl AncEqnTerm {
     }
 }
 /// Vapor Pressure Equation
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PsEqn {
     flag: i32,
     terms: Vec<AncEqnTerm>,
@@ -33,7 +33,7 @@ impl PsEqn {
     }
 }
 /// Saturated Vapor Density Equation
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RhovEqn {
     flag: i32,
     terms: Vec<AncEqnTerm>,
@@ -57,7 +57,7 @@ impl RhovEqn {
     }
 }
 /// Saturated Liquid Density Equation
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RholEqn {
     flag: i32,
     terms: Vec<AncEqnTerm>,

@@ -28,6 +28,7 @@ pub enum HelmholtzErr {
     #[error("no helmholtz")]
     NoHelmholtz,
 }
+#[derive(Debug)]
 #[allow(non_snake_case)]
 pub enum Phase {
     One {
