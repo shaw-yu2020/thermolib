@@ -26,6 +26,17 @@ impl LambdaParams {
 lazy_static! {
     pub static ref METALS_TO_LAMBDAPARAMS: HashMap<Metals, LambdaParams> = HashMap::from([
         (
+            Metals::Si,
+            LambdaParams {
+                Tm: 1687.0,
+                Tmin: 1690.0,
+                Tmax: 1945.0,
+                d0: 54.70218,
+                d1: 1.53E-3,
+                d2: 0.0
+            }
+        ),
+        (
             Metals::Ti,
             LambdaParams {
                 Tm: 1941.0,
@@ -59,6 +70,17 @@ lazy_static! {
             }
         ),
         (
+            Metals::Co,
+            LambdaParams {
+                Tm: 1768.15,
+                Tmin: 1769.0,
+                Tmax: 1903.0,
+                d0: 29.49359,
+                d1: 87.81E-3,
+                d2: 0.0
+            }
+        ),
+        (
             Metals::Ni,
             LambdaParams {
                 Tm: 1728.0,
@@ -88,6 +110,17 @@ lazy_static! {
                 Tmax: 850.0,
                 d0: 28.403,
                 d1: 71.896E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Ge,
+            LambdaParams {
+                Tm: 1210.4,
+                Tmin: 1212.0,
+                Tmax: 1473.0,
+                d0: 45.55252,
+                d1: 24.09E-3,
                 d2: 0.0
             }
         ),
@@ -187,6 +220,17 @@ lazy_static! {
                 Tmax: 1150.0,
                 d0: 16.093,
                 d1: 7.8526E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Bi,
+            LambdaParams {
+                Tm: 544.55,
+                Tmin: 545.0,
+                Tmax: 1110.0,
+                d0: 13.19939,
+                d1: 11.47E-3,
                 d2: 0.0
             }
         )

@@ -80,6 +80,7 @@ lazy_static! {
         (String::from("Cu"), Metals::Cu),
         (String::from("Zn"), Metals::Zn),
         (String::from("Ga"), Metals::Ga),
+        (String::from("Ge"), Metals::Ge),
         (String::from("Zr"), Metals::Zr),
         (String::from("Nb"), Metals::Nb),
         (String::from("Mo"), Metals::Mo),
@@ -110,6 +111,7 @@ pub enum Metals {
     Cu, // 29
     Zn, // 30
     Ga, // 31
+    Ge, // 32
     Zr, // 40
     Nb, // 41
     Mo, // 42

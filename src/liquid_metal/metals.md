@@ -5,16 +5,17 @@ Liquid Metals
 | Atomic Number | Symbol | Name | Density | Thermal Conductivity | Viscosity |
 | :---: | :---: | :---: | :---: | :---: | :---: |
 | 13 | Al | Aluminum | √ |  | √ |
-| 14 | Si | Silicon | √ |  | √ |
+| 14 | Si | Silicon | √ | √ | √ |
 | 22 | Ti | Titanium | √ | √ |  |
 | 23 | V | Vanadium | √ | √ |  |
 | 24 | Cr | Chromium | √ |  |  |
 | 26 | Fe | Iron | √ | √ | √ |
-| 27 | Co | Cobalt | √ |  | √ |
+| 27 | Co | Cobalt | √ | √ | √ |
 | 28 | Ni | Nickel | √ | √ | √ |
 | 29 | Cu | Copper | √ | √ | √ |
 | 30 | Zn | Zinc | √ |  | √ |
 | 31 | Ga | Gallium | √ | √ | √ |
+| 32 | Ge | Germanium |  | √ |  |
 | 40 | Zr | Zirconium | √ | √ |  |
 | 41 | Nb | Niobium | √ | √ |  |
 | 42 | Mo | Molybdenum | √ | √ |  |
@@ -29,5 +30,5 @@ Liquid Metals
 | 80 | Hg | Mercury |  |  | √ |
 | 81 | Tl | Thallium | √ |  | √ |
 | 82 | Pb | Lead | √ | √ | √ |
-| 83 | Bi | Bismuth | √ |  | √ |
+| 83 | Bi | Bismuth | √ | √ | √ |
 
