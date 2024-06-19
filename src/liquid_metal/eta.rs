@@ -35,12 +35,32 @@ lazy_static! {
             },
         ),
         (
+            Metals::Si,
+            EtaParams {
+                Tmin: 1685.0,
+                Tmax: 1900.0,
+                a0: -1.0881,
+                a1: 1478.7,
+                eta0: 1.0
+            }
+        ),
+        (
             Metals::Fe,
             EtaParams {
                 Tmin: 1809.0,
                 Tmax: 2480.0,
                 a0: -0.7209,
                 a1: 2694.85,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Co,
+            EtaParams {
+                Tmin: 1768.0,
+                Tmax: 2100.0,
+                a0: -0.903,
+                a1: 2808.7,
                 eta0: 1.0
             }
         ),
@@ -65,12 +85,52 @@ lazy_static! {
             }
         ),
         (
+            Metals::Zn,
+            EtaParams {
+                Tmin: 695.0,
+                Tmax: 1100.0,
+                a0: -0.3291,
+                a1: 631.12,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Ga,
+            EtaParams {
+                Tmin: 304.0,
+                Tmax: 800.0,
+                a0: -0.4465,
+                a1: 204.03,
+                eta0: 1.0
+            }
+        ),
+        (
             Metals::Ag,
             EtaParams {
                 Tmin: 1235.0,
                 Tmax: 1500.0,
                 a0: -0.258,
                 a1: 1081.8,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Cd,
+            EtaParams {
+                Tmin: 900.0,
+                Tmax: 1300.0,
+                a0: -0.4239,
+                a1: 513.89,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::In,
+            EtaParams {
+                Tmin: 429.0,
+                Tmax: 1000.0,
+                a0: -0.3621,
+                a1: 272.06,
                 eta0: 1.0
             }
         ),
@@ -91,6 +151,26 @@ lazy_static! {
                 Tmax: 1300.0,
                 a0: -0.637,
                 a1: 712.5,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Hg,
+            EtaParams {
+                Tmin: 234.0,
+                Tmax: 600.0,
+                a0: -0.2561,
+                a1: 132.29,
+                eta0: 1.0
+            }
+        ),
+        (
+            Metals::Tl,
+            EtaParams {
+                Tmin: 577.0,
+                Tmax: 800.0,
+                a0: -0.3017,
+                a1: 412.84,
                 eta0: 1.0
             }
         ),

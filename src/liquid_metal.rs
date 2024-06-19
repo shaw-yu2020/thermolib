@@ -70,21 +70,29 @@ impl LiquidMetal {
 lazy_static! {
     static ref STRING_TO_METALS: HashMap<String, Metals> = HashMap::from([
         (String::from("Al"), Metals::Al),
+        (String::from("Si"), Metals::Si),
         (String::from("Ti"), Metals::Ti),
         (String::from("V"), Metals::V),
         (String::from("Cr"), Metals::Cr),
         (String::from("Fe"), Metals::Fe),
+        (String::from("Co"), Metals::Co),
         (String::from("Ni"), Metals::Ni),
         (String::from("Cu"), Metals::Cu),
+        (String::from("Zn"), Metals::Zn),
+        (String::from("Ga"), Metals::Ga),
         (String::from("Zr"), Metals::Zr),
         (String::from("Nb"), Metals::Nb),
         (String::from("Mo"), Metals::Mo),
         (String::from("Ag"), Metals::Ag),
+        (String::from("Cd"), Metals::Cd),
+        (String::from("In"), Metals::In),
         (String::from("Sn"), Metals::Sn),
         (String::from("Sb"), Metals::Sb),
         (String::from("Hf"), Metals::Hf),
         (String::from("Ta"), Metals::Ta),
         (String::from("W"), Metals::W),
+        (String::from("Hg"), Metals::Hg),
+        (String::from("Tl"), Metals::Tl),
         (String::from("Pb"), Metals::Pb),
         (String::from("Bi"), Metals::Bi),
     ]);
@@ -92,21 +100,29 @@ lazy_static! {
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub enum Metals {
     Al, // 13
+    Si, // 14
     Ti, // 22
     V,  // 23
     Cr, // 24
     Fe, // 26
+    Co, // 27
     Ni, // 28
     Cu, // 29
+    Zn, // 30
+    Ga, // 31
     Zr, // 40
     Nb, // 41
     Mo, // 42
     Ag, // 47
+    Cd, // 48
+    In, // 49
     Sn, // 50
     Sb, // 51
     Hf, // 72
     Ta, // 73
     W,  // 74
+    Hg, // 80
+    Tl, // 81
     Pb, // 82
     Bi, // 83
 }

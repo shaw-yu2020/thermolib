@@ -35,6 +35,16 @@ lazy_static! {
             }
         ),
         (
+            Metals::Si,
+            RhoParams {
+                Tm: 1687.0,
+                Tmin: 1687.0,
+                Tmax: 2000.0,
+                c0: 2550.0,
+                c1: -0.264
+            }
+        ),
+        (
             Metals::Ti,
             RhoParams {
                 Tm: 1941.0,
@@ -75,6 +85,16 @@ lazy_static! {
             }
         ),
         (
+            Metals::Co,
+            RhoParams {
+                Tm: 1768.0,
+                Tmin: 1768.0,
+                Tmax: 2500.0,
+                c0: 7827.0,
+                c1: -0.936
+            }
+        ),
+        (
             Metals::Ni,
             RhoParams {
                 Tm: 1728.0,
@@ -92,6 +112,26 @@ lazy_static! {
                 Tmax: 2500.0,
                 c0: 7997.0,
                 c1: -0.819
+            }
+        ),
+        (
+            Metals::Zn,
+            RhoParams {
+                Tm: 692.677,
+                Tmin: 692.0,
+                Tmax: 910.0,
+                c0: 6559.0,
+                c1: -0.884
+            }
+        ),
+        (
+            Metals::Ga,
+            RhoParams {
+                Tm: 302.914,
+                Tmin: 303.0,
+                Tmax: 1500.0,
+                c0: 6077.0,
+                c1: -0.611
             }
         ),
         (
@@ -132,6 +172,26 @@ lazy_static! {
                 Tmax: 1600.0,
                 c0: 9294.0,
                 c1: -0.877
+            }
+        ),
+        (
+            Metals::Cd,
+            RhoParams {
+                Tm: 594.219,
+                Tmin: 594.0,
+                Tmax: 833.0,
+                c0: 8008.0,
+                c1: -1.251
+            }
+        ),
+        (
+            Metals::In,
+            RhoParams {
+                Tm: 429.748,
+                Tmin: 430.0,
+                Tmax: 1100.0,
+                c0: 7022.0,
+                c1: -0.762
             }
         ),
         (
@@ -182,6 +242,16 @@ lazy_static! {
                 Tmax: 5818.0,
                 c0: 17146.4,
                 c1: -0.6769
+            }
+        ),
+        (
+            Metals::Tl,
+            RhoParams {
+                Tm: 576.7,
+                Tmin: 576.0,
+                Tmax: 1200.0,
+                c0: 11233.0,
+                c1: -1.2
             }
         ),
         (
