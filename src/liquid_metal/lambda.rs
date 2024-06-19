@@ -48,6 +48,50 @@ lazy_static! {
             },
         ),
         (
+            Metals::Fe,
+            LambdaParams {
+                Tm: 1811.0,
+                Tmin: 1815.0,
+                Tmax: 2050.0,
+                d0: 36.349,
+                d1: 9.6207E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Ni,
+            LambdaParams {
+                Tm: 1728.0,
+                Tmin: 1730.0,
+                Tmax: 2000.0,
+                d0: 54.182,
+                d1: 20.97E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Cu,
+            LambdaParams {
+                Tm: 1357.77,
+                Tmin: 1358.0,
+                Tmax: 1700.0,
+                d0: 150.49,
+                d1: 70.41E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Ga,
+            LambdaParams {
+                Tm: 302.914,
+                Tmin: 303.0,
+                Tmax: 850.0,
+                d0: 28.403,
+                d1: 71.896E-3,
+                d2: 0.0
+            }
+        ),
+        (
             Metals::Zr,
             LambdaParams {
                 Tm: 2128.0,
@@ -81,6 +125,28 @@ lazy_static! {
             },
         ),
         (
+            Metals::In,
+            LambdaParams {
+                Tm: 429.748,
+                Tmin: 430.0,
+                Tmax: 1300.0,
+                d0: 36.493,
+                d1: 9.6207E-3,
+                d2: 0.0
+            }
+        ),
+        (
+            Metals::Sn,
+            LambdaParams {
+                Tm: 505.8,
+                Tmin: 507.0,
+                Tmax: 2000.0,
+                d0: 28.037,
+                d1: 23.397E-3,
+                d2: 0.0
+            }
+        ),
+        (
             Metals::Hf,
             LambdaParams {
                 Tm: 2500.0,
@@ -112,6 +178,17 @@ lazy_static! {
                 d1: 18.595E-3,
                 d2: -20.217E-7
             },
+        ),
+        (
+            Metals::Pb,
+            LambdaParams {
+                Tm: 600.61,
+                Tmin: 602.0,
+                Tmax: 1150.0,
+                d0: 16.093,
+                d1: 7.8526E-3,
+                d2: 0.0
+            }
         )
     ]);
 }
