@@ -7,6 +7,7 @@
 //!
 //!
 /// Python wrappers
+#[cfg(feature = "with_pyo3")]
 mod python;
 /// Vdw EOS
 mod vdw;

@@ -24,3 +24,6 @@ features = ["anyhow", "extension-module"]
 name = "thermolib"
 crate-type = ["cdylib" ,"rlib"]
 
+[features]
+with_pyo3 = []
+
