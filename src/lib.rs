@@ -7,6 +7,7 @@
 //!
 //!
 /// Python wrappers
+#[cfg(feature = "with_pyo3")]
 mod python;
 /// Vdw EOS
 mod vdw;
@@ -23,3 +24,6 @@ pub use pr::Pr;
 /// Helmholtz EOS
 mod helmholtz;
 pub use helmholtz::Helmholtz;
+/// liquid metals
+mod liquid_metal;
+pub use liquid_metal::LiquidMetal;
