@@ -67,32 +67,32 @@ impl eframe::App for LiquidMetalApp {
         }
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let _ = ui.button("App Visuals:");
-                if ui.button("Light").clicked() {
+                let _ = ui.button(" App Visuals: ");
+                if ui.button(" Light ").clicked() {
                     ctx.set_visuals(egui::Visuals::light());
                 }
-                if ui.button("Dark").clicked() {
+                if ui.button(" Dark ").clicked() {
                     ctx.set_visuals(egui::Visuals::dark());
                 }
             });
             ui.horizontal(|ui| {
-                ui.label("metal:");
+                ui.label(" metal: ");
                 ui.text_edit_singleline(&mut self.metal);
             });
             ui.horizontal(|ui| {
-                ui.label("temperature (K) :");
+                ui.label(" temperature [K]: ");
                 ui.text_edit_singleline(&mut self.temperature);
             });
             ui.horizontal(|ui| {
-                ui.label("density (kg/m3) :");
+                ui.label(" density [kg/m3]: ");
                 ui.label(&self.rho);
             });
             ui.horizontal(|ui| {
-                ui.label("viscosity (mPa*s) :");
+                ui.label(" viscosity [mPa*s]: ");
                 ui.label(&self.eta);
             });
             ui.horizontal(|ui| {
-                ui.label("thermal conductivity (W/m/K) :");
+                ui.label(" thermal conductivity [W/m/K]: ");
                 ui.label(&self.lambda);
             })
         });
