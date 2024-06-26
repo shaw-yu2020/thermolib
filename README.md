@@ -198,3 +198,32 @@ print("w =", SO2.w())  # speed of sound = 209.41 m/s
 
 ```
 
+# LiquidMetal
+
+| Function | Unit |
+| :---: | :---: |
+| `calc_rho(T)` | `kg/m^3` |
+| `calc_eta(T)` | `mPa*s` |
+| `calc_lambda(T)` | `W/m/K` |
+
+```rust
+use thermolib::LiquidMetal;
+
+if let Ok(metal) = LiquidMetal::new_metal("Si") {
+    println!("rho = {}", metal.calc_rho(1800.0).unwrap()); // 2528 kg/m3
+    println!("eta = {}", metal.calc_eta(1800.0).unwrap()); // 0.541 mPa*s
+    println!("lambda = {}", metal.calc_lambda(1800.0).unwrap()); // 54.88 W/m/K
+}
+
+```
+
+```python
+from thermolib import LiquidMetal
+
+metal = LiquidMetal("Si")
+print("rho =", metal.calc_rho(1800))  # 2528 kg/m3
+print("eta =", metal.calc_eta(1800))  # 0.541 mPa*s
+print("lambda =", metal.calc_lambda(1800))  # 54.88 W/m/K
+
+```
+

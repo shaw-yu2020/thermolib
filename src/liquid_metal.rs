@@ -24,6 +24,17 @@ use rho::METALS_TO_RHOPARAMS;
 /// + Density, unit: kg/m3
 /// + Thermal Conductivity, unit: W/m/K
 /// + Viscosity, unit: mPa*s
+/// ```
+/// use thermolib::LiquidMetal;
+/// let T = 1800.0; // K
+/// let metal = LiquidMetal::new_metal("Si").unwrap();
+/// let rho = metal.calc_rho(T).unwrap(); // kg/m3
+/// assert_eq!(2520.0, (rho * 1e0).round() / 1e0);
+/// let eta = metal.calc_eta(T).unwrap(); // mPa*s
+/// assert_eq!(0.541, (eta * 1e3).round() / 1e3);
+/// let lambda = metal.calc_lambda(T).unwrap(); // W/m/K
+/// assert_eq!(54.88, (lambda * 1e2).round() / 1e2);
+/// ```
 #[pyclass]
 #[allow(non_snake_case)]
 pub struct LiquidMetal {
