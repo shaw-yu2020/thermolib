@@ -27,3 +27,6 @@ pub use helmholtz::Helmholtz;
 /// liquid metals
 mod liquid_metal;
 pub use liquid_metal::LiquidMetal;
+/// PC-SAFT EOS
+mod pc_saft;
+pub use pc_saft::PcSaftPure;

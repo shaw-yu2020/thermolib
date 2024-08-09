@@ -6,6 +6,7 @@ fn hello() -> PyResult<String> {
 }
 use crate::Helmholtz;
 use crate::LiquidMetal;
+use crate::PcSaftPure;
 use crate::Pr;
 use crate::Rk;
 use crate::Srk;
@@ -21,5 +22,6 @@ pub fn pylib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Pr>()?;
     m.add_class::<Helmholtz>()?;
     m.add_class::<LiquidMetal>()?;
+    m.add_class::<PcSaftPure>()?;
     Ok(())
 }
