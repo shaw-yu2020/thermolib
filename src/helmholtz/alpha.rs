@@ -150,7 +150,7 @@ impl Helmholtz {
         let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
         Ok(eos)
     }
-    pub fn set_mole_unit(&mut self) {
+    pub fn set_molar_unit(&mut self) {
         if self.R > 10.0 {
             self.R *= self.M;
             self.rhoc /= self.M;

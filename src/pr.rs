@@ -22,7 +22,7 @@ use pyo3::{pyclass, pymethods};
 /// let omega = 0.256;
 /// let M = 0.064064; // kg/mol
 /// let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
-/// let _ = SO2.set_mole_unit();
+/// let _ = SO2.set_molar_unit();
 /// if let Ok(_) = SO2.t_flash(273.15) {
 ///     println!("T_s={}", SO2.T_s().unwrap());
 ///     println!("p_s={}", SO2.p_s().unwrap());
@@ -136,7 +136,7 @@ impl Pr {
         pr.tp_flash(273.15, 0.1E6);
         pr
     }
-    pub fn set_mole_unit(&mut self) {
+    pub fn set_molar_unit(&mut self) {
         if self.R > 10.0 {
             self.R *= self.M;
         }

@@ -18,7 +18,7 @@ let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Vdw::new_fluid(Tc, pc, M);
-let _ = SO2.set_mole_unit();
+let _ = SO2.set_molar_unit();
 
 if let Ok(_) = SO2.t_flash(273.15) {
     println!("T_s={}", SO2.T_s().unwrap());
@@ -41,7 +41,7 @@ Tc = 430.64
 pc = 7886600
 M = 0.064064
 SO2 = Vdw(Tc, pc, M)
-SO2.set_mole_unit()
+SO2.set_molar_unit()
 
 SO2.t_flash(273.15)
 print("T_s =", SO2.T_s())
@@ -70,7 +70,7 @@ let Tc = 430.64; // K
 let pc = 7886600.0; // Pa
 let M = 0.064064; // kg/mol
 let mut SO2 = Rk::new_fluid(Tc, pc, M);
-let _ = SO2.set_mole_unit();
+let _ = SO2.set_molar_unit();
 
 ```
 
@@ -81,7 +81,7 @@ Tc = 430.64
 pc = 7886600
 M = 0.064064
 SO2 = Rk(Tc, pc, M)
-SO2.set_mole_unit()
+SO2.set_molar_unit()
 
 ```
 
@@ -100,7 +100,7 @@ let pc = 7886600.0; // Pa
 let omega = 0.256;
 let M = 0.064064; // kg/mol
 let mut SO2 = Srk::new_fluid(Tc, pc, omega, M);
-let _ = SO2.set_mole_unit();
+let _ = SO2.set_molar_unit();
 
 ```
 
@@ -112,7 +112,7 @@ pc = 7886600
 omega = 0.256
 M = 0.064064
 SO2 = Srk(Tc, Pc, omega, M)
-SO2.set_mole_unit()
+SO2.set_molar_unit()
 
 ```
 
@@ -131,7 +131,7 @@ let pc = 7886600.0; // Pa
 let omega = 0.256;
 let M = 0.064064; // kg/mol
 let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
-let _ = SO2.set_mole_unit();
+let _ = SO2.set_molar_unit();
 
 ```
 
@@ -143,7 +143,7 @@ pc = 7886600
 omega = 0.256
 M = 0.064064
 SO2 = Pr(Tc, Pc, omega, M)
-SO2.set_mole_unit()
+SO2.set_molar_unit()
 
 ```
 
