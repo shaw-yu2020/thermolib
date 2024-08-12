@@ -115,7 +115,7 @@ impl PcSaftPure {
             self.set_temperature_and_number_density(T, rhov_num);
             self.is_single_phase = true;
             Ok(())
-        } else if lnphi_l < 1E16 && lnphi_v == 1E6 {
+        } else if lnphi_l < 1E16 && lnphi_v == 1E16 {
             self.set_temperature_and_number_density(T, rhol_num);
             self.is_single_phase = true;
             Ok(())
