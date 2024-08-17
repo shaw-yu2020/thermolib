@@ -802,7 +802,7 @@ impl PcSaftPure {
     }
     fn cT0D4(&self, eta: f64) -> f64 {
         eta.powi(4)
-            * 12.0
+            * 120.0
             * (2.0 * self.m * (-eta.powi(2) + 8.0 * eta + 14.0) / (1.0 - eta).powi(8)
                 + (1.0 - self.m)
                     * (-eta.powi(6) - 12.0 * eta.powi(5) + 120.0 * eta.powi(4)
