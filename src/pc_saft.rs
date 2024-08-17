@@ -306,7 +306,7 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn calc_p(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T) * self.rho_num * (1.0 + self.calc_rT0D1(T, rho_num))
+        (1E30 / NA * R * T) * rho_num * (1.0 + self.calc_rT0D1(T, rho_num))
     }
     fn calc_Dp_Drho_T(&mut self, T: f64, rho_num: f64) -> f64 {
         (1E30 / NA * R * T)
