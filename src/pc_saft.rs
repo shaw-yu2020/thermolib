@@ -12,6 +12,7 @@ enum PcSaftPureErr {
 }
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 /// PC-SAFT EOS
 /// ```
 /// ```
@@ -156,8 +157,10 @@ impl PcSaftPure {
     pub fn c_flash(&mut self) -> anyhow::Result<()> {
         // Iteration from T_c = 1000 eta_c = 1E-10
         let mut Tc = 1000.0;
-        let mut rhoc = (6E-10 / PI / self.m)
-            / (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / Tc).exp())).powi(3);
+        let mut rhoc = (1E-10)
+            / (FRAC_PI_6
+                * self.m
+                * (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / Tc).exp())).powi(3));
         // Define variables
         let mut Dp_Drho_T = self.calc_Dp_Drho_T(Tc, rhoc);
         let mut D2p_DTrho;
@@ -186,7 +189,7 @@ impl PcSaftPure {
         let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
         let mut p_diff: f64;
         // Iteration from gas phase: eta = 1E-10
-        let mut rhov_num = 6.0 * 1E-10 / PI / self.m / d3;
+        let mut rhov_num = 1E-10 / (FRAC_PI_6 * self.m * d3);
         let mut Dp_Drhov_T = -1.0;
         loop {
             p_diff = self.calc_p(T, rhov_num) - p;
@@ -208,7 +211,7 @@ impl PcSaftPure {
             self.calc_lnphi(T, rhov_num)
         };
         // Iteration from liquid phase: eta = 0.5
-        let mut rhol_num = 6.0 * 0.5 / PI / self.m / d3;
+        let mut rhol_num = 0.5 / (FRAC_PI_6 * self.m * d3);
         let mut Dp_Drhol_T = -1.0;
         loop {
             p_diff = self.calc_p(T, rhol_num) - p;
@@ -356,14 +359,14 @@ impl PcSaftPure {
             self.rho_num = rho_num;
             let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp());
             let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / T).exp() * self.epsilon / T;
-            self.eta = PI / 6.0 * rho_num * self.m * d.powi(3);
-            self.eta1 = PI / 2.0 * rho_num * self.m * d.powi(2) * d1;
+            self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
+            self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
         } else if rho_num != self.rho_num {
             self.rho_num = rho_num;
             let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp());
             let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / T).exp() * self.epsilon / T;
-            self.eta = PI / 6.0 * rho_num * self.m * d.powi(3);
-            self.eta1 = PI / 2.0 * rho_num * self.m * d.powi(2) * d1;
+            self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
+            self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
         }
     }
     fn calc_rT0D0(&mut self, T: f64, rho_num: f64) -> f64 {
@@ -1020,7 +1023,6 @@ impl PcSaftPure {
 }
 const R: f64 = 8.314462618;
 const NA: f64 = 6.02214076E23;
-const PI: f64 = std::f64::consts::PI;
 const A0: [f64; 7] = [
     0.9105631445,
     0.6361281449,
