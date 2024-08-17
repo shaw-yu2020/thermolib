@@ -14,6 +14,7 @@ enum PrErr {
 }
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
+use std::f64::consts::SQRT_2;
 /// Pr EOS
 /// ```
 /// use thermolib::Pr;
@@ -92,7 +93,7 @@ impl Pr {
     fn calc_lnfp(&self, Z: f64) -> f64 {
         Z - 1.0
             - (Z - self.B).ln()
-            - self.A / (2.0 * 2.0_f64.sqrt() * self.B)
+            - self.A / (2.0 * SQRT_2 * self.B)
                 * ((Z + 2.414 * self.B) / (Z - 0.414 * self.B)).abs().ln()
     }
     fn calc_diff_lnfpvl(&mut self) -> f64 {
