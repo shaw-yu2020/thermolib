@@ -6,6 +6,8 @@
 //! the calculation of fluid properties.
 //!
 //!
+/// algorithms
+mod algorithms;
 /// Python wrappers
 #[cfg(feature = "with_pyo3")]
 mod python;

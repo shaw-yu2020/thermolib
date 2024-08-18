@@ -1,10 +1,6 @@
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum RkErr {
-    #[error("T is too min")]
-    TisTooMin,
-    #[error("T is too max")]
-    TisTooMax,
     #[error("t_flash diverge")]
     NotConvForT,
     #[error("property only in single phase")]
@@ -144,38 +140,20 @@ impl Rk {
     }
     pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
         self.T = T;
-        let mut ps_min = 1.0;
-        self.p = ps_min;
-        let mut lnfp_pmin = self.calc_diff_lnfpvl();
-        let mut ps_max = self.pc - 1.0;
-        self.p = ps_max;
-        let mut lnfp_pmax = self.calc_diff_lnfpvl();
-        if !(lnfp_pmin * lnfp_pmax).is_sign_negative() {
-            if T < 0.9 * self.Tc {
-                return Err(anyhow!(RkErr::TisTooMin));
-            } else {
-                return Err(anyhow!(RkErr::TisTooMax));
-            }
+        let ps_max = self.pc - 1.0;
+        let ps = crate::algorithms::brent_zero(
+            |ps| {
+                self.p = ps;
+                self.calc_diff_lnfpvl()
+            },
+            1.0,
+            ps_max,
+        );
+        if ps.is_nan() {
+            Err(anyhow!(RkErr::NotConvForT))
+        } else {
+            Ok(())
         }
-        let mut ps;
-        let mut lnfp;
-        let mut counter = 0;
-        while counter <= 1000 {
-            ps = (ps_min + ps_max) / 2.0;
-            self.p = ps;
-            lnfp = self.calc_diff_lnfpvl();
-            if lnfp.abs() < 1E-6 {
-                return Ok(());
-            } else if (lnfp * lnfp_pmin).is_sign_negative() {
-                ps_max = ps;
-                lnfp_pmax = lnfp;
-            } else if (lnfp * lnfp_pmax).is_sign_negative() {
-                ps_min = ps;
-                lnfp_pmin = lnfp;
-            }
-            counter += 1;
-        }
-        Err(anyhow!(RkErr::NotConvForT))
     }
     pub fn tp_flash(&mut self, T: f64, p: f64) {
         self.T = T;
