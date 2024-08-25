@@ -187,53 +187,32 @@ impl PcSaftPure {
     }
     pub fn tp_flash(&mut self, T: f64, p: f64) -> anyhow::Result<()> {
         let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
-        let mut p_diff: f64;
         // Iteration from gas phase: eta = 1E-10
-        let mut rhov_num = 1E-10 / (FRAC_PI_6 * self.m * d3);
-        let mut Dp_Drhov_T = -1.0;
-        loop {
-            p_diff = self.calc_p(T, rhov_num) - p;
-            if (p_diff / p).abs() < 1E-9 {
-                break;
-            }
-            Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
-            if Dp_Drhov_T.is_sign_negative() {
-                break;
-            }
-            rhov_num -= p_diff / Dp_Drhov_T;
-            if rhov_num.is_sign_negative() {
-                break;
-            }
-        }
-        let lnphi_v = if rhov_num.is_sign_negative() || Dp_Drhov_T.is_sign_negative() {
-            1E16
+        let rhov_num = self.calc_density(T, p, 1E-10 / (FRAC_PI_6 * self.m * d3));
+        let lnphi_v = if rhov_num.is_nan() {
+            f64::INFINITY
         } else {
             self.calc_lnphi(T, rhov_num)
         };
         // Iteration from liquid phase: eta = 0.5
-        let mut rhol_num = 0.5 / (FRAC_PI_6 * self.m * d3);
-        let mut Dp_Drhol_T = -1.0;
-        loop {
-            p_diff = self.calc_p(T, rhol_num) - p;
-            if (p_diff / p).abs() < 1E-9 {
-                break;
-            }
-            Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
-            if Dp_Drhol_T.is_sign_negative() {
-                break;
-            }
-            rhol_num -= p_diff / Dp_Drhol_T;
-            if rhol_num.is_sign_negative() {
-                break;
-            }
-        }
-        let lnphi_l = if rhol_num.is_sign_negative() || Dp_Drhol_T.is_sign_negative() {
-            1E16
+        let rhol_num = self.calc_density(T, p, 0.5 / (FRAC_PI_6 * self.m * d3));
+        let lnphi_l = if rhol_num.is_nan() {
+            f64::INFINITY
         } else {
             self.calc_lnphi(T, rhol_num)
         };
         // Select the correct output
-        if lnphi_v < 1E16 && lnphi_l < 1E16 {
+        if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
+            Err(anyhow!(PcSaftPureErr::NotConvForTP))
+        } else if lnphi_v.is_infinite() {
+            self.set_temperature_and_number_density(T, rhol_num);
+            self.is_single_phase = true;
+            Ok(())
+        } else if lnphi_l.is_infinite() {
+            self.set_temperature_and_number_density(T, rhov_num);
+            self.is_single_phase = true;
+            Ok(())
+        } else {
             if lnphi_v < lnphi_l {
                 self.set_temperature_and_number_density(T, rhov_num);
             } else {
@@ -241,16 +220,6 @@ impl PcSaftPure {
             }
             self.is_single_phase = true;
             Ok(())
-        } else if lnphi_v < 1E16 && lnphi_l == 1E16 {
-            self.set_temperature_and_number_density(T, rhov_num);
-            self.is_single_phase = true;
-            Ok(())
-        } else if lnphi_l < 1E16 && lnphi_v == 1E16 {
-            self.set_temperature_and_number_density(T, rhol_num);
-            self.is_single_phase = true;
-            Ok(())
-        } else {
-            Err(anyhow!(PcSaftPureErr::NotConvForTP))
         }
     }
     pub fn T(&self) -> anyhow::Result<f64> {
@@ -347,6 +316,29 @@ impl PcSaftPure {
     fn calc_lnphi(&mut self, T: f64, rho_num: f64) -> f64 {
         self.calc_rT0D0(T, rho_num) + self.calc_rT0D1(T, rho_num)
             - (1.0 + self.calc_rT0D1(T, rho_num)).ln()
+    }
+    fn calc_density(&mut self, T: f64, p: f64, rho_num_guess: f64) -> f64 {
+        let mut rho_num = rho_num_guess;
+        let (mut p_diff, mut val_Dp_Drho_T, mut rho_num_diff);
+        for _i in 1..10000 {
+            p_diff = self.calc_p(T, rho_num) - p;
+            if p_diff.abs() < f64::EPSILON {
+                return rho_num;
+            }
+            val_Dp_Drho_T = self.calc_Dp_Drho_T(T, rho_num);
+            if val_Dp_Drho_T.is_sign_negative() {
+                return f64::NAN;
+            }
+            rho_num_diff = p_diff / val_Dp_Drho_T;
+            if rho_num_diff.abs() < f64::EPSILON {
+                return rho_num;
+            }
+            rho_num -= rho_num_diff;
+            if rho_num.is_sign_negative() {
+                return f64::NAN;
+            }
+        }
+        f64::NAN
     }
 }
 #[allow(non_snake_case)]
