@@ -70,12 +70,40 @@ where
         }
     }
 }
+/// Romberg Numerical Differentiation
+/// Reference:
+/// C. J. F. RIDDERS
+/// Accurate computation of F'(x) and F'(x) F"(x)
+/// Adv. Eng. Software, 1982, Vol. 4, No. 2, 75-76.
+const N_DIM: usize = 10;
+pub fn romberg_diff<F>(mut f: F, x: f64) -> f64
+where
+    F: FnMut(f64) -> f64,
+{
+    let tol = f64::EPSILON.sqrt() * 2.0;
+    let mut fx: [[f64; N_DIM]; N_DIM] = [[0.0; N_DIM]; N_DIM];
+    let mut h: f64 = if x > 1.0 { 0.01 * x } else { 0.01 };
+    fx[0][0] = (f(x + h) - f(x - h)) / 2.0 / h;
+    for i in 1..N_DIM {
+        h /= 2.0;
+        fx[0][i] = (f(x + h) - f(x - h)) / 2.0 / h;
+        for j in 1..i + 1 {
+            fx[j][i] = (fx[j - 1][i] * 4_f64.powi(j as i32) - fx[j - 1][i - 1])
+                / (4_f64.powi(j as i32) - 1.0);
+        }
+        if (fx[i][i] / fx[i - 1][i - 1] - fx[i - 1][i - 1] / fx[i][i]).abs() < tol {
+            return fx[i][i];
+        }
+    }
+    fx[N_DIM - 1][N_DIM - 1]
+}
 /// unit test
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_algorithm() {
+        // test brent_zero
         let x0 = brent_zero(|x: f64| x.sin() - 0.5 * x, 1.0, 2.0);
         let (x1, digits) = (1.89549, 10_f64.powi(5));
         assert_eq!(x1, (x0 * digits).round() / digits);
@@ -91,5 +119,15 @@ mod tests {
         let x0 = brent_zero(|x: f64| (x + 3.0) * (x - 1.0) * (x - 1.0), -5.0, 20.0);
         let (x1, digits) = (-3.0, 10_f64.powi(0));
         assert_eq!(x1, (x0 * digits).round() / digits);
+        // test romberg_diff
+        let (df0, digits) = (140.7377356, 10_f64.powi(7)); // real = 140.7377355
+        let df1 = romberg_diff(|x: f64| x.exp() / (x.sin() - x.powi(2)), 1.0);
+        assert_eq!(df0, (df1 * digits).round() / digits);
+        let (df0, digits) = (2.718281828, 10_f64.powi(9));
+        let df1 = romberg_diff(|x: f64| x.exp(), 1.0);
+        assert_eq!(df0, (df1 * digits).round() / digits);
+        let (df0, digits) = (22026.46579, 10_f64.powi(5));
+        let df1 = romberg_diff(|x: f64| x.exp(), 10.0);
+        assert_eq!(df0, (df1 * digits).round() / digits);
     }
 }

@@ -10,6 +10,7 @@ enum PcSaftPureErr {
     #[error("property only in single phase")]
     OnlyInSinglePhase,
 }
+use crate::algorithms::romberg_diff;
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
@@ -1069,27 +1070,6 @@ const B2: [f64; 7] = [
     93.626774077,
     -29.666905585,
 ];
-/// Romberg Numerical Differentiation
-fn romberg_diff<F>(mut f: F, x: f64) -> f64
-where
-    F: FnMut(f64) -> f64,
-{
-    let mut fx: [[f64; 12]; 12] = [[0.0; 12]; 12];
-    let mut h: f64 = 0.01 * x;
-    fx[0][0] = (f(x + h) - f(x - h)) / 2.0 / h;
-    for i in 1..12 {
-        h /= 2.0;
-        fx[0][i] = (f(x + h) - f(x - h)) / 2.0 / h;
-        for j in 1..i + 1 {
-            fx[j][i] = (fx[j - 1][i] * 4_f64.powi(j as i32) - fx[j - 1][i - 1])
-                / (4_f64.powi(j as i32) - 1.0);
-        }
-        if (fx[i][i] / fx[i - 1][i - 1] - 1.0).abs() < 1E-10 {
-            return fx[i][i];
-        }
-    }
-    fx[11][11]
-}
 /// unit test
 #[cfg(test)]
 mod tests {
