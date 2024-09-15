@@ -3,6 +3,8 @@ use thiserror::Error;
 enum PcSaftPureErr {
     #[error("c_flash diverge")]
     NotConvForC,
+    #[error("t_flash diverge")]
+    NotConvForT,
     #[error("tp_flash diverge")]
     NotConvForTP,
     #[error("property not in single phase")]
@@ -10,7 +12,7 @@ enum PcSaftPureErr {
     #[error("property only in single phase")]
     OnlyInSinglePhase,
 }
-use crate::algorithms::romberg_diff;
+use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
@@ -185,6 +187,64 @@ impl PcSaftPure {
             }
         }
         Err(anyhow!(PcSaftPureErr::NotConvForC))
+    }
+    pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
+        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
+        // Vapor phase: eta = 1E-10
+        let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
+        let mut rhov_num = rhov_num_guess;
+        let mut Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
+        loop {
+            if Dp_Drhov_T.abs() < 1.0 {
+                break;
+            } else {
+                rhov_num -= Dp_Drhov_T / self.calc_D2p_Drho2_T(T, rhov_num);
+                Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
+            }
+        }
+        let pv_limit = self.calc_p(T, rhov_num);
+        if pv_limit.is_sign_negative() {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        // Liquid phase: eta = 0.5
+        let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
+        let mut rhol_num = rhol_num_guess;
+        let mut Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
+        loop {
+            if Dp_Drhol_T.abs() < 1.0 {
+                break;
+            } else {
+                rhol_num -= Dp_Drhol_T / self.calc_D2p_Drho2_T(T, rhol_num);
+                Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
+            }
+        }
+        if rhol_num < rhov_num {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        let pl_limit = self.calc_p(T, rhol_num);
+        if pl_limit > pv_limit {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        // Iteration for saturation state
+        let rhov_max = rhov_num;
+        let lnphi_diff = |p: f64| {
+            rhov_num = self.calc_density(T, p, rhov_num_guess);
+            if rhov_num.is_nan() && (p / pv_limit - 1.0).abs() < 1E-2 {
+                rhov_num = rhov_max;
+            };
+            rhol_num = self.calc_density(T, p, rhol_num_guess);
+            self.calc_lnphi(T, rhov_num) - self.calc_lnphi(T, rhol_num)
+        };
+        let ps = brent_zero(lnphi_diff, pv_limit - 1.0, pl_limit.max(1.0));
+        if ps.is_nan() {
+            Err(anyhow!(PcSaftPureErr::NotConvForT))
+        } else {
+            self.is_single_phase = false;
+            self.T = T;
+            self.rhov_num = rhov_num;
+            self.rhol_num = rhol_num;
+            Ok(())
+        }
     }
     pub fn tp_flash(&mut self, T: f64, p: f64) -> anyhow::Result<()> {
         let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
@@ -1073,6 +1133,21 @@ const B2: [f64; 7] = [
 /// unit test
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn test_pc_saft_pure() {}
+    #[allow(non_snake_case)]
+    fn test_pc_saft_pure() {
+        let m = 2.8611;
+        let sigma = 2.6826;
+        let epsilon = 205.35;
+        let mut SO2 = PcSaftPure::new_fluid(m, sigma, epsilon);
+        SO2.c_flash().unwrap();
+        let Tmin: i32 = (0.6 * SO2.T().unwrap()).floor() as i32;
+        let Tmax: i32 = SO2.T().unwrap().ceil() as i32;
+        for T in Tmin..Tmax {
+            if let Err(_) = SO2.t_flash(T as f64) {
+                panic!();
+            }
+        }
+    }
 }
