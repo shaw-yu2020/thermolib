@@ -18,6 +18,27 @@ use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 /// PC-SAFT EOS
 /// ```
+/// use thermolib::PcSaftPure;
+/// let m = 2.8611;
+/// let sigma = 2.6826;
+/// let epsilon = 205.35;
+/// let mut SO2 = PcSaftPure::new_fluid(m, sigma, epsilon);
+/// if let Ok(_) = SO2.c_flash() {
+///     println!("T_c={}", SO2.T().unwrap());
+///     println!("p_c={}", SO2.p().unwrap());
+///     println!("rho_c={}", SO2.rho().unwrap());
+/// }
+/// if let Ok(_) = SO2.t_flash(273.15) {
+///     println!("T_s={}", SO2.T_s().unwrap());
+///     println!("p_s={}", SO2.p_s().unwrap());
+///     println!("rho_v={}", SO2.rho_v().unwrap());
+///     println!("rho_l={}", SO2.rho_l().unwrap());
+/// }
+/// if let Ok(_) = SO2.tp_flash(273.15, 0.1e6) {
+///     println!("T={}", SO2.T().unwrap());
+///     println!("p={}", SO2.p().unwrap());
+///     println!("rho={}", SO2.rho().unwrap());
+/// }
 /// ```
 #[pyclass]
 #[allow(non_snake_case)]

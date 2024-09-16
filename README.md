@@ -227,3 +227,66 @@ print("lambda =", metal.calc_lambda(1800))  # 54.88 W/m/K
 
 ```
 
+# PcSaftPure
+
+| Flash Calculation | Get Corresponding Properties |
+| :---: | :---: |
+| `c_flash()` | `T()` <br> `p()` <br> `rho()` <br> |
+| `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
+| `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
+
+```rust
+use thermolib::PcSaftPure;
+
+let m = 2.8611;
+let sigma = 2.6826;
+let epsilon = 205.35;
+let mut SO2 = PcSaftPure::new_fluid(m, sigma, epsilon);
+
+if let Ok(_) = SO2.c_flash() {
+    println!("T_c={}", SO2.T().unwrap());
+    println!("p_c={}", SO2.p().unwrap());
+    println!("rho_c={}", SO2.rho().unwrap());
+}
+
+if let Ok(_) = SO2.t_flash(273.15) {
+    println!("T_s={}", SO2.T_s().unwrap());
+    println!("p_s={}", SO2.p_s().unwrap());
+    println!("rho_v={}", SO2.rho_v().unwrap());
+    println!("rho_l={}", SO2.rho_l().unwrap());
+}
+
+if let Ok(_) = SO2.tp_flash(273.15, 0.1e6) {
+    println!("T={}", SO2.T().unwrap());
+    println!("p={}", SO2.p().unwrap());
+    println!("rho={}", SO2.rho().unwrap());
+}
+
+```
+
+```python
+from thermolib import PcSaftPure
+
+M = 2.8611  # m
+S = 2.6826  # sigma
+E = 205.35  # epsilon
+SO2 = PcSaftPure(M, S, E)
+
+SO2.c_flash()
+print("T_c =", SO2.T())
+print("p_c =", SO2.p())
+print("rho_c =", SO2.rho())
+
+SO2.t_flash(273.15)
+print("T_s =", SO2.T_s())
+print("p_s =", SO2.p_s())
+print("rho_v =", SO2.rho_v())
+print("rho_l =", SO2.rho_l())
+
+SO2.tp_flash(273.15, 0.1e6)
+print("T =", SO2.T())
+print("p =", SO2.p())
+print("rho =", SO2.rho())
+
+```
+
