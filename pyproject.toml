@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "thermolib"
 dynamic = ["version"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 [tool.maturin]
 bindings = "pyo3"
