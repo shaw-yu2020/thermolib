@@ -385,6 +385,57 @@ impl PcSaftPure {
             Ok(self.rhol_num * 1E30 / NA)
         }
     }
+    pub fn B(&mut self, T: f64) -> anyhow::Result<f64> {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D1(T, rho_num) / rho_num;
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D1(T, rho_num) / rho_num;
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        Ok(val_new * NA / 1E30)
+    }
+    pub fn C(&mut self, T: f64) -> anyhow::Result<f64> {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D2(T, rho_num) / rho_num.powi(2);
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D2(T, rho_num) / rho_num.powi(2);
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        Ok(val_new * (NA / 1E30).powi(2))
+    }
+    pub fn D(&mut self, T: f64) -> anyhow::Result<f64> {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D3(T, rho_num) / rho_num.powi(3);
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D3(T, rho_num) / rho_num.powi(3);
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        Ok(val_new * (NA / 1E30).powi(3))
+    }
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
