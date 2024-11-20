@@ -1362,7 +1362,7 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn Xt1(&self, X: f64) -> f64 {
-        self.X.powi(3) / (X - 2.0)
+        X.powi(3) / (X - 2.0)
     }
     fn Xt2(&self, X: f64) -> f64 {
         2.0 * X.powi(5) / (X - 2.0).powi(3) * (X - 3.0)
