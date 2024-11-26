@@ -1243,7 +1243,14 @@ impl PcSaftPure {
                 2.0 * (self.assocX2(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(2)
                     + self.assocX1(self.XA) * self.XT0D2(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX2(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
+                    + self.assocX1(self.XA) * self.XT0D2(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX2(2.0 * self.XA - 1.0)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
     fn assocT0D3(&self, eta: f64) -> f64 {
@@ -1265,7 +1272,22 @@ impl PcSaftPure {
                         * self.XT0D2(Xtype::Xa2B(self.XA), eta)
                     + self.assocX1(self.XA) * self.XT0D3(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX3(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(3)
+                    + 3.0
+                        * self.assocX2(self.XA)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(self.XA) * self.XT0D3(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX3(2.0 * self.XA - 1.0)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(3)
+                        + 3.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
     fn assocT0D4(&self, eta: f64) -> f64 {
@@ -1297,7 +1319,34 @@ impl PcSaftPure {
                         * self.XT0D3(Xtype::Xa2B(self.XA), eta)
                     + self.assocX1(self.XA) * self.XT0D4(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX4(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(4)
+                    + 6.0
+                        * self.assocX3(self.XA)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
+                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
+                    + 3.0 * self.assocX2(self.XA) * self.XT0D2(Xtype::Xa3B(self.XA), eta).powi(2)
+                    + 4.0
+                        * self.assocX2(self.XA)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D3(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(self.XA) * self.XT0D4(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX4(2.0 * self.XA - 1.0)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(4)
+                        + 6.0
+                            * self.assocX3(2.0 * self.XA - 1.0)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + 3.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
+                        + 4.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT0D4(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
     fn assocT1D1(&self, eta: f64) -> f64 {
@@ -1315,7 +1364,17 @@ impl PcSaftPure {
                     * self.XT0D1(Xtype::Xa2B(self.XA), eta)
                     + self.assocX1(self.XA) * self.XT1D1(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX2(self.XA)
+                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                    * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(self.XA) * self.XT1D1(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX2(2.0 * self.XA - 1.0)
+                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
     fn assocT1D2(&self, eta: f64) -> f64 {
@@ -1347,7 +1406,31 @@ impl PcSaftPure {
                         * self.XT0D2(Xtype::Xa2B(self.XA), eta)
                     + self.assocX1(self.XA) * self.XT1D2(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX3(self.XA)
+                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                    * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
+                    + 2.0
+                        * self.assocX2(self.XA)
+                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX2(self.XA)
+                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(self.XA) * self.XT1D2(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX3(2.0 * self.XA - 1.0)
+                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
+                        + 2.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT1D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
     fn assocT1D3(&self, eta: f64) -> f64 {
@@ -1405,7 +1488,57 @@ impl PcSaftPure {
                         * self.XT0D3(Xtype::Xa2B(self.XA), eta)
                     + self.assocX1(self.XA) * self.XT1D3(Xtype::Xa2B(self.XA), eta))
             }
-            AssocType::Type3B => 0.0,
+            AssocType::Type3B => {
+                2.0 * (self.assocX4(self.XA)
+                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                    * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(3)
+                    + 3.0
+                        * self.assocX3(self.XA)
+                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
+                    + 3.0
+                        * self.assocX3(self.XA)
+                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
+                    + 3.0
+                        * self.assocX2(self.XA)
+                        * self.XT1D2(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                    + 3.0
+                        * self.assocX2(self.XA)
+                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX2(self.XA)
+                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
+                        * self.XT0D3(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(self.XA) * self.XT1D3(Xtype::Xa3B(self.XA), eta))
+                    + (self.assocX4(2.0 * self.XA - 1.0)
+                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(3)
+                        + 3.0
+                            * self.assocX3(2.0 * self.XA - 1.0)
+                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
+                        + 3.0
+                            * self.assocX3(2.0 * self.XA - 1.0)
+                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + 3.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT1D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + 3.0
+                            * self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX2(2.0 * self.XA - 1.0)
+                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                        + self.assocX1(2.0 * self.XA - 1.0)
+                            * self.XT1D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+            }
         }
     }
 }
@@ -1686,6 +1819,10 @@ mod tests {
         }
         let mut CH3OH =
             PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_2B_assoc_term(2899.5, 0.035176);
+        CH3OH.td_unchecked(300.0, 24514.0);
+        // CH3OH.check_derivatives();
+        let mut CH3OH =
+            PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_3B_assoc_term(2899.5, 0.035176);
         CH3OH.td_unchecked(300.0, 24514.0);
         // CH3OH.check_derivatives();
     }
