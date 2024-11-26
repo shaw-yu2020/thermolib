@@ -77,6 +77,7 @@ enum Xtype {
     Xa1(f64),
     Xa2B(f64),
     Xa3B(f64),
+    Xc3B(f64),
 }
 #[pymethods]
 #[allow(non_snake_case)]
@@ -1222,10 +1223,12 @@ impl PcSaftPure {
             AssocType::Type0 => 0.0,
             AssocType::Type1 => self.assocX1(self.XA) * self.XT0D1(Xtype::Xa1(self.XA), eta),
             AssocType::Type2B => {
-                2.0 * (self.assocX1(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta))
+                2.0 * self.assocX1(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta)
             }
             AssocType::Type3B => {
-                2.0 * (self.assocX1(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta))
+                2.0 * self.assocX1(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta)
+                    + self.assocX1(2.0 * self.XA - 1.0)
+                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
@@ -1469,6 +1472,7 @@ impl PcSaftPure {
         match X0 {
             Xtype::Xa1(X) | Xtype::Xa2B(X) => X.powi(3) / (X - 2.0),
             Xtype::Xa3B(X) => (X * (2.0 * X - 1.0)).powi(2) / (2.0 * X.powi(2) - 4.0 * X + 1.0),
+            Xtype::Xc3B(X) => (X * (X + 1.0)).powi(2) / (X.powi(2) - 2.0 * X - 1.0),
         }
     }
     fn Xt2(&self, X0: Xtype) -> f64 {
@@ -1477,6 +1481,10 @@ impl PcSaftPure {
             Xtype::Xa3B(X) => {
                 2.0 * (X * (2.0 * X - 1.0)).powi(3) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(3)
                     * (4.0 * X.powi(3) - 12.0 * X.powi(2) + 6.0 * X - 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                2.0 * (X * (X + 1.0)).powi(3) / (X.powi(2) - 2.0 * X - 1.0).powi(3)
+                    * (X.powi(3) - 3.0 * X.powi(2) - 3.0 * X - 1.0)
             }
         }
     }
@@ -1490,6 +1498,15 @@ impl PcSaftPure {
                     * (16.0 * X.powi(6) - 96.0 * X.powi(5) + 200.0 * X.powi(4) - 160.0 * X.powi(3)
                         + 62.0 * X.powi(2)
                         - 12.0 * X
+                        + 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                6.0 * (X * (X + 1.0)).powi(4) / (X.powi(2) - 2.0 * X - 1.0).powi(5)
+                    * (X.powi(6) - 6.0 * X.powi(5)
+                        + 5.0 * X.powi(4)
+                        + 20.0 * X.powi(3)
+                        + 17.0 * X.powi(2)
+                        + 6.0 * X
                         + 1.0)
             }
         }
@@ -1509,6 +1526,16 @@ impl PcSaftPure {
                         + 716.0 * X.powi(3)
                         - 150.0 * X.powi(2)
                         + 18.0 * X
+                        - 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                24.0 * (X * (X + 1.0)).powi(5) / (X.powi(2) - 2.0 * X - 1.0).powi(7)
+                    * (X.powi(9) - 9.0 * X.powi(8) + 22.0 * X.powi(7) + 14.0 * X.powi(6)
+                        - 84.0 * X.powi(5)
+                        - 146.0 * X.powi(4)
+                        - 106.0 * X.powi(3)
+                        - 42.0 * X.powi(2)
+                        - 9.0 * X
                         - 1.0)
             }
         }
