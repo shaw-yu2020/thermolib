@@ -72,12 +72,93 @@ enum AssocType {
     Type2B,
     Type3B,
 }
-#[derive(Clone, Copy)]
 enum Xtype {
     Xa1(f64),
     Xa2B(f64),
     Xa3B(f64),
     Xc3B(f64),
+}
+#[allow(non_snake_case)]
+impl Xtype {
+    fn t0(&self) -> f64 {
+        match self {
+            Xtype::Xa1(X) => *X,
+            Xtype::Xa2B(X) => *X,
+            Xtype::Xa3B(X) | Xtype::Xc3B(X) => *X,
+        }
+    }
+    fn t1(&self) -> f64 {
+        match self {
+            Xtype::Xa1(X) | Xtype::Xa2B(X) => X.powi(3) / (X - 2.0),
+            Xtype::Xa3B(X) => (X * (2.0 * X - 1.0)).powi(2) / (2.0 * X.powi(2) - 4.0 * X + 1.0),
+            Xtype::Xc3B(X) => (X * (X + 1.0)).powi(2) / (X.powi(2) - 2.0 * X - 1.0),
+        }
+    }
+    fn t2(&self) -> f64 {
+        match self {
+            Xtype::Xa1(X) | Xtype::Xa2B(X) => 2.0 * X.powi(5) / (X - 2.0).powi(3) * (X - 3.0),
+            Xtype::Xa3B(X) => {
+                2.0 * (X * (2.0 * X - 1.0)).powi(3) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(3)
+                    * (4.0 * X.powi(3) - 12.0 * X.powi(2) + 6.0 * X - 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                2.0 * (X * (X + 1.0)).powi(3) / (X.powi(2) - 2.0 * X - 1.0).powi(3)
+                    * (X.powi(3) - 3.0 * X.powi(2) - 3.0 * X - 1.0)
+            }
+        }
+    }
+    fn t3(&self) -> f64 {
+        match self {
+            Xtype::Xa1(X) | Xtype::Xa2B(X) => {
+                6.0 * X.powi(7) / (X - 2.0).powi(5) * (X.powi(2) - 6.0 * X + 10.0)
+            }
+            Xtype::Xa3B(X) => {
+                6.0 * (X * (2.0 * X - 1.0)).powi(4) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(5)
+                    * (16.0 * X.powi(6) - 96.0 * X.powi(5) + 200.0 * X.powi(4) - 160.0 * X.powi(3)
+                        + 62.0 * X.powi(2)
+                        - 12.0 * X
+                        + 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                6.0 * (X * (X + 1.0)).powi(4) / (X.powi(2) - 2.0 * X - 1.0).powi(5)
+                    * (X.powi(6) - 6.0 * X.powi(5)
+                        + 5.0 * X.powi(4)
+                        + 20.0 * X.powi(3)
+                        + 17.0 * X.powi(2)
+                        + 6.0 * X
+                        + 1.0)
+            }
+        }
+    }
+    fn t4(&self) -> f64 {
+        match self {
+            Xtype::Xa1(X) | Xtype::Xa2B(X) => {
+                24.0 * X.powi(9) / (X - 2.0).powi(7)
+                    * (X.powi(3) - 9.0 * X.powi(2) + 29.0 * X - 35.0)
+            }
+            Xtype::Xa3B(X) => {
+                24.0 * (X * (2.0 * X - 1.0)).powi(5) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(7)
+                    * (64.0 * X.powi(9) - 576.0 * X.powi(8) + 2080.0 * X.powi(7)
+                        - 3808.0 * X.powi(6)
+                        + 3696.0 * X.powi(5)
+                        - 2084.0 * X.powi(4)
+                        + 716.0 * X.powi(3)
+                        - 150.0 * X.powi(2)
+                        + 18.0 * X
+                        - 1.0)
+            }
+            Xtype::Xc3B(X) => {
+                24.0 * (X * (X + 1.0)).powi(5) / (X.powi(2) - 2.0 * X - 1.0).powi(7)
+                    * (X.powi(9) - 9.0 * X.powi(8) + 22.0 * X.powi(7) + 14.0 * X.powi(6)
+                        - 84.0 * X.powi(5)
+                        - 146.0 * X.powi(4)
+                        - 106.0 * X.powi(3)
+                        - 42.0 * X.powi(2)
+                        - 9.0 * X
+                        - 1.0)
+            }
+        }
+    }
 }
 #[pymethods]
 #[allow(non_snake_case)]
@@ -1221,457 +1302,180 @@ impl PcSaftPure {
     fn assocT0D1(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => self.assocX1(self.XA) * self.XT0D1(Xtype::Xa1(self.XA), eta),
-            AssocType::Type2B => {
-                2.0 * self.assocX1(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-            }
+            AssocType::Type1 => self.siteT0D1(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT0D1(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * self.assocX1(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(2.0 * self.XA - 1.0)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
+                2.0 * self.siteT0D1(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT0D1(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT0D2(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX2(self.XA) * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(2)
-                    + self.assocX1(self.XA) * self.XT0D2(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX2(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(2)
-                    + self.assocX1(self.XA) * self.XT0D2(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT0D2(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT0D2(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX2(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
-                    + self.assocX1(self.XA) * self.XT0D2(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX2(2.0 * self.XA - 1.0)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT0D2(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT0D2(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT0D3(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX3(self.XA) * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa1(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D3(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX3(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D3(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT0D3(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT0D3(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX3(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D3(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX3(2.0 * self.XA - 1.0)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(3)
-                        + 3.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT0D3(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT0D3(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT0D4(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX4(self.XA) * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(4)
-                    + 6.0
-                        * self.assocX3(self.XA)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(2)
-                        * self.XT0D2(Xtype::Xa1(self.XA), eta)
-                    + 3.0 * self.assocX2(self.XA) * self.XT0D2(Xtype::Xa1(self.XA), eta).powi(2)
-                    + 4.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa1(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D4(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX4(self.XA) * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(4)
-                    + 6.0
-                        * self.assocX3(self.XA)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(2)
-                        * self.XT0D2(Xtype::Xa2B(self.XA), eta)
-                    + 3.0 * self.assocX2(self.XA) * self.XT0D2(Xtype::Xa2B(self.XA), eta).powi(2)
-                    + 4.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D4(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT0D4(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT0D4(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX4(self.XA) * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(4)
-                    + 6.0
-                        * self.assocX3(self.XA)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
-                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
-                    + 3.0 * self.assocX2(self.XA) * self.XT0D2(Xtype::Xa3B(self.XA), eta).powi(2)
-                    + 4.0
-                        * self.assocX2(self.XA)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT0D4(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX4(2.0 * self.XA - 1.0)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(4)
-                        + 6.0
-                            * self.assocX3(2.0 * self.XA - 1.0)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + 3.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
-                        + 4.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT0D4(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT0D4(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT0D4(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT1D1(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX2(self.XA)
-                    * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D1(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX2(self.XA)
-                    * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D1(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT1D1(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT1D1(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX2(self.XA)
-                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D1(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX2(2.0 * self.XA - 1.0)
-                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT1D1(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT1D1(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT1D2(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX3(self.XA)
-                    * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(2)
-                    + 2.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa1(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D2(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX3(self.XA)
-                    * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(2)
-                    + 2.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D2(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT1D2(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT1D2(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX3(self.XA)
-                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
-                    + 2.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D2(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX3(2.0 * self.XA - 1.0)
-                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
-                        + 2.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT1D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT1D2(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT1D2(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
     fn assocT1D3(&self, eta: f64) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 => {
-                self.assocX4(self.XA)
-                    * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta).powi(2)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa1(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D2(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa1(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa1(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa1(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa1(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D3(Xtype::Xa1(self.XA), eta)
-            }
-            AssocType::Type2B => {
-                2.0 * (self.assocX4(self.XA)
-                    * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta).powi(2)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa2B(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D2(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa2B(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa2B(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa2B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D3(Xtype::Xa2B(self.XA), eta))
-            }
+            AssocType::Type1 => self.siteT1D3(&Xtype::Xa1(self.XA), eta),
+            AssocType::Type2B => 2.0 * self.siteT1D3(&Xtype::Xa2B(self.XA), eta),
             AssocType::Type3B => {
-                2.0 * (self.assocX4(self.XA)
-                    * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                    * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(3)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta).powi(2)
-                    + 3.0
-                        * self.assocX3(self.XA)
-                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D2(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D1(Xtype::Xa3B(self.XA), eta)
-                    + 3.0
-                        * self.assocX2(self.XA)
-                        * self.XT1D1(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D2(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX2(self.XA)
-                        * self.XT1D0(Xtype::Xa3B(self.XA), eta)
-                        * self.XT0D3(Xtype::Xa3B(self.XA), eta)
-                    + self.assocX1(self.XA) * self.XT1D3(Xtype::Xa3B(self.XA), eta))
-                    + (self.assocX4(2.0 * self.XA - 1.0)
-                        * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(3)
-                        + 3.0
-                            * self.assocX3(2.0 * self.XA - 1.0)
-                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta).powi(2)
-                        + 3.0
-                            * self.assocX3(2.0 * self.XA - 1.0)
-                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + 3.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT1D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + 3.0
-                            * self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT1D1(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D2(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX2(2.0 * self.XA - 1.0)
-                            * self.XT1D0(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                            * self.XT0D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
-                        + self.assocX1(2.0 * self.XA - 1.0)
-                            * self.XT1D3(Xtype::Xc3B(2.0 * self.XA - 1.0), eta))
+                2.0 * self.siteT1D3(&Xtype::Xa3B(self.XA), eta)
+                    + self.siteT1D3(&Xtype::Xc3B(2.0 * self.XA - 1.0), eta)
             }
         }
     }
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn assocX1(&self, X: f64) -> f64 {
+    fn siteT0D1(&self, X: &Xtype, eta: f64) -> f64 {
+        self.siteX1(X.t0()) * self.XT0D1(X, eta)
+    }
+    fn siteT0D2(&self, X: &Xtype, eta: f64) -> f64 {
+        self.siteX2(X.t0()) * self.XT0D1(X, eta).powi(2) + self.siteX1(X.t0()) * self.XT0D2(X, eta)
+    }
+    fn siteT0D3(&self, X: &Xtype, eta: f64) -> f64 {
+        let Xt0 = X.t0();
+        self.siteX3(Xt0) * self.XT0D1(X, eta).powi(3)
+            + 3.0 * self.siteX2(Xt0) * self.XT0D1(X, eta) * self.XT0D2(X, eta)
+            + self.siteX1(Xt0) * self.XT0D3(X, eta)
+    }
+    fn siteT0D4(&self, X: &Xtype, eta: f64) -> f64 {
+        let Xt0 = X.t0();
+        self.siteX4(Xt0) * self.XT0D1(X, eta).powi(4)
+            + 6.0 * self.siteX3(Xt0) * self.XT0D1(X, eta).powi(2) * self.XT0D2(X, eta)
+            + 3.0 * self.siteX2(Xt0) * self.XT0D2(X, eta).powi(2)
+            + 4.0 * self.siteX2(Xt0) * self.XT0D1(X, eta) * self.XT0D3(X, eta)
+            + self.siteX1(Xt0) * self.XT0D4(X, eta)
+    }
+    fn siteT1D1(&self, X: &Xtype, eta: f64) -> f64 {
+        self.siteX2(X.t0()) * self.XT1D0(X, eta) * self.XT0D1(X, eta)
+            + self.siteX1(X.t0()) * self.XT1D1(X, eta)
+    }
+    fn siteT1D2(&self, X: &Xtype, eta: f64) -> f64 {
+        let Xt0 = X.t0();
+        self.siteX3(Xt0) * self.XT1D0(X, eta) * self.XT0D1(X, eta).powi(2)
+            + 2.0 * self.siteX2(Xt0) * self.XT1D1(X, eta) * self.XT0D1(X, eta)
+            + self.siteX2(Xt0) * self.XT1D0(X, eta) * self.XT0D2(X, eta)
+            + self.siteX1(Xt0) * self.XT1D2(X, eta)
+    }
+    fn siteT1D3(&self, X: &Xtype, eta: f64) -> f64 {
+        let Xt0 = X.t0();
+        self.siteX4(Xt0) * self.XT1D0(X, eta) * self.XT0D1(X, eta).powi(3)
+            + 3.0 * self.siteX3(Xt0) * self.XT1D1(X, eta) * self.XT0D1(X, eta).powi(2)
+            + 3.0 * self.siteX3(Xt0) * self.XT1D0(X, eta) * self.XT0D1(X, eta) * self.XT0D2(X, eta)
+            + 3.0 * self.siteX2(Xt0) * self.XT1D2(X, eta) * self.XT0D1(X, eta)
+            + 3.0 * self.siteX2(Xt0) * self.XT1D1(X, eta) * self.XT0D2(X, eta)
+            + self.siteX2(Xt0) * self.XT1D0(X, eta) * self.XT0D3(X, eta)
+            + self.siteX1(Xt0) * self.XT1D3(X, eta)
+    }
+}
+#[allow(non_snake_case)]
+impl PcSaftPure {
+    fn siteX1(&self, X: f64) -> f64 {
         1.0 / X - 1.0 / 2.0
     }
-    fn assocX2(&self, X: f64) -> f64 {
+    fn siteX2(&self, X: f64) -> f64 {
         -1.0 / X.powi(2)
     }
-    fn assocX3(&self, X: f64) -> f64 {
+    fn siteX3(&self, X: f64) -> f64 {
         2.0 / X.powi(3)
     }
-    fn assocX4(&self, X: f64) -> f64 {
+    fn siteX4(&self, X: f64) -> f64 {
         -6.0 / X.powi(4)
     }
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn XT0D1(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt1(X) * self.tT0D1(eta)
+    fn XT0D1(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t1() * self.tT0D1(eta)
     }
-    fn XT0D2(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt2(X) * self.tT0D1(eta).powi(2) + self.Xt1(X) * self.tT0D2(eta)
+    fn XT0D2(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t2() * self.tT0D1(eta).powi(2) + X.t1() * self.tT0D2(eta)
     }
-    fn XT0D3(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt3(X) * self.tT0D1(eta).powi(3)
-            + 3.0 * self.Xt2(X) * self.tT0D1(eta) * self.tT0D2(eta)
-            + self.Xt1(X) * self.tT0D3(eta)
+    fn XT0D3(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t3() * self.tT0D1(eta).powi(3)
+            + 3.0 * X.t2() * self.tT0D1(eta) * self.tT0D2(eta)
+            + X.t1() * self.tT0D3(eta)
     }
-    fn XT0D4(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt4(X) * self.tT0D1(eta).powi(4)
-            + 6.0 * self.Xt3(X) * self.tT0D1(eta).powi(2) * self.tT0D2(eta)
-            + 3.0 * self.Xt2(X) * self.tT0D2(eta).powi(2)
-            + 4.0 * self.Xt2(X) * self.tT0D1(eta) * self.tT0D3(eta)
-            + self.Xt1(X) * self.tT0D4(eta)
+    fn XT0D4(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t4() * self.tT0D1(eta).powi(4)
+            + 6.0 * X.t3() * self.tT0D1(eta).powi(2) * self.tT0D2(eta)
+            + 3.0 * X.t2() * self.tT0D2(eta).powi(2)
+            + 4.0 * X.t2() * self.tT0D1(eta) * self.tT0D3(eta)
+            + X.t1() * self.tT0D4(eta)
     }
-    fn XT1D0(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt1(X) * self.tT1D0(eta)
+    fn XT1D0(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t1() * self.tT1D0(eta)
     }
-    fn XT1D1(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt2(X) * self.tT1D0(eta) * self.tT0D1(eta) + self.Xt1(X) * self.tT1D1(eta)
+    fn XT1D1(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t2() * self.tT1D0(eta) * self.tT0D1(eta) + X.t1() * self.tT1D1(eta)
     }
-    fn XT1D2(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt3(X) * self.tT1D0(eta) * self.tT0D1(eta).powi(2)
-            + 2.0 * self.Xt2(X) * self.tT1D1(eta) * self.tT0D1(eta)
-            + self.Xt2(X) * self.tT1D0(eta) * self.tT0D2(eta)
-            + self.Xt1(X) * self.tT1D2(eta)
+    fn XT1D2(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t3() * self.tT1D0(eta) * self.tT0D1(eta).powi(2)
+            + 2.0 * X.t2() * self.tT1D1(eta) * self.tT0D1(eta)
+            + X.t2() * self.tT1D0(eta) * self.tT0D2(eta)
+            + X.t1() * self.tT1D2(eta)
     }
-    fn XT1D3(&self, X: Xtype, eta: f64) -> f64 {
-        self.Xt4(X) * self.tT1D0(eta) * self.tT0D1(eta).powi(3)
-            + 3.0 * self.Xt3(X) * self.tT1D1(eta) * self.tT0D1(eta).powi(2)
-            + 3.0 * self.Xt3(X) * self.tT1D0(eta) * self.tT0D1(eta) * self.tT0D2(eta)
-            + 3.0 * self.Xt2(X) * self.tT1D2(eta) * self.tT0D1(eta)
-            + 3.0 * self.Xt2(X) * self.tT1D1(eta) * self.tT0D2(eta)
-            + self.Xt2(X) * self.tT1D0(eta) * self.tT0D3(eta)
-            + self.Xt1(X) * self.tT1D3(eta)
-    }
-}
-#[allow(non_snake_case)]
-impl PcSaftPure {
-    fn Xt1(&self, X0: Xtype) -> f64 {
-        match X0 {
-            Xtype::Xa1(X) | Xtype::Xa2B(X) => X.powi(3) / (X - 2.0),
-            Xtype::Xa3B(X) => (X * (2.0 * X - 1.0)).powi(2) / (2.0 * X.powi(2) - 4.0 * X + 1.0),
-            Xtype::Xc3B(X) => (X * (X + 1.0)).powi(2) / (X.powi(2) - 2.0 * X - 1.0),
-        }
-    }
-    fn Xt2(&self, X0: Xtype) -> f64 {
-        match X0 {
-            Xtype::Xa1(X) | Xtype::Xa2B(X) => 2.0 * X.powi(5) / (X - 2.0).powi(3) * (X - 3.0),
-            Xtype::Xa3B(X) => {
-                2.0 * (X * (2.0 * X - 1.0)).powi(3) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(3)
-                    * (4.0 * X.powi(3) - 12.0 * X.powi(2) + 6.0 * X - 1.0)
-            }
-            Xtype::Xc3B(X) => {
-                2.0 * (X * (X + 1.0)).powi(3) / (X.powi(2) - 2.0 * X - 1.0).powi(3)
-                    * (X.powi(3) - 3.0 * X.powi(2) - 3.0 * X - 1.0)
-            }
-        }
-    }
-    fn Xt3(&self, X0: Xtype) -> f64 {
-        match X0 {
-            Xtype::Xa1(X) | Xtype::Xa2B(X) => {
-                6.0 * X.powi(7) / (X - 2.0).powi(5) * (X.powi(2) - 6.0 * X + 10.0)
-            }
-            Xtype::Xa3B(X) => {
-                6.0 * (X * (2.0 * X - 1.0)).powi(4) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(5)
-                    * (16.0 * X.powi(6) - 96.0 * X.powi(5) + 200.0 * X.powi(4) - 160.0 * X.powi(3)
-                        + 62.0 * X.powi(2)
-                        - 12.0 * X
-                        + 1.0)
-            }
-            Xtype::Xc3B(X) => {
-                6.0 * (X * (X + 1.0)).powi(4) / (X.powi(2) - 2.0 * X - 1.0).powi(5)
-                    * (X.powi(6) - 6.0 * X.powi(5)
-                        + 5.0 * X.powi(4)
-                        + 20.0 * X.powi(3)
-                        + 17.0 * X.powi(2)
-                        + 6.0 * X
-                        + 1.0)
-            }
-        }
-    }
-    fn Xt4(&self, X0: Xtype) -> f64 {
-        match X0 {
-            Xtype::Xa1(X) | Xtype::Xa2B(X) => {
-                24.0 * X.powi(9) / (X - 2.0).powi(7)
-                    * (X.powi(3) - 9.0 * X.powi(2) + 29.0 * X - 35.0)
-            }
-            Xtype::Xa3B(X) => {
-                24.0 * (X * (2.0 * X - 1.0)).powi(5) / (2.0 * X.powi(2) - 4.0 * X + 1.0).powi(7)
-                    * (64.0 * X.powi(9) - 576.0 * X.powi(8) + 2080.0 * X.powi(7)
-                        - 3808.0 * X.powi(6)
-                        + 3696.0 * X.powi(5)
-                        - 2084.0 * X.powi(4)
-                        + 716.0 * X.powi(3)
-                        - 150.0 * X.powi(2)
-                        + 18.0 * X
-                        - 1.0)
-            }
-            Xtype::Xc3B(X) => {
-                24.0 * (X * (X + 1.0)).powi(5) / (X.powi(2) - 2.0 * X - 1.0).powi(7)
-                    * (X.powi(9) - 9.0 * X.powi(8) + 22.0 * X.powi(7) + 14.0 * X.powi(6)
-                        - 84.0 * X.powi(5)
-                        - 146.0 * X.powi(4)
-                        - 106.0 * X.powi(3)
-                        - 42.0 * X.powi(2)
-                        - 9.0 * X
-                        - 1.0)
-            }
-        }
+    fn XT1D3(&self, X: &Xtype, eta: f64) -> f64 {
+        X.t4() * self.tT1D0(eta) * self.tT0D1(eta).powi(3)
+            + 3.0 * X.t3() * self.tT1D1(eta) * self.tT0D1(eta).powi(2)
+            + 3.0 * X.t3() * self.tT1D0(eta) * self.tT0D1(eta) * self.tT0D2(eta)
+            + 3.0 * X.t2() * self.tT1D2(eta) * self.tT0D1(eta)
+            + 3.0 * X.t2() * self.tT1D1(eta) * self.tT0D2(eta)
+            + X.t2() * self.tT1D0(eta) * self.tT0D3(eta)
+            + X.t1() * self.tT1D3(eta)
     }
 }
 #[allow(non_snake_case)]
