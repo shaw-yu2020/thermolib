@@ -1419,47 +1419,41 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn siteT0D1(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c * self.siteX1(X) * self.XAT0D1(eta)
+        c * self.siteX1(X) * self.XT0D1(eta)
     }
     fn siteT0D2(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(2) * self.siteX2(X) * self.XAT0D1(eta).powi(2)
-            + c * self.siteX1(X) * self.XAT0D2(eta)
+        c.powi(2) * self.siteX2(X) * self.XT0D1(eta).powi(2) + c * self.siteX1(X) * self.XT0D2(eta)
     }
     fn siteT0D3(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(3) * self.siteX3(X) * self.XAT0D1(eta).powi(3)
-            + 3.0 * c.powi(2) * self.siteX2(X) * self.XAT0D1(eta) * self.XAT0D2(eta)
-            + c * self.siteX1(X) * self.XAT0D3(eta)
+        c.powi(3) * self.siteX3(X) * self.XT0D1(eta).powi(3)
+            + 3.0 * c.powi(2) * self.siteX2(X) * self.XT0D1(eta) * self.XT0D2(eta)
+            + c * self.siteX1(X) * self.XT0D3(eta)
     }
     fn siteT0D4(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(4) * self.siteX4(X) * self.XAT0D1(eta).powi(4)
-            + 6.0 * c.powi(3) * self.siteX3(X) * self.XAT0D1(eta).powi(2) * self.XAT0D2(eta)
-            + 3.0 * c.powi(2) * self.siteX2(X) * self.XAT0D2(eta).powi(2)
-            + 4.0 * c.powi(2) * self.siteX2(X) * self.XAT0D1(eta) * self.XAT0D3(eta)
-            + c * self.siteX1(X) * self.XAT0D4(eta)
+        c.powi(4) * self.siteX4(X) * self.XT0D1(eta).powi(4)
+            + 6.0 * c.powi(3) * self.siteX3(X) * self.XT0D1(eta).powi(2) * self.XT0D2(eta)
+            + 3.0 * c.powi(2) * self.siteX2(X) * self.XT0D2(eta).powi(2)
+            + 4.0 * c.powi(2) * self.siteX2(X) * self.XT0D1(eta) * self.XT0D3(eta)
+            + c * self.siteX1(X) * self.XT0D4(eta)
     }
     fn siteT1D1(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(2) * self.siteX2(X) * self.XAT1D0(eta) * self.XAT0D1(eta)
-            + c * self.siteX1(X) * self.XAT1D1(eta)
+        c.powi(2) * self.siteX2(X) * self.XT1D0(eta) * self.XT0D1(eta)
+            + c * self.siteX1(X) * self.XT1D1(eta)
     }
     fn siteT1D2(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(3) * self.siteX3(X) * self.XAT1D0(eta) * self.XAT0D1(eta).powi(2)
-            + 2.0 * c.powi(2) * self.siteX2(X) * self.XAT1D1(eta) * self.XAT0D1(eta)
-            + c.powi(2) * self.siteX2(X) * self.XAT1D0(eta) * self.XAT0D2(eta)
-            + c * self.siteX1(X) * self.XAT1D2(eta)
+        c.powi(3) * self.siteX3(X) * self.XT1D0(eta) * self.XT0D1(eta).powi(2)
+            + 2.0 * c.powi(2) * self.siteX2(X) * self.XT1D1(eta) * self.XT0D1(eta)
+            + c.powi(2) * self.siteX2(X) * self.XT1D0(eta) * self.XT0D2(eta)
+            + c * self.siteX1(X) * self.XT1D2(eta)
     }
     fn siteT1D3(&self, c: f64, X: f64, eta: f64) -> f64 {
-        c.powi(4) * self.siteX4(X) * self.XAT1D0(eta) * self.XAT0D1(eta).powi(3)
-            + 3.0 * c.powi(3) * self.siteX3(X) * self.XAT1D1(eta) * self.XAT0D1(eta).powi(2)
-            + 3.0
-                * c.powi(3)
-                * self.siteX3(X)
-                * self.XAT1D0(eta)
-                * self.XAT0D1(eta)
-                * self.XAT0D2(eta)
-            + 3.0 * c.powi(2) * self.siteX2(X) * self.XAT1D2(eta) * self.XAT0D1(eta)
-            + 3.0 * c.powi(2) * self.siteX2(X) * self.XAT1D1(eta) * self.XAT0D2(eta)
-            + c.powi(2) * self.siteX2(X) * self.XAT1D0(eta) * self.XAT0D3(eta)
-            + c * self.siteX1(X) * self.XAT1D3(eta)
+        c.powi(4) * self.siteX4(X) * self.XT1D0(eta) * self.XT0D1(eta).powi(3)
+            + 3.0 * c.powi(3) * self.siteX3(X) * self.XT1D1(eta) * self.XT0D1(eta).powi(2)
+            + 3.0 * c.powi(3) * self.siteX3(X) * self.XT1D0(eta) * self.XT0D1(eta) * self.XT0D2(eta)
+            + 3.0 * c.powi(2) * self.siteX2(X) * self.XT1D2(eta) * self.XT0D1(eta)
+            + 3.0 * c.powi(2) * self.siteX2(X) * self.XT1D1(eta) * self.XT0D2(eta)
+            + c.powi(2) * self.siteX2(X) * self.XT1D0(eta) * self.XT0D3(eta)
+            + c * self.siteX1(X) * self.XT1D3(eta)
     }
 }
 #[allow(non_snake_case)]
@@ -1479,38 +1473,38 @@ impl PcSaftPure {
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn XAT0D1(&self, eta: f64) -> f64 {
+    fn XT0D1(&self, eta: f64) -> f64 {
         self.assoc_type.t1() * self.tT0D1(eta)
     }
-    fn XAT0D2(&self, eta: f64) -> f64 {
+    fn XT0D2(&self, eta: f64) -> f64 {
         self.assoc_type.t2() * self.tT0D1(eta).powi(2) + self.assoc_type.t1() * self.tT0D2(eta)
     }
-    fn XAT0D3(&self, eta: f64) -> f64 {
+    fn XT0D3(&self, eta: f64) -> f64 {
         self.assoc_type.t3() * self.tT0D1(eta).powi(3)
             + 3.0 * self.assoc_type.t2() * self.tT0D1(eta) * self.tT0D2(eta)
             + self.assoc_type.t1() * self.tT0D3(eta)
     }
-    fn XAT0D4(&self, eta: f64) -> f64 {
+    fn XT0D4(&self, eta: f64) -> f64 {
         self.assoc_type.t4() * self.tT0D1(eta).powi(4)
             + 6.0 * self.assoc_type.t3() * self.tT0D1(eta).powi(2) * self.tT0D2(eta)
             + 3.0 * self.assoc_type.t2() * self.tT0D2(eta).powi(2)
             + 4.0 * self.assoc_type.t2() * self.tT0D1(eta) * self.tT0D3(eta)
             + self.assoc_type.t1() * self.tT0D4(eta)
     }
-    fn XAT1D0(&self, eta: f64) -> f64 {
+    fn XT1D0(&self, eta: f64) -> f64 {
         self.assoc_type.t1() * self.tT1D0(eta)
     }
-    fn XAT1D1(&self, eta: f64) -> f64 {
+    fn XT1D1(&self, eta: f64) -> f64 {
         self.assoc_type.t2() * self.tT1D0(eta) * self.tT0D1(eta)
             + self.assoc_type.t1() * self.tT1D1(eta)
     }
-    fn XAT1D2(&self, eta: f64) -> f64 {
+    fn XT1D2(&self, eta: f64) -> f64 {
         self.assoc_type.t3() * self.tT1D0(eta) * self.tT0D1(eta).powi(2)
             + 2.0 * self.assoc_type.t2() * self.tT1D1(eta) * self.tT0D1(eta)
             + self.assoc_type.t2() * self.tT1D0(eta) * self.tT0D2(eta)
             + self.assoc_type.t1() * self.tT1D2(eta)
     }
-    fn XAT1D3(&self, eta: f64) -> f64 {
+    fn XT1D3(&self, eta: f64) -> f64 {
         self.assoc_type.t4() * self.tT1D0(eta) * self.tT0D1(eta).powi(3)
             + 3.0 * self.assoc_type.t3() * self.tT1D1(eta) * self.tT0D1(eta).powi(2)
             + 3.0 * self.assoc_type.t3() * self.tT1D0(eta) * self.tT0D1(eta) * self.tT0D2(eta)
