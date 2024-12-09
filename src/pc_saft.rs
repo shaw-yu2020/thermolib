@@ -123,8 +123,7 @@ impl AssocType {
                         + 5.0 * (3.0 * b + 2.0) * (1.0 + b).powi(3) * XA.powi(4)
                         - 20.0 * b * (1.0 + b).powi(3) * XA.powi(3)
                         + b.powi(2) * (15.0 * b + 16.0) * (1.0 + b) * XA.powi(2)
-                        - 6.0 * b.powi(3) * (1.0 + b) * XA
-                        + b.powi(4))
+                        - (6.0 * b.powi(3) * (1.0 + b) * XA - b.powi(4)))
             }
             _ => 0.0,
         }
@@ -155,8 +154,7 @@ impl AssocType {
                             * XA.powi(4)
                         + b.powi(3) * (84.0 * b + 95.0) * (1.0 + b).powi(2) * XA.powi(3)
                         - 3.0 * b.powi(4) * (12.0 * b + 13.0) * (1.0 + b) * XA.powi(2)
-                        + 9.0 * b.powi(5) * (1.0 + b) * XA
-                        - b.powi(6))
+                        + (9.0 * b.powi(5) * (1.0 + b) * XA - b.powi(6)))
             }
             _ => 0.0,
         }
