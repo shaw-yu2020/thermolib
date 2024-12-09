@@ -112,8 +112,8 @@ impl AssocType {
             }
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(4) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0).powi(5)
-                    * (16.0 * XA.powi(6) - 96.0 * XA.powi(5) + 200.0 * XA.powi(4)
-                        - 160.0 * XA.powi(3)
+                    * (16.0 * XA.powi(6) - 96.0 * XA.powi(5)
+                        + (200.0 * XA.powi(4) - 160.0 * XA.powi(3))
                         + (62.0 * XA.powi(2) - 12.0 * XA + 1.0))
             }
             AssocType::Type3Bm { XA, b } => {
@@ -136,7 +136,7 @@ impl AssocType {
             }
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(5) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0).powi(7)
-                    * ((64.0 * XA.powi(9) - 576.0 * XA.powi(8))
+                    * (64.0 * XA.powi(9) - 576.0 * XA.powi(8)
                         + (2080.0 * XA.powi(7) - 3808.0 * XA.powi(6))
                         + (3696.0 * XA.powi(5) - 2084.0 * XA.powi(4))
                         + (716.0 * XA.powi(3) - 150.0 * XA.powi(2))
@@ -631,10 +631,7 @@ impl PcSaftPure {
         } else {
             let t = self.tT0D0(self.eta);
             match &mut self.assoc_type {
-                AssocType::Type1 { X } => {
-                    *X = (-1.0 + (1.0 + 4.0 * t).sqrt()) / (2.0 * t);
-                }
-                AssocType::Type2B { X } => {
+                AssocType::Type1 { X } | AssocType::Type2B { X } => {
                     *X = (-1.0 + (1.0 + 4.0 * t).sqrt()) / (2.0 * t);
                 }
                 AssocType::Type3B { XA } => {
