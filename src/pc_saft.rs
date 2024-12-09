@@ -206,7 +206,10 @@ impl PcSaftPure {
         self.clone()
     }
     pub fn add_3Bm_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) -> Self {
-        self.assoc_type = AssocType::Type3Bm { XA: 1.0, b };
+        self.assoc_type = AssocType::Type3Bm {
+            XA: 1.0,
+            b: b.abs().min(b.abs().recip()),
+        };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
         self.clone()
