@@ -82,7 +82,7 @@ where
 {
     let tol = f64::EPSILON.sqrt() * 2.0;
     let mut fx: [[f64; N_DIM]; N_DIM] = [[0.0; N_DIM]; N_DIM];
-    let mut h: f64 = if x > 1.0 { 0.01 * x } else { 0.01 };
+    let mut h: f64 = if x > 1.0 { 0.01 * x } else { 0.1 * x };
     fx[0][0] = (f(x + h) - f(x - h)) / 2.0 / h;
     for i in 1..N_DIM {
         h /= 2.0;
