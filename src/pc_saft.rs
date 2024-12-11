@@ -57,6 +57,7 @@ pub struct PcSaftPure {
     // changed from T and rho_num
     eta: f64,
     eta1: f64,
+    eta2: f64,
     m2e1s3: f64,
     m2e2s3: f64,
     // association term
@@ -183,6 +184,7 @@ impl PcSaftPure {
             // changed from T and rho_num
             eta: 0.0,
             eta1: 0.0,
+            eta2: 0.0,
             m2e1s3: 0.0,
             m2e2s3: 0.0,
             // association term
@@ -628,20 +630,18 @@ impl PcSaftPure {
             self.T = T;
             self.m2e1s3 = self.m.powi(2) * (self.epsilon / T) * self.sigma.powi(3);
             self.m2e2s3 = self.m.powi(2) * (self.epsilon / T).powi(2) * self.sigma.powi(3);
-            self.rho_num = rho_num;
-            let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp());
-            let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / T).exp() * self.epsilon / T;
-            self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
-            self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
         } else if rho_num != self.rho_num {
-            self.rho_num = rho_num;
-            let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp());
-            let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / T).exp() * self.epsilon / T;
-            self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
-            self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
         } else {
             return;
         }
+        self.rho_num = rho_num;
+        let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp());
+        let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / T).exp() * self.epsilon / T;
+        let d2 = d1 * (3.0 * self.epsilon / T - 2.0);
+        self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
+        self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
+        self.eta2 =
+            PI * rho_num * self.m * d * d1.powi(2) + FRAC_PI_2 * rho_num * self.m * d.powi(2) * d2;
         if let AssocType::Type0 = self.assoc_type {
         } else {
             let t = self.tT0D0(self.eta);
