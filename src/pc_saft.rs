@@ -64,10 +64,6 @@ pub struct PcSaftPure {
     assoc_type: AssocType,
     epsilon_AB: f64,
     kappa_AB_plus: f64,
-    // ideal gas cv
-    c0: f64,
-    v: Vec<f64>,
-    u: Vec<f64>,
 }
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -191,10 +187,6 @@ impl PcSaftPure {
             assoc_type: AssocType::Type0,
             epsilon_AB: 0.0,
             kappa_AB_plus: 0.0,
-            // ideal gas cv
-            c0: 1.5,
-            v: Vec::new(),
-            u: Vec::new(),
         }
     }
     pub fn add_1_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
@@ -222,14 +214,6 @@ impl PcSaftPure {
         };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-        self.clone()
-    }
-    pub fn add_ideal_cv_term(&mut self, c0: f64, v: Vec<f64>, u: Vec<f64>) -> Self {
-        if v.len() == u.len() {
-            self.c0 = c0;
-            self.v = v;
-            self.u = u;
-        }
         self.clone()
     }
     #[pyo3(signature=(print_val=true))]
@@ -499,6 +483,20 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
+    pub fn cp_res(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cp_res(self.T, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn h_res(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_h_res(self.T, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
@@ -619,6 +617,14 @@ impl PcSaftPure {
                 + 4.0 * self.calc_rT1D2(T, rho_num)
                 + self.calc_rT1D3(T, rho_num))
             / rho_num
+    }
+    fn calc_cp_res(&mut self, T: f64, rho_num: f64) -> f64 {
+        -R * (1.0 + 2.0 * self.calc_rT1D0(T, rho_num) + self.calc_rT2D0(T, rho_num))
+            + R * (1.0 + self.calc_rT0D1(T, rho_num) + self.calc_rT1D1(T, rho_num)).powi(2)
+                / (1.0 + 2.0 * self.calc_rT0D1(T, rho_num) + self.calc_rT0D2(T, rho_num))
+    }
+    fn calc_h_res(&mut self, T: f64, rho_num: f64) -> f64 {
+        R * T * (-self.calc_rT1D0(T, rho_num) + self.calc_rT0D1(T, rho_num))
     }
     fn calc_lnphi(&mut self, T: f64, rho_num: f64) -> f64 {
         self.calc_rT0D0(T, rho_num) + self.calc_rT0D1(T, rho_num)
