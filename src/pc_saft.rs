@@ -71,6 +71,7 @@ pub struct PcSaftPure {
     u: Vec<f64>,
     // cached variables
     giiT0D0: Option<f64>,
+    cT0D0: Option<f64>,
 }
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -200,6 +201,7 @@ impl PcSaftPure {
             u: Vec::new(),
             // cached variables
             giiT0D0: None,
+            cT0D0: None,
         }
     }
     pub fn add_1_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
@@ -716,6 +718,7 @@ impl PcSaftPure {
         self.eta2 =
             PI * rho_num * self.m * d * d1.powi(2) + FRAC_PI_2 * rho_num * self.m * d.powi(2) * d2;
         self.giiT0D0 = None;
+        self.cT0D0 = None;
         if let AssocType::Type0 = self.assoc_type {
         } else {
             let t = self.tT0D0();
@@ -935,12 +938,12 @@ impl PcSaftPure {
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn dispT0D0(&self, eta: f64) -> f64 {
+    fn dispT0D0(&mut self, eta: f64) -> f64 {
         -PI * self.rho_num
             * (2.0 * self.m2e1s3 * self.i1T0D0(eta)
                 + self.m * self.m2e2s3 * self.c1T0D0(eta) * self.i2T0D0(eta))
     }
-    fn dispT0D1(&self, eta: f64) -> f64 {
+    fn dispT0D1(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let i2T0D0 = self.i2T0D0(eta);
         -PI * self.rho_num
@@ -949,7 +952,7 @@ impl PcSaftPure {
                     * self.m2e2s3
                     * (c1T0D0 * i2T0D0 + self.c1T0D1(eta) * i2T0D0 + c1T0D0 * self.i2T0D1(eta)))
     }
-    fn dispT0D2(&self, eta: f64) -> f64 {
+    fn dispT0D2(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let i2T0D0 = self.i2T0D0(eta);
@@ -964,7 +967,7 @@ impl PcSaftPure {
                         + 2.0 * c1T0D1 * i2T0D1
                         + c1T0D0 * self.i2T0D2(eta)))
     }
-    fn dispT0D3(&self, eta: f64) -> f64 {
+    fn dispT0D3(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let c1T0D2 = self.c1T0D2(eta);
@@ -983,7 +986,7 @@ impl PcSaftPure {
                         + 3.0 * c1T0D1 * i2T0D2
                         + c1T0D0 * self.i2T0D3(eta)))
     }
-    fn dispT0D4(&self, eta: f64) -> f64 {
+    fn dispT0D4(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let c1T0D2 = self.c1T0D2(eta);
@@ -1006,7 +1009,7 @@ impl PcSaftPure {
                         + 4.0 * c1T0D1 * i2T0D3
                         + c1T0D0 * self.i2T0D4(eta)))
     }
-    fn dispT1D0(&self, eta: f64) -> f64 {
+    fn dispT1D0(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let i2T0D0 = self.i2T0D0(eta);
         -PI * self.rho_num
@@ -1016,7 +1019,7 @@ impl PcSaftPure {
                     * (self.c1T1D0(eta) * i2T0D0 + c1T0D0 * self.i2T1D0(eta)
                         - 2.0 * c1T0D0 * i2T0D0))
     }
-    fn dispT1D1(&self, eta: f64) -> f64 {
+    fn dispT1D1(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let c1T1D0 = self.c1T1D0(eta);
@@ -1037,7 +1040,7 @@ impl PcSaftPure {
                         + c1T0D0 * self.i2T1D1(eta)
                         - 2.0 * c1T0D0 * i2T0D1))
     }
-    fn dispT1D2(&self, eta: f64) -> f64 {
+    fn dispT1D2(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let c1T0D2 = self.c1T0D2(eta);
@@ -1069,7 +1072,7 @@ impl PcSaftPure {
                         + c1T0D0 * self.i2T1D2(eta)
                         - 2.0 * c1T0D0 * i2T0D2))
     }
-    fn dispT1D3(&self, eta: f64) -> f64 {
+    fn dispT1D3(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T0D1 = self.c1T0D1(eta);
         let c1T0D2 = self.c1T0D2(eta);
@@ -1112,7 +1115,7 @@ impl PcSaftPure {
                         + c1T0D0 * self.i2T1D3(eta)
                         - 2.0 * c1T0D0 * i2T0D3))
     }
-    fn dispT2D0(&self, eta: f64) -> f64 {
+    fn dispT2D0(&mut self, eta: f64) -> f64 {
         let c1T0D0 = self.c1T0D0(eta);
         let c1T1D0 = self.c1T1D0(eta);
         let i2T0D0 = self.i2T0D0(eta);
@@ -1133,73 +1136,77 @@ impl PcSaftPure {
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn c1T0D0(&self, eta: f64) -> f64 {
-        1.0 / self.cT0D0(eta)
+    fn c1T0D0(&mut self, eta: f64) -> f64 {
+        self.cT0D0(eta).recip()
     }
-    fn c1T0D1(&self, eta: f64) -> f64 {
+    fn c1T0D1(&mut self, eta: f64) -> f64 {
         -self.cT0D1(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T0D2(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
-        2.0 * self.cT0D1(eta).powi(2) / cT0D0.powi(3) - self.cT0D2(eta) / cT0D0.powi(2)
+    fn c1T0D2(&mut self, eta: f64) -> f64 {
+        2.0 * self.cT0D1(eta).powi(2) / self.cT0D0(eta).powi(3)
+            - self.cT0D2(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T0D3(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
+    fn c1T0D3(&mut self, eta: f64) -> f64 {
         let cT0D1 = self.cT0D1(eta);
-        -6.0 * cT0D1.powi(3) / cT0D0.powi(4) + 6.0 * cT0D1 * self.cT0D2(eta) / cT0D0.powi(3)
-            - self.cT0D3(eta) / cT0D0.powi(2)
+        -6.0 * cT0D1.powi(3) / self.cT0D0(eta).powi(4)
+            + 6.0 * cT0D1 * self.cT0D2(eta) / self.cT0D0(eta).powi(3)
+            - self.cT0D3(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T0D4(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
+    fn c1T0D4(&mut self, eta: f64) -> f64 {
         let cT0D1 = self.cT0D1(eta);
         let cT0D2 = self.cT0D2(eta);
-        24.0 * cT0D1.powi(4) / cT0D0.powi(5) - 36.0 * cT0D1.powi(2) * cT0D2 / cT0D0.powi(4)
-            + 8.0 * cT0D1 * self.cT0D3(eta) / cT0D0.powi(3)
-            + 6.0 * cT0D2.powi(2) / cT0D0.powi(3)
-            - self.cT0D4(eta) / cT0D0.powi(2)
+        24.0 * cT0D1.powi(4) / self.cT0D0(eta).powi(5)
+            - 36.0 * cT0D1.powi(2) * cT0D2 / self.cT0D0(eta).powi(4)
+            + 8.0 * cT0D1 * self.cT0D3(eta) / self.cT0D0(eta).powi(3)
+            + 6.0 * cT0D2.powi(2) / self.cT0D0(eta).powi(3)
+            - self.cT0D4(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T1D0(&self, eta: f64) -> f64 {
+    fn c1T1D0(&mut self, eta: f64) -> f64 {
         -self.cT1D0(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T1D1(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
-        2.0 * self.cT1D0(eta) * self.cT0D1(eta) / cT0D0.powi(3) - self.cT1D1(eta) / cT0D0.powi(2)
+    fn c1T1D1(&mut self, eta: f64) -> f64 {
+        2.0 * self.cT1D0(eta) * self.cT0D1(eta) / self.cT0D0(eta).powi(3)
+            - self.cT1D1(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T1D2(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
+    fn c1T1D2(&mut self, eta: f64) -> f64 {
         let cT0D1 = self.cT0D1(eta);
         let cT1D0 = self.cT1D0(eta);
-        -6.0 * cT1D0 * cT0D1.powi(2) / cT0D0.powi(4)
-            + 4.0 * self.cT1D1(eta) * cT0D1 / cT0D0.powi(3)
-            + 2.0 * cT1D0 * self.cT0D2(eta) / cT0D0.powi(3)
-            - self.cT1D2(eta) / cT0D0.powi(2)
+        -6.0 * cT1D0 * cT0D1.powi(2) / self.cT0D0(eta).powi(4)
+            + 4.0 * self.cT1D1(eta) * cT0D1 / self.cT0D0(eta).powi(3)
+            + 2.0 * cT1D0 * self.cT0D2(eta) / self.cT0D0(eta).powi(3)
+            - self.cT1D2(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T1D3(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
+    fn c1T1D3(&mut self, eta: f64) -> f64 {
         let cT0D1 = self.cT0D1(eta);
         let cT0D2 = self.cT0D2(eta);
         let cT1D0 = self.cT1D0(eta);
         let cT1D1 = self.cT1D1(eta);
-        24.0 * cT1D0 * cT0D1.powi(3) / cT0D0.powi(5)
-            - 18.0 * cT1D1 * cT0D1.powi(2) / cT0D0.powi(4)
-            - 18.0 * cT1D0 * cT0D1 * cT0D2 / cT0D0.powi(4)
-            + 6.0 * cT1D1 * cT0D2 / cT0D0.powi(3)
-            + 6.0 * self.cT1D2(eta) * cT0D1 / cT0D0.powi(3)
-            + 2.0 * cT1D0 * self.cT0D3(eta) / cT0D0.powi(3)
-            - self.cT1D3(eta) / cT0D0.powi(2)
+        24.0 * cT1D0 * cT0D1.powi(3) / self.cT0D0(eta).powi(5)
+            - 18.0 * cT1D1 * cT0D1.powi(2) / self.cT0D0(eta).powi(4)
+            - 18.0 * cT1D0 * cT0D1 * cT0D2 / self.cT0D0(eta).powi(4)
+            + 6.0 * cT1D1 * cT0D2 / self.cT0D0(eta).powi(3)
+            + 6.0 * self.cT1D2(eta) * cT0D1 / self.cT0D0(eta).powi(3)
+            + 2.0 * cT1D0 * self.cT0D3(eta) / self.cT0D0(eta).powi(3)
+            - self.cT1D3(eta) / self.cT0D0(eta).powi(2)
     }
-    fn c1T2D0(&self, eta: f64) -> f64 {
-        let cT0D0 = self.cT0D0(eta);
-        2.0 * self.cT1D0(eta).powi(2) / cT0D0.powi(3) - self.cT2D0(eta) / cT0D0.powi(2)
+    fn c1T2D0(&mut self, eta: f64) -> f64 {
+        2.0 * self.cT1D0(eta).powi(2) / self.cT0D0(eta).powi(3)
+            - self.cT2D0(eta) / self.cT0D0(eta).powi(2)
     }
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
-    fn cT0D0(&self, eta: f64) -> f64 {
-        1.0 + 2.0 * self.m * (4.0 * eta - eta.powi(2)) / (1.0 - eta).powi(4)
-            + (1.0 - self.m)
-                * (20.0 * eta - 27.0 * eta.powi(2) + 12.0 * eta.powi(3) - 2.0 * eta.powi(4))
-                / ((1.0 - eta) * (2.0 - eta)).powi(2)
+    fn cT0D0(&mut self, eta: f64) -> f64 {
+        if self.cT0D0.is_none() {
+            self.cT0D0 = Some(
+                1.0 + 2.0 * self.m * (4.0 * eta - eta.powi(2)) / (1.0 - eta).powi(4)
+                    + (1.0 - self.m)
+                        * (20.0 * eta - 27.0 * eta.powi(2) + 12.0 * eta.powi(3)
+                            - 2.0 * eta.powi(4))
+                        / ((1.0 - eta) * (2.0 - eta)).powi(2),
+            )
+        }
+        self.cT0D0.unwrap()
     }
     fn cT0D1(&self, eta: f64) -> f64 {
         eta * 2.0
