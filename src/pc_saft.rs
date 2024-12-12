@@ -16,6 +16,7 @@ use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
+use std::iter::zip;
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftPure;
@@ -64,6 +65,10 @@ pub struct PcSaftPure {
     assoc_type: AssocType,
     epsilon_AB: f64,
     kappa_AB_plus: f64,
+    // ideal cv
+    c: f64,
+    v: Vec<f64>,
+    u: Vec<f64>,
 }
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -187,6 +192,10 @@ impl PcSaftPure {
             assoc_type: AssocType::Type0,
             epsilon_AB: 0.0,
             kappa_AB_plus: 0.0,
+            // ideal cv
+            c: 1.5,
+            v: Vec::new(),
+            u: Vec::new(),
         }
     }
     pub fn add_1_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
@@ -214,6 +223,14 @@ impl PcSaftPure {
         };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+        self.clone()
+    }
+    pub fn add_ideal_cv_term(&mut self, c: f64, v: Vec<f64>, u: Vec<f64>) -> Self {
+        if v.len() == u.len() {
+            self.c = c;
+            self.v = v;
+            self.u = u;
+        }
         self.clone()
     }
     #[pyo3(signature=(print_val=true))]
@@ -483,6 +500,20 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
+    pub fn cv(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cv(self.T, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn cp(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cp(self.T, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
     pub fn cp_res(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_cp_res(self.T, self.rho_num))
@@ -618,6 +649,13 @@ impl PcSaftPure {
                 + self.calc_rT1D3(T, rho_num))
             / rho_num
     }
+    fn calc_cv(&mut self, T: f64, rho_num: f64) -> f64 {
+        R * self.calc_ideal_cv(T)
+            - R * (2.0 * self.calc_rT1D0(T, rho_num) + self.calc_rT2D0(T, rho_num))
+    }
+    fn calc_cp(&mut self, T: f64, rho_num: f64) -> f64 {
+        R * (self.calc_ideal_cv(T) + 1.0) + self.calc_cp_res(T, rho_num)
+    }
     fn calc_cp_res(&mut self, T: f64, rho_num: f64) -> f64 {
         -R * (1.0 + 2.0 * self.calc_rT1D0(T, rho_num) + self.calc_rT2D0(T, rho_num))
             + R * (1.0 + self.calc_rT0D1(T, rho_num) + self.calc_rT1D1(T, rho_num)).powi(2)
@@ -691,6 +729,12 @@ impl PcSaftPure {
                 AssocType::Type0 => (),
             }
         }
+    }
+    fn calc_ideal_cv(&mut self, T: f64) -> f64 {
+        zip(&self.v, &self.u)
+            .map(|(v, u)| v * (u / T).powi(2) * (u / T).exp() / ((u / T).exp() - 1.0).powi(2))
+            .sum::<f64>()
+            + self.c
     }
     fn calc_rT0D0(&mut self, T: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(T, rho_num);
