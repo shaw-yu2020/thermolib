@@ -45,6 +45,7 @@ use std::iter::zip;
 #[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct PcSaftPure {
+    M: f64, // molar mass: kg/mol
     m: f64,
     sigma: f64,
     epsilon: f64,
@@ -175,6 +176,7 @@ impl PcSaftPure {
     #[new]
     pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self {
+            M: 0.001, // default = 0.001 kg/mol
             m,
             sigma,
             epsilon,
@@ -204,40 +206,38 @@ impl PcSaftPure {
             cT0D0: None,
         }
     }
-    pub fn add_1_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
+    pub fn set_1_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type1 { X: 1.0 };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-        self.clone()
     }
-    pub fn add_2B_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
+    pub fn set_2B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type2B { X: 1.0 };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-        self.clone()
     }
-    pub fn add_3B_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64) -> Self {
+    pub fn set_3B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type3B { XA: 1.0 };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-        self.clone()
     }
-    pub fn add_3Bm_assoc_term(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) -> Self {
+    pub fn set_3Bm_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) {
         self.assoc_type = AssocType::Type3Bm {
             XA: 1.0,
             b: b.abs().min(b.abs().recip()),
         };
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-        self.clone()
     }
-    pub fn add_ideal_cv_term(&mut self, c: f64, v: Vec<f64>, u: Vec<f64>) -> Self {
+    pub fn set_ideal_cv(&mut self, c: f64, v: Vec<f64>, u: Vec<f64>) {
         if v.len() == u.len() {
             self.c = c;
             self.v = v;
             self.u = u;
         }
-        self.clone()
+    }
+    pub fn set_molar_mass(&mut self, M: f64) {
+        self.M = M;
     }
     #[pyo3(signature=(print_val=true))]
     pub fn check_derivatives(&mut self, print_val: bool) {
@@ -492,6 +492,13 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
+    pub fn rho(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.rho_num * 1E30 / NA)
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
     pub fn p(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_p(self.T, self.rho_num))
@@ -499,9 +506,9 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
-    pub fn rho(&self) -> anyhow::Result<f64> {
+    pub fn w(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok(self.rho_num * 1E30 / NA)
+            Ok((self.calc_w2(self.T, self.rho_num) / self.M).sqrt())
         } else {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
@@ -534,18 +541,18 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
-    pub fn T_s(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
-        } else {
-            Ok(self.T)
-        }
-    }
     pub fn p_s(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
         } else {
             Ok((self.calc_p(self.T, self.rhov_num) + self.calc_p(self.T, self.rhol_num)) / 2.0)
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
+        } else {
+            Ok(self.T)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
@@ -655,6 +662,13 @@ impl PcSaftPure {
                 + self.calc_rT1D3(T, rho_num))
             / rho_num
     }
+    fn calc_w2(&mut self, T: f64, rho_num: f64) -> f64 {
+        R * T * (1.0 + 2.0 * self.calc_rT0D1(T, rho_num) + self.calc_rT0D2(T, rho_num))
+            - R * T * (1.0 + self.calc_rT0D1(T, rho_num) + self.calc_rT1D1(T, rho_num)).powi(2)
+                / (-self.calc_ideal_cv(T)
+                    + 2.0 * self.calc_rT1D0(T, rho_num)
+                    + self.calc_rT2D0(T, rho_num))
+    }
     fn calc_cv(&mut self, T: f64, rho_num: f64) -> f64 {
         R * self.calc_ideal_cv(T)
             - R * (2.0 * self.calc_rT1D0(T, rho_num) + self.calc_rT2D0(T, rho_num))
@@ -717,8 +731,8 @@ impl PcSaftPure {
         self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
         self.eta2 =
             PI * rho_num * self.m * d * d1.powi(2) + FRAC_PI_2 * rho_num * self.m * d.powi(2) * d2;
-        self.giiT0D0 = None;
-        self.cT0D0 = None;
+        self.giiT0D0 = None; // cached variables
+        self.cT0D0 = None; // cached variables
         if let AssocType::Type0 = self.assoc_type {
         } else {
             let t = self.tT0D0();
@@ -1895,20 +1909,20 @@ mod tests {
                 panic!();
             }
         }
-        let mut CH3OH =
-            PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_2B_assoc_term(2899.5, 0.035176);
+        let mut CH3OH = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
+        CH3OH.set_2B_assoc_type(2899.5, 0.035176);
         CH3OH.td_unchecked(300.0, 24514.0);
         CH3OH.check_derivatives(false);
-        let mut CH3OH =
-            PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_3Bm_assoc_term(2899.5, 0.035176, 0.0);
+        let mut CH3OH = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
+        CH3OH.set_3Bm_assoc_type(2899.5, 0.035176, 0.0);
         CH3OH.td_unchecked(300.0, 24514.0);
         CH3OH.check_derivatives(false);
-        let mut CH3OH =
-            PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_3B_assoc_term(2899.5, 0.035176);
+        let mut CH3OH = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
+        CH3OH.set_3B_assoc_type(2899.5, 0.035176);
         CH3OH.td_unchecked(300.0, 24514.0);
         CH3OH.check_derivatives(false);
-        let mut CH3OH =
-            PcSaftPure::new_fluid(1.5255, 3.23, 188.9).add_3Bm_assoc_term(2899.5, 0.035176, 1.0);
+        let mut CH3OH = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
+        CH3OH.set_3Bm_assoc_type(2899.5, 0.035176, 1.0);
         CH3OH.td_unchecked(300.0, 24514.0);
         CH3OH.check_derivatives(false);
     }
