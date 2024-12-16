@@ -45,7 +45,6 @@ use std::iter::zip;
 #[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct PcSaftPure {
-    M: f64, // molar mass: kg/mol
     m: f64,
     sigma: f64,
     epsilon: f64,
@@ -176,7 +175,6 @@ impl PcSaftPure {
     #[new]
     pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self {
-            M: 0.001, // default = 0.001 kg/mol
             m,
             sigma,
             epsilon,
@@ -235,9 +233,6 @@ impl PcSaftPure {
             self.v = v;
             self.u = u;
         }
-    }
-    pub fn set_molar_mass(&mut self, M: f64) {
-        self.M = M;
     }
     #[pyo3(signature=(print_val=true))]
     pub fn check_derivatives(&mut self, print_val: bool) {
@@ -506,9 +501,9 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
     }
-    pub fn w(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase && self.M != 0.001_f64 {
-            Ok((self.calc_w2(self.T, self.rho_num) / self.M).sqrt())
+    pub fn w(&mut self, M: f64) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok((self.calc_w2(self.T, self.rho_num) / M).sqrt())
         } else {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
