@@ -615,6 +615,33 @@ impl PcSaftPure {
         }
         val_new * (NA / 1E30).powi(3) / 2.0
     }
+    pub fn prop_tp_flash(&mut self, prop: &str, T: Vec<f64>, P: Vec<f64>, M: f64) -> Vec<f64> {
+        zip(T, P)
+            .map(|(t, p)| {
+                self.tp_flash(t, p * 1E3).unwrap(); // p:kPa=>Pa
+                match prop {
+                    "RHO" => self.rho_num * 1E30 / NA / M,      // kg/m3
+                    "CP" => self.calc_cp(self.T, self.rho_num), // J/mol/K
+                    "W" => (self.calc_w2(self.T, self.rho_num) / M).sqrt(), // m/s
+                    _ => 0.0,
+                }
+            })
+            .collect()
+    }
+    pub fn prop_t_flash(&mut self, prop: &str, T: Vec<f64>, M: f64) -> Vec<f64> {
+        T.iter()
+            .map(|&t| {
+                self.t_flash(t).unwrap();
+                match prop {
+                    "RHO" => self.rhol_num * 1E30 / NA / M,      // kg/m3
+                    "CP" => self.calc_cp(self.T, self.rhol_num), // J/mol/K
+                    "W" => (self.calc_w2(self.T, self.rhol_num) / M).sqrt(), // m/s
+                    "P" => self.calc_p(self.T, self.rhol_num) / 1E3, // Pa=>kPa
+                    _ => 0.0,
+                }
+            })
+            .collect()
+    }
 }
 #[allow(non_snake_case)]
 impl PcSaftPure {
