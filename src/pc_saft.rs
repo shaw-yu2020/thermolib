@@ -615,31 +615,49 @@ impl PcSaftPure {
         }
         val_new * (NA / 1E30).powi(3) / 2.0
     }
-    pub fn prop_tp_flash(&mut self, prop: &str, T: Vec<f64>, P: Vec<f64>, M: f64) -> Vec<f64> {
-        zip(T, P)
-            .map(|(t, p)| {
-                self.tp_flash(t, p * 1E3).unwrap(); // p:kPa=>Pa
-                match prop {
-                    "RHO" => self.rho_num * 1E30 / NA * M,      // kg/m3
-                    "CP" => self.calc_cp(self.T, self.rho_num), // J/mol/K
-                    "W" => (self.calc_w2(self.T, self.rho_num) / M).sqrt(), // m/s
-                    _ => 0.0,
-                }
-            })
-            .collect()
-    }
-    pub fn prop_t_flash(&mut self, prop: &str, T: Vec<f64>, M: f64) -> Vec<f64> {
+    pub fn vec_t_flash(&mut self, T: Vec<f64>) -> Vec<f64> {
         T.iter()
             .map(|&t| {
                 self.t_flash(t).unwrap();
-                match prop {
-                    "RHO" => self.rhol_num * 1E30 / NA * M,      // kg/m3
-                    "CP" => self.calc_cp(self.T, self.rhol_num), // J/mol/K
-                    "W" => (self.calc_w2(self.T, self.rhol_num) / M).sqrt(), // m/s
-                    "P" => self.calc_p(self.T, self.rhol_num) / 1E3, // Pa=>kPa
-                    _ => 0.0,
-                }
+                self.rhol_num
             })
+            .collect()
+    }
+    pub fn vec_p(&mut self, T: Vec<f64>, rho_num: Vec<f64>) -> Vec<f64> {
+        zip(T, rho_num).map(|(t, d)| self.calc_p(t, d)).collect()
+    }
+    pub fn vec_tp_flash(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
+        zip(T, P)
+            .map(|(t, p)| {
+                self.tp_flash(t, p).unwrap();
+                self.rho_num
+            })
+            .collect()
+    }
+    pub fn vec_tp_flash_g(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
+        zip(T, P)
+            .map(|(t, p)| {
+                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                // Iteration from gas phase: eta = 1E-10
+                self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
+            })
+            .collect()
+    }
+    pub fn vec_tp_flash_l(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
+        zip(T, P)
+            .map(|(t, p)| {
+                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                // Iteration from gas phase: eta = 0.5
+                self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
+            })
+            .collect()
+    }
+    pub fn vec_cp(&mut self, T: Vec<f64>, rho_num: Vec<f64>) -> Vec<f64> {
+        zip(T, rho_num).map(|(t, d)| self.calc_cp(t, d)).collect()
+    }
+    pub fn vec_w(&mut self, T: Vec<f64>, rho_num: Vec<f64>, M: f64) -> Vec<f64> {
+        zip(T, rho_num)
+            .map(|(t, d)| (self.calc_w2(t, d) / M).sqrt()) // m/s
             .collect()
     }
 }
