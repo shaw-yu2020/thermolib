@@ -351,7 +351,7 @@ impl PcSaftPure {
         }
     }
     pub fn td_unchecked(&mut self, T: f64, rho_mol: f64) {
-        self.set_temperature_and_number_density(T, rho_mol * NA / 1E30);
+        self.set_temperature_and_number_density(T, rho_mol * FRAC_NA_1E30);
         self.is_single_phase = true;
     }
     pub fn c_flash(&mut self) -> anyhow::Result<()> {
@@ -489,7 +489,7 @@ impl PcSaftPure {
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok(self.rho_num * 1E30 / NA)
+            Ok(self.rho_num / FRAC_NA_1E30)
         } else {
             Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
         }
@@ -554,14 +554,14 @@ impl PcSaftPure {
         if self.is_single_phase {
             Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
         } else {
-            Ok(self.rhov_num * 1E30 / NA)
+            Ok(self.rhov_num / FRAC_NA_1E30)
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
         } else {
-            Ok(self.rhol_num * 1E30 / NA)
+            Ok(self.rhol_num / FRAC_NA_1E30)
         }
     }
     pub fn B(&mut self, T: f64) -> f64 {
@@ -579,7 +579,7 @@ impl PcSaftPure {
             }
             val_old = val_new;
         }
-        val_new * NA / 1E30
+        val_new * FRAC_NA_1E30
     }
     pub fn C(&mut self, T: f64) -> f64 {
         let mut rho_num: f64 = 1E-9;
@@ -596,7 +596,7 @@ impl PcSaftPure {
             }
             val_old = val_new;
         }
-        val_new * (NA / 1E30).powi(2)
+        val_new * FRAC_NA_1E30.powi(2)
     }
     pub fn D(&mut self, T: f64) -> f64 {
         let mut rho_num: f64 = 1E-9;
@@ -613,7 +613,7 @@ impl PcSaftPure {
             }
             val_old = val_new;
         }
-        val_new * (NA / 1E30).powi(3) / 2.0
+        val_new * FRAC_NA_1E30.powi(3) / 2.0
     }
     pub fn vec_t_flash(&mut self, T: Vec<f64>) -> Vec<f64> {
         T.iter()
@@ -664,28 +664,28 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn calc_p(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T) * rho_num * (1.0 + self.calc_rT0D1(T, rho_num))
+        (R / FRAC_NA_1E30 * T) * rho_num * (1.0 + self.calc_rT0D1(T, rho_num))
     }
     fn calc_Dp_Drho_T(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T)
+        (R / FRAC_NA_1E30 * T)
             * (1.0 + 2.0 * self.calc_rT0D1(T, rho_num) + self.calc_rT0D2(T, rho_num))
     }
     fn calc_D2p_Drho2_T(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T)
+        (R / FRAC_NA_1E30 * T)
             * (2.0 * self.calc_rT0D1(T, rho_num)
                 + 4.0 * self.calc_rT0D2(T, rho_num)
                 + self.calc_rT0D3(T, rho_num))
             / rho_num
     }
     fn calc_D3p_Drho3_T(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T)
+        (R / FRAC_NA_1E30 * T)
             * (6.0 * self.calc_rT0D2(T, rho_num)
                 + 6.0 * self.calc_rT0D3(T, rho_num)
                 + self.calc_rT0D4(T, rho_num))
             / rho_num.powi(2)
     }
     fn calc_D2p_DTrho(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T)
+        (R / FRAC_NA_1E30 * T)
             * (1.0
                 + 2.0 * self.calc_rT0D1(T, rho_num)
                 + self.calc_rT0D2(T, rho_num)
@@ -693,7 +693,7 @@ impl PcSaftPure {
                 + self.calc_rT1D2(T, rho_num))
     }
     fn calc_D3p_DTrho2(&mut self, T: f64, rho_num: f64) -> f64 {
-        (1E30 / NA * R * T)
+        (R / FRAC_NA_1E30 * T)
             * (2.0 * self.calc_rT0D1(T, rho_num)
                 + 4.0 * self.calc_rT0D2(T, rho_num)
                 + self.calc_rT0D3(T, rho_num)
@@ -1880,7 +1880,7 @@ impl PcSaftPure {
     }
 }
 const R: f64 = 8.314462618;
-const NA: f64 = 6.02214076E23;
+const FRAC_NA_1E30: f64 = 6.02214076E-7; // const NA: f64 = 6.02214076E23;
 const A0: [f64; 7] = [
     0.9105631445,
     0.6361281449,
