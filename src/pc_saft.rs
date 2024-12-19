@@ -620,7 +620,7 @@ impl PcSaftPure {
             .map(|(t, p)| {
                 self.tp_flash(t, p * 1E3).unwrap(); // p:kPa=>Pa
                 match prop {
-                    "RHO" => self.rho_num * 1E30 / NA / M,      // kg/m3
+                    "RHO" => self.rho_num * 1E30 / NA * M,      // kg/m3
                     "CP" => self.calc_cp(self.T, self.rho_num), // J/mol/K
                     "W" => (self.calc_w2(self.T, self.rho_num) / M).sqrt(), // m/s
                     _ => 0.0,
@@ -633,7 +633,7 @@ impl PcSaftPure {
             .map(|&t| {
                 self.t_flash(t).unwrap();
                 match prop {
-                    "RHO" => self.rhol_num * 1E30 / NA / M,      // kg/m3
+                    "RHO" => self.rhol_num * 1E30 / NA * M,      // kg/m3
                     "CP" => self.calc_cp(self.T, self.rhol_num), // J/mol/K
                     "W" => (self.calc_w2(self.T, self.rhol_num) / M).sqrt(), // m/s
                     "P" => self.calc_p(self.T, self.rhol_num) / 1E3, // Pa=>kPa
