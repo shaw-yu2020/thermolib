@@ -399,7 +399,7 @@ impl PcSaftPure {
         let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
         let mut rhov_num = rhov_num_guess;
         let mut Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
-        loop {
+        for _i in 1..100000 {
             if Dp_Drhov_T.abs() < 1.0 {
                 break;
             } else {
@@ -415,7 +415,7 @@ impl PcSaftPure {
         let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
         let mut rhol_num = rhol_num_guess;
         let mut Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
-        loop {
+        for _i in 1..100000 {
             if Dp_Drhol_T.abs() < 1.0 {
                 break;
             } else {
@@ -626,8 +626,12 @@ impl PcSaftPure {
     pub fn vec_t_flash(&mut self, T: Vec<f64>) -> Vec<f64> {
         T.iter()
             .map(|&t| {
-                self.t_flash(t).unwrap();
-                self.rhol_num
+                if self.t_flash(t).is_err() {
+                    println!("t_flash diverge in {} K", t);
+                    0.0
+                } else {
+                    self.rhol_num
+                }
             })
             .collect()
     }
@@ -637,8 +641,12 @@ impl PcSaftPure {
     pub fn vec_tp_flash(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
         zip(T, P)
             .map(|(t, p)| {
-                self.tp_flash(t, p).unwrap();
-                self.rho_num
+                if self.tp_flash(t, p).is_err() {
+                    println!("tp_flash diverge in {} K {} Pa", t, p);
+                    0.0
+                } else {
+                    self.rho_num
+                }
             })
             .collect()
     }
