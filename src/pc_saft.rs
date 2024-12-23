@@ -623,11 +623,23 @@ impl PcSaftPure {
         }
         val_new * FRAC_NA_1E30.powi(3) / 2.0
     }
-    pub fn vec_t_flash(&mut self, T: Vec<f64>) -> Vec<f64> {
+    pub fn vec_t_flash_g(&mut self, T: Vec<f64>) -> Vec<f64> {
         T.iter()
             .map(|&t| {
                 if self.t_flash(t).is_err() {
-                    println!("t_flash diverge in {} K", t);
+                    println!("t_flash_g diverge in {} K", t);
+                    0.0
+                } else {
+                    self.rhov_num
+                }
+            })
+            .collect()
+    }
+    pub fn vec_t_flash_l(&mut self, T: Vec<f64>) -> Vec<f64> {
+        T.iter()
+            .map(|&t| {
+                if self.t_flash(t).is_err() {
+                    println!("t_flash_l diverge in {} K", t);
                     0.0
                 } else {
                     self.rhol_num
