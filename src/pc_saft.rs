@@ -667,7 +667,21 @@ impl PcSaftPure {
             .map(|(t, p)| {
                 let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
                 // Iteration from gas phase: eta = 1E-10
-                self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
+                let mut rho_num = 1E-10 / (FRAC_PI_6 * self.m * d3);
+                let (mut p_diff, mut val_Dp_Drho_T, mut rho_num_diff);
+                for _i in 1..10000 {
+                    p_diff = self.calc_p(t, rho_num) - p;
+                    if p_diff.abs() < f64::EPSILON {
+                        break;
+                    }
+                    val_Dp_Drho_T = self.calc_Dp_Drho_T(t, rho_num);
+                    rho_num_diff = p_diff / val_Dp_Drho_T;
+                    if rho_num_diff.abs() < f64::EPSILON {
+                        break;
+                    }
+                    rho_num -= rho_num_diff;
+                }
+                rho_num
             })
             .collect()
     }
@@ -676,7 +690,21 @@ impl PcSaftPure {
             .map(|(t, p)| {
                 let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
                 // Iteration from gas phase: eta = 0.5
-                self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
+                let mut rho_num = 0.5 / (FRAC_PI_6 * self.m * d3);
+                let (mut p_diff, mut val_Dp_Drho_T, mut rho_num_diff);
+                for _i in 1..10000 {
+                    p_diff = self.calc_p(t, rho_num) - p;
+                    if p_diff.abs() < f64::EPSILON {
+                        break;
+                    }
+                    val_Dp_Drho_T = self.calc_Dp_Drho_T(t, rho_num);
+                    rho_num_diff = p_diff / val_Dp_Drho_T;
+                    if rho_num_diff.abs() < f64::EPSILON {
+                        break;
+                    }
+                    rho_num -= rho_num_diff;
+                }
+                rho_num
             })
             .collect()
     }
