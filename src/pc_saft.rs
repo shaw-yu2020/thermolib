@@ -65,10 +65,12 @@ pub struct PcSaftPure {
     assoc_type: AssocType,
     epsilon_AB: f64,
     kappa_AB_plus: f64,
-    // ideal cv
-    c: f64,
-    v: Vec<f64>,
-    u: Vec<f64>,
+    // modified aly_lee_cv0
+    mB: f64, // mB=B/R-1
+    mC: f64, // mC=C/R
+    mD: f64, // mD=D
+    mE: f64, // mE=E/R
+    mF: f64, // mF=F
     // cached variables
     giiT0D0: Option<f64>,
     giiT0D1: Option<f64>,
@@ -199,10 +201,12 @@ impl PcSaftPure {
             assoc_type: AssocType::Type0,
             epsilon_AB: 0.0,
             kappa_AB_plus: 0.0,
-            // ideal cv
-            c: 1.5,
-            v: Vec::new(),
-            u: Vec::new(),
+            // modified aly_lee_cv0
+            mB: 1.5,
+            mC: 0.0,
+            mD: 1.0,
+            mE: 0.0,
+            mF: 1.0,
             // cached variables
             giiT0D0: None,
             giiT0D1: None,
@@ -235,12 +239,12 @@ impl PcSaftPure {
         self.epsilon_AB = epsilon_AB;
         self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
     }
-    pub fn set_ideal_cv(&mut self, c: f64, v: Vec<f64>, u: Vec<f64>) {
-        if v.len() == u.len() {
-            self.c = c;
-            self.v = v;
-            self.u = u;
-        }
+    pub fn set_aly_lee_cp0(&mut self, B: f64, C: f64, D: f64, E: f64, F: f64) {
+        self.mB = B / R - 1.0; // mB = B/R -1
+        self.mC = C / R; // mC = C/R
+        self.mD = D; // mD = D
+        self.mE = E / R; // mE = E/R
+        self.mF = F; // mF = F
     }
     #[pyo3(signature=(print_val=true))]
     pub fn check_derivatives(&mut self, print_val: bool) {
@@ -859,10 +863,9 @@ impl PcSaftPure {
         }
     }
     fn calc_ideal_cv(&mut self, T: f64) -> f64 {
-        zip(&self.v, &self.u)
-            .map(|(v, u)| v * (u / T).powi(2) * (u / T).exp() / ((u / T).exp() - 1.0).powi(2))
-            .sum::<f64>()
-            + self.c
+        self.mB
+            + self.mC * (self.mD / T / (self.mD / T).sinh()).powi(2)
+            + self.mE * (self.mF / T / (self.mF / T).cosh()).powi(2)
     }
     fn calc_rT0D0(&mut self, T: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(T, rho_num);
