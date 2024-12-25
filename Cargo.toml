@@ -18,7 +18,7 @@ version = "1.0.200"
 features = ["derive"]
 
 [dependencies.pyo3]
-version = "0.20.0"
+version = "0.22.6"
 features = ["anyhow", "extension-module"]
 
 [lib]
