@@ -4,6 +4,7 @@ version = "0.7.6"
 edition = "2021"
 license = "MIT"
 description = "An open-source library for the calculation of fluid properties"
+repository = "https://github.com/shaw-yu2020/thermolib"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
