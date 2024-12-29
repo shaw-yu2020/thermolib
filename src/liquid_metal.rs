@@ -1,8 +1,5 @@
-use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::collections::HashMap;
-use std::sync::OnceLock;
 use thiserror::Error;
 #[derive(Debug, Error)]
 enum LiquidMetalErr {
@@ -18,9 +15,12 @@ enum LiquidMetalErr {
 mod eta;
 mod lambda;
 mod rho;
+use anyhow::anyhow;
 use eta::metals2etaparams;
 use lambda::metals2lambdaparams;
 use rho::metals2rhoparams;
+use std::collections::HashMap;
+use std::sync::OnceLock;
 /// liquid metal
 /// + Density, unit: kg/m3
 /// + Thermal Conductivity, unit: W/m/K
@@ -41,8 +41,8 @@ use rho::metals2rhoparams;
 pub struct LiquidMetal {
     metal: Metals,
 }
-#[allow(non_snake_case)]
 impl LiquidMetal {
+    #[allow(non_snake_case)]
     pub fn new_metal(name: &str) -> anyhow::Result<LiquidMetal> {
         if let Some(metal) = string2metals().get(name) {
             Ok(Self {
