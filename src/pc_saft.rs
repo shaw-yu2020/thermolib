@@ -80,7 +80,6 @@ pub struct PcSaftPure {
     i2T0D0: Option<f64>,
     i2T0D1: Option<f64>,
 }
-#[allow(non_snake_case)]
 impl PcSaftPure {
     pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self {
