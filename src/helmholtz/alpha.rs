@@ -3,6 +3,7 @@ use super::{HelmholtzErr, Phase};
 use super::{IdealHelmholtz, ResidualHelmholtz};
 use super::{PsEqn, RholEqn, RhovEqn};
 use anyhow::anyhow;
+#[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 use serde::{Deserialize, Serialize};
 /// Helmholtz EOS
@@ -26,7 +27,7 @@ use serde::{Deserialize, Serialize};
 ///     assert_eq!(96.51, (SO2.s().unwrap() * 1e2).round() / 1e2);
 /// }
 /// ```
-#[pyclass]
+#[cfg_attr(feature = "with_pyo3", pyclass)]
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct Helmholtz {
@@ -43,6 +44,36 @@ pub struct Helmholtz {
     omega: f64,
     #[serde(skip, default)]
     phase: Phase,
+}
+#[allow(non_snake_case)]
+impl Helmholtz {
+    /// read helmholtz equation of state from fluid.json file
+    pub fn read_json(path: &str) -> anyhow::Result<Helmholtz> {
+        let mut file_json: Option<std::fs::File>;
+        file_json = match std::fs::File::open(std::path::Path::new(path)) {
+            Ok(file) => Some(file),
+            Err(_) => None,
+        };
+        if file_json.is_none() {
+            file_json = match std::fs::File::open(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("res")
+                    .join(path),
+            ) {
+                Ok(file) => Some(file),
+                Err(_) => None,
+            };
+        };
+        let mut file_json = file_json.ok_or(anyhow!(HelmholtzErr::NoJson))?;
+        let mut str_json = String::new();
+        let _ = std::io::Read::read_to_string(&mut file_json, &mut str_json);
+        let eos: Option<Helmholtz> = match serde_json::from_str(&str_json) {
+            Ok(eos) => Some(eos),
+            Err(_) => None,
+        };
+        let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
+        Ok(eos)
+    }
 }
 #[allow(non_snake_case)]
 impl Helmholtz {
@@ -119,36 +150,13 @@ impl Helmholtz {
             / delta
     }
 }
-#[pymethods]
+#[cfg_attr(feature = "with_pyo3", pymethods)]
 #[allow(non_snake_case)]
 impl Helmholtz {
-    /// read helmholtz equation of state from fluid.json file
+    #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn read_json(path: &str) -> anyhow::Result<Helmholtz> {
-        let mut file_json: Option<std::fs::File>;
-        file_json = match std::fs::File::open(std::path::Path::new(path)) {
-            Ok(file) => Some(file),
-            Err(_) => None,
-        };
-        if file_json.is_none() {
-            file_json = match std::fs::File::open(
-                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("res")
-                    .join(path),
-            ) {
-                Ok(file) => Some(file),
-                Err(_) => None,
-            };
-        };
-        let mut file_json = file_json.ok_or(anyhow!(HelmholtzErr::NoJson))?;
-        let mut str_json = String::new();
-        let _ = std::io::Read::read_to_string(&mut file_json, &mut str_json);
-        let eos: Option<Helmholtz> = match serde_json::from_str(&str_json) {
-            Ok(eos) => Some(eos),
-            Err(_) => None,
-        };
-        let eos = eos.ok_or(anyhow!(HelmholtzErr::NoHelmholtz))?;
-        Ok(eos)
+    pub fn new_py(path: &str) -> anyhow::Result<Helmholtz> {
+        Self::read_json(path)
     }
     pub fn set_molar_unit(&mut self) {
         if self.R > 10.0 {

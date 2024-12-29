@@ -14,6 +14,7 @@ enum PcSaftPureErr {
 }
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
+#[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 use std::iter::zip;
@@ -41,7 +42,7 @@ use std::iter::zip;
 ///     println!("rho={}", SO2.rho().unwrap());
 /// }
 /// ```
-#[pyclass]
+#[cfg_attr(feature = "with_pyo3", pyclass)]
 #[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct PcSaftPure {
@@ -78,6 +79,46 @@ pub struct PcSaftPure {
     cT0D1: Option<f64>,
     i2T0D0: Option<f64>,
     i2T0D1: Option<f64>,
+}
+#[allow(non_snake_case)]
+impl PcSaftPure {
+    pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
+        Self {
+            m,
+            sigma,
+            epsilon,
+            T: 1.0,
+            rho_num: 1E-10,
+            rhov_num: 0.0,
+            rhol_num: 0.0,
+            is_single_phase: true,
+            m1: (m - 1.0) / m,                      // (m-1)/m
+            m12: (m - 1.0) * (m - 2.0) / m.powi(2), // (m-1)/m * (m-2)/m
+            // changed from T and rho_num
+            eta: 0.0,
+            eta1: 0.0,
+            eta2: 0.0,
+            m2e1s3: 0.0,
+            m2e2s3: 0.0,
+            // association term
+            assoc_type: AssocType::Type0,
+            epsilon_AB: 0.0,
+            kappa_AB_plus: 0.0,
+            // modified aly_lee_cv0
+            mB: 1.5,
+            mC: 0.0,
+            mD: 1.0,
+            mE: 0.0,
+            mF: 1.0,
+            // cached variables
+            giiT0D0: None,
+            giiT0D1: None,
+            cT0D0: None,
+            cT0D1: None,
+            i2T0D0: None,
+            i2T0D1: None,
+        }
+    }
 }
 #[derive(Clone)]
 #[allow(non_snake_case)]
@@ -175,46 +216,13 @@ impl AssocType {
         }
     }
 }
-#[pymethods]
+#[cfg_attr(feature = "with_pyo3", pymethods)]
 #[allow(non_snake_case)]
 impl PcSaftPure {
+    #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
-        Self {
-            m,
-            sigma,
-            epsilon,
-            T: 1.0,
-            rho_num: 1E-10,
-            rhov_num: 0.0,
-            rhol_num: 0.0,
-            is_single_phase: true,
-            m1: (m - 1.0) / m,                      // (m-1)/m
-            m12: (m - 1.0) * (m - 2.0) / m.powi(2), // (m-1)/m * (m-2)/m
-            // changed from T and rho_num
-            eta: 0.0,
-            eta1: 0.0,
-            eta2: 0.0,
-            m2e1s3: 0.0,
-            m2e2s3: 0.0,
-            // association term
-            assoc_type: AssocType::Type0,
-            epsilon_AB: 0.0,
-            kappa_AB_plus: 0.0,
-            // modified aly_lee_cv0
-            mB: 1.5,
-            mC: 0.0,
-            mD: 1.0,
-            mE: 0.0,
-            mF: 1.0,
-            // cached variables
-            giiT0D0: None,
-            giiT0D1: None,
-            cT0D0: None,
-            cT0D1: None,
-            i2T0D0: None,
-            i2T0D1: None,
-        }
+    pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
+        Self::new_fluid(m, sigma, epsilon)
     }
     pub fn set_1_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type1 { X: 1.0 };
@@ -246,121 +254,8 @@ impl PcSaftPure {
         self.mE = E / R; // mE = E/R
         self.mF = F; // mF = F
     }
-    #[pyo3(signature=(print_val=true))]
-    pub fn check_derivatives(&mut self, print_val: bool) {
-        let T = self.T;
-        let rho = self.rho_num;
-        if print_val {
-            println!("[rT0D0 == rT0D0] calc_rT0D0() ={}", self.calc_rT0D0(T, rho));
-        }
-        let compare_val = |val_calc: f64, val_diff: f64| {
-            assert_eq!(
-                &val_calc.abs().to_string()[0..11],
-                &val_diff.abs().to_string()[0..11]
-            )
-        };
-        // derivative for density
-        let val_calc = self.calc_rT0D1(T, rho) / rho;
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D0(T, rhox), rho);
-        if print_val {
-            println!("[rT0D1 == rT0D1] calc_rT0D1() ={}", val_calc);
-            println!("[rT0D0 -> rT0D1] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for density+density
-        let val_calc = self.calc_rT0D2(T, rho) / rho.powi(2);
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D1(T, rhox) / rhox, rho);
-        if print_val {
-            println!("[rT0D2 == rT0D2] calc_rT0D2() ={}", val_calc);
-            println!("[rT0D1 -> rT0D2] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for density+density+density
-        let val_calc = self.calc_rT0D3(T, rho) / rho.powi(3);
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D2(T, rhox) / rhox.powi(2), rho);
-        if print_val {
-            println!("[rT0D3 == rT0D3] calc_rT0D3() ={}", val_calc);
-            println!("[rT0D2 -> rT0D3] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for density+density+density+density
-        let val_calc = self.calc_rT0D4(T, rho) / rho.powi(4);
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D3(T, rhox) / rhox.powi(3), rho);
-        if print_val {
-            println!("[rT0D4 == rT0D4] calc_rT0D4() ={}", val_calc);
-            println!("[rT0D3 -> rT0D4] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for temperature
-        let val_calc = self.calc_rT1D0(T, rho) / T;
-        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D0(Tx, rho), T);
-        if print_val {
-            println!("[rT1D0 == rT1D0] calc_rT1D0() ={}", val_calc);
-            println!("[rT0D0 -> rT1D0] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for temperature+density
-        let val_calc = self.calc_rT1D1(T, rho) / T / rho;
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D0(T, rhox) / T, rho);
-        if print_val {
-            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
-            println!("[rT1D0 -> rT1D1] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D1(Tx, rho) / rho, T);
-        if print_val {
-            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
-            println!("[rT0D1 -> rT1D1] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for temperature+density+density
-        let val_calc = self.calc_rT1D2(T, rho) / T / rho.powi(2);
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D1(T, rhox) / T / rhox, rho);
-        if print_val {
-            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
-            println!("[rT1D1 -> rT1D2] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D2(Tx, rho) / rho.powi(2), T);
-        if print_val {
-            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
-            println!("[rT0D2 -> rT1D2] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for temperature+density+density+density
-        let val_calc = self.calc_rT1D3(T, rho) / T / rho.powi(3);
-        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D2(T, rhox) / T / rhox.powi(2), rho);
-        if print_val {
-            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
-            println!("[rT1D2 -> rT1D3] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D3(Tx, rho) / rho.powi(3), T);
-        if print_val {
-            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
-            println!("[rT0D3 -> rT1D3] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
-        // derivative for temperature+temperature
-        let val_calc = self.calc_rT2D0(T, rho) / T.powi(2);
-        let val_diff = romberg_diff(|Tx: f64| self.calc_rT1D0(Tx, rho) / Tx, T);
-        if print_val {
-            println!("[rT2D0 == rT2D0] calc_rT2D0() ={}", val_calc);
-            println!("[rT1D0 -> rT2D0] romberg_diff ={}", val_diff);
-        } else {
-            compare_val(val_calc, val_diff);
-        }
+    pub fn print_derivatives(&mut self) {
+        Self::check_derivatives(self, true);
     }
     pub fn td_unchecked(&mut self, T: f64, rho_mol: f64) {
         self.set_temperature_and_number_density(T, rho_mol * FRAC_NA_1E30);
@@ -1963,6 +1858,124 @@ const B2: [f64; 7] = [
     93.626774077,
     -29.666905585,
 ];
+#[allow(non_snake_case)]
+impl PcSaftPure {
+    pub fn check_derivatives(&mut self, print_val: bool) {
+        let T = self.T;
+        let rho = self.rho_num;
+        if print_val {
+            println!("[rT0D0 == rT0D0] calc_rT0D0() ={}", self.calc_rT0D0(T, rho));
+        }
+        let compare_val = |val_calc: f64, val_diff: f64| {
+            assert_eq!(
+                &val_calc.abs().to_string()[0..11],
+                &val_diff.abs().to_string()[0..11]
+            )
+        };
+        // derivative for density
+        let val_calc = self.calc_rT0D1(T, rho) / rho;
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D0(T, rhox), rho);
+        if print_val {
+            println!("[rT0D1 == rT0D1] calc_rT0D1() ={}", val_calc);
+            println!("[rT0D0 -> rT0D1] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for density+density
+        let val_calc = self.calc_rT0D2(T, rho) / rho.powi(2);
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D1(T, rhox) / rhox, rho);
+        if print_val {
+            println!("[rT0D2 == rT0D2] calc_rT0D2() ={}", val_calc);
+            println!("[rT0D1 -> rT0D2] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for density+density+density
+        let val_calc = self.calc_rT0D3(T, rho) / rho.powi(3);
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D2(T, rhox) / rhox.powi(2), rho);
+        if print_val {
+            println!("[rT0D3 == rT0D3] calc_rT0D3() ={}", val_calc);
+            println!("[rT0D2 -> rT0D3] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for density+density+density+density
+        let val_calc = self.calc_rT0D4(T, rho) / rho.powi(4);
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT0D3(T, rhox) / rhox.powi(3), rho);
+        if print_val {
+            println!("[rT0D4 == rT0D4] calc_rT0D4() ={}", val_calc);
+            println!("[rT0D3 -> rT0D4] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for temperature
+        let val_calc = self.calc_rT1D0(T, rho) / T;
+        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D0(Tx, rho), T);
+        if print_val {
+            println!("[rT1D0 == rT1D0] calc_rT1D0() ={}", val_calc);
+            println!("[rT0D0 -> rT1D0] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for temperature+density
+        let val_calc = self.calc_rT1D1(T, rho) / T / rho;
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D0(T, rhox) / T, rho);
+        if print_val {
+            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
+            println!("[rT1D0 -> rT1D1] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D1(Tx, rho) / rho, T);
+        if print_val {
+            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
+            println!("[rT0D1 -> rT1D1] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for temperature+density+density
+        let val_calc = self.calc_rT1D2(T, rho) / T / rho.powi(2);
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D1(T, rhox) / T / rhox, rho);
+        if print_val {
+            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
+            println!("[rT1D1 -> rT1D2] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D2(Tx, rho) / rho.powi(2), T);
+        if print_val {
+            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
+            println!("[rT0D2 -> rT1D2] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for temperature+density+density+density
+        let val_calc = self.calc_rT1D3(T, rho) / T / rho.powi(3);
+        let val_diff = romberg_diff(|rhox: f64| self.calc_rT1D2(T, rhox) / T / rhox.powi(2), rho);
+        if print_val {
+            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
+            println!("[rT1D2 -> rT1D3] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        let val_diff = romberg_diff(|Tx: f64| self.calc_rT0D3(Tx, rho) / rho.powi(3), T);
+        if print_val {
+            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
+            println!("[rT0D3 -> rT1D3] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+        // derivative for temperature+temperature
+        let val_calc = self.calc_rT2D0(T, rho) / T.powi(2);
+        let val_diff = romberg_diff(|Tx: f64| self.calc_rT1D0(Tx, rho) / Tx, T);
+        if print_val {
+            println!("[rT2D0 == rT2D0] calc_rT2D0() ={}", val_calc);
+            println!("[rT1D0 -> rT2D0] romberg_diff ={}", val_diff);
+        } else {
+            compare_val(val_calc, val_diff);
+        }
+    }
+}
 /// unit test
 #[cfg(test)]
 mod tests {

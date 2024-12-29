@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+#[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -35,15 +36,13 @@ use rho::metals2rhoparams;
 /// let lambda = metal.calc_lambda(T).unwrap(); // W/m/K
 /// assert_eq!(54.88, (lambda * 1e2).round() / 1e2);
 /// ```
-#[pyclass]
+#[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct LiquidMetal {
     metal: Metals,
 }
-#[pymethods]
 #[allow(non_snake_case)]
 impl LiquidMetal {
-    #[new]
     pub fn new_metal(name: &str) -> anyhow::Result<LiquidMetal> {
         if let Some(metal) = string2metals().get(name) {
             Ok(Self {
@@ -52,6 +51,15 @@ impl LiquidMetal {
         } else {
             Err(anyhow!(LiquidMetalErr::NoLiquidMetal))
         }
+    }
+}
+#[cfg_attr(feature = "with_pyo3", pymethods)]
+#[allow(non_snake_case)]
+impl LiquidMetal {
+    #[cfg(feature = "with_pyo3")]
+    #[new]
+    pub fn new_py(name: &str) -> anyhow::Result<LiquidMetal> {
+        Self::new_metal(name)
     }
     /// calculate density of liquid metals at 0.1 MPa, unit: kg/m3
     pub fn calc_rho(&self, T: f64) -> anyhow::Result<f64> {

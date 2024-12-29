@@ -9,6 +9,7 @@ enum VdwErr {
     NotInSinglePhase,
 }
 use anyhow::anyhow;
+#[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 /// Vdw EOS
 /// ```
@@ -29,7 +30,7 @@ use pyo3::{pyclass, pymethods};
 /// println!("p={}", SO2.p().unwrap());
 /// println!("rho={}", SO2.rho().unwrap());
 /// ```
-#[pyclass]
+#[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Vdw {
     Tc: f64,
@@ -47,6 +48,32 @@ pub struct Vdw {
     Zv: f64,
     Zl: f64,
     is_single_phase: bool,
+}
+#[allow(non_snake_case)]
+impl Vdw {
+    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
+        let R = 8.314462618;
+        let Zc = 3.0 / 8.0;
+        let mut vdw = Vdw {
+            Zc,
+            Tc,
+            pc,
+            R,
+            M,
+            a: 27.0 * (R * Tc).powi(2) / (64.0 * pc),
+            b: R * Tc / (8.0 * pc),
+            T: 0.0,
+            p: 0.0,
+            A: 0.0,
+            B: 0.0,
+            Z: 0.0,
+            Zv: 0.0,
+            Zl: 0.0,
+            is_single_phase: false,
+        };
+        vdw.tp_flash(273.15, 0.1E6);
+        vdw
+    }
 }
 #[allow(non_snake_case)]
 impl Vdw {
@@ -98,32 +125,13 @@ impl Vdw {
         }
     }
 }
-#[pymethods]
+#[cfg_attr(feature = "with_pyo3", pymethods)]
 #[allow(non_snake_case)]
 impl Vdw {
+    #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
-        let R = 8.314462618;
-        let Zc = 3.0 / 8.0;
-        let mut vdw = Vdw {
-            Zc,
-            Tc,
-            pc,
-            R,
-            M,
-            a: 27.0 * (R * Tc).powi(2) / (64.0 * pc),
-            b: R * Tc / (8.0 * pc),
-            T: 0.0,
-            p: 0.0,
-            A: 0.0,
-            B: 0.0,
-            Z: 0.0,
-            Zv: 0.0,
-            Zl: 0.0,
-            is_single_phase: false,
-        };
-        vdw.tp_flash(273.15, 0.1E6);
-        vdw
+    pub fn new_py(Tc: f64, pc: f64, M: f64) -> Self {
+        Self::new_fluid(Tc, pc, M)
     }
     pub fn set_molar_unit(&mut self) {
         if self.R > 10.0 {

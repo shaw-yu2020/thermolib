@@ -9,6 +9,7 @@ enum SrkErr {
     NotInSinglePhase,
 }
 use anyhow::anyhow;
+#[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 /// Srk EOS
 /// ```
@@ -30,7 +31,7 @@ use pyo3::{pyclass, pymethods};
 /// println!("p={}", SO2.p().unwrap());
 /// println!("rho={}", SO2.rho().unwrap());
 /// ```
-#[pyclass]
+#[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Srk {
     Tc: f64,
@@ -49,6 +50,33 @@ pub struct Srk {
     Zv: f64,
     Zl: f64,
     is_single_phase: bool,
+}
+#[allow(non_snake_case)]
+impl Srk {
+    pub fn new_fluid(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
+        let R = 8.314462618;
+        let Zc = 1.0 / 3.0;
+        let mut srk = Srk {
+            Zc,
+            Tc,
+            pc,
+            R,
+            M,
+            m: 0.48 + 1.574 * omega - 0.176 * omega.powi(2),
+            ac: 0.42747 * (R * Tc).powi(2) / pc,
+            bc: 0.08664 * R * Tc / pc,
+            T: 0.0,
+            p: 0.0,
+            A: 0.0,
+            B: 0.0,
+            Z: 0.0,
+            Zv: 0.0,
+            Zl: 0.0,
+            is_single_phase: false,
+        };
+        srk.tp_flash(273.15, 0.1E6);
+        srk
+    }
 }
 #[allow(non_snake_case)]
 impl Srk {
@@ -100,33 +128,13 @@ impl Srk {
         }
     }
 }
-#[pymethods]
+#[cfg_attr(feature = "with_pyo3", pymethods)]
 #[allow(non_snake_case)]
 impl Srk {
+    #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_fluid(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
-        let R = 8.314462618;
-        let Zc = 1.0 / 3.0;
-        let mut srk = Srk {
-            Zc,
-            Tc,
-            pc,
-            R,
-            M,
-            m: 0.48 + 1.574 * omega - 0.176 * omega.powi(2),
-            ac: 0.42747 * (R * Tc).powi(2) / pc,
-            bc: 0.08664 * R * Tc / pc,
-            T: 0.0,
-            p: 0.0,
-            A: 0.0,
-            B: 0.0,
-            Z: 0.0,
-            Zv: 0.0,
-            Zl: 0.0,
-            is_single_phase: false,
-        };
-        srk.tp_flash(273.15, 0.1E6);
-        srk
+    pub fn new_py(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
+        Self::new_fluid(Tc, pc, omega, M)
     }
     pub fn set_molar_unit(&mut self) {
         if self.R > 10.0 {
