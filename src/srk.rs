@@ -51,8 +51,8 @@ pub struct Srk {
     Zl: f64,
     is_single_phase: bool,
 }
-#[allow(non_snake_case)]
 impl Srk {
+    #[allow(non_snake_case)]
     pub fn new_fluid(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
         let R = 8.314462618;
         let Zc = 1.0 / 3.0;
