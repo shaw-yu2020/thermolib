@@ -45,9 +45,9 @@ pub struct Helmholtz {
     #[serde(skip, default)]
     phase: Phase,
 }
-#[allow(non_snake_case)]
 impl Helmholtz {
     /// read helmholtz equation of state from fluid.json file
+    #[allow(non_snake_case)]
     pub fn read_json(path: &str) -> anyhow::Result<Helmholtz> {
         let mut file_json: Option<std::fs::File>;
         file_json = match std::fs::File::open(std::path::Path::new(path)) {
