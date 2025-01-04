@@ -8,6 +8,7 @@ enum PrErr {
     #[error("property not in single phase")]
     NotInSinglePhase,
 }
+use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
@@ -85,33 +86,17 @@ impl Pr {
         self.A = self.ac * (1.0 + self.kappa * (1.0 - (self.T / self.Tc).sqrt())).powi(2) * self.p
             / (self.R * self.T).powi(2);
         self.B = self.bc * self.p / (self.R * self.T);
-        let b = -1.0 + self.B;
-        let c = self.A - 3.0 * self.B.powi(2) - 2.0 * self.B;
-        let d = -self.A * self.B + self.B.powi(2) + self.B.powi(3);
-        let A = b.powi(2) - 3.0 * c;
-        let B = b * c - 9.0 * d;
-        let C = c.powi(2) - 3.0 * b * d;
-        let Delta = B.powi(2) - 4.0 * A * C;
-        if Delta.is_sign_negative() {
-            let theta3 = ((2.0 * A * b - 3.0 * B) / (2.0 * A * A.sqrt())).acos() / 3.0;
-            let x1 = (-b - 2.0 * A.sqrt() * theta3.cos()) / 3.0;
-            let x2 = (-b + A.sqrt() * (theta3.cos() + 3_f64.sqrt() * theta3.sin())) / 3.0;
-            let x3 = (-b + A.sqrt() * (theta3.cos() - 3_f64.sqrt() * theta3.sin())) / 3.0;
-            let Zv = x1.max(x2).max(x3);
-            let Zl = x1.min(x2).min(x3);
-            if Zl.is_sign_negative() {
-                self.Z = Zv;
-                self.is_single_phase = true;
-            } else {
-                self.Zv = Zv;
-                self.Zl = Zl;
-                self.is_single_phase = false;
-            }
-        } else {
-            let Y1 = A * b + 1.5 * (-B + Delta.sqrt());
-            let Y2 = A * b + 1.5 * (-B - Delta.sqrt());
-            self.Z = (-b - (Y1.cbrt() + Y2.cbrt())) / 3.0;
+        let (Zv, Zl) = shengjin_roots(
+            self.B - 1.0,
+            self.A - 3.0 * self.B.powi(2) - 2.0 * self.B,
+            -self.A * self.B + self.B.powi(2) + self.B.powi(3),
+        );
+        if Zl == 0.0 {
+            self.Z = Zv;
             self.is_single_phase = true;
+        } else {
+            (self.Zv, self.Zl) = (Zv, Zl);
+            self.is_single_phase = false;
         }
     }
     fn calc_lnfp(&self, Z: f64) -> f64 {
