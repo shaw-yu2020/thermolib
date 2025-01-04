@@ -8,6 +8,7 @@ enum SrkErr {
     #[error("property not in single phase")]
     NotInSinglePhase,
 }
+use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
@@ -84,32 +85,13 @@ impl Srk {
         self.A = self.ac * (1.0 + self.m * (1.0 - (self.T / self.Tc).sqrt())).powi(2) * self.p
             / (self.R * self.T).powi(2);
         self.B = self.bc * self.p / (self.R * self.T);
-        let c = self.A - self.B - self.B.powi(2);
-        let d = -self.A * self.B;
-        let A = 1.0 - 3.0 * c;
-        let B = -c - 9.0 * d;
-        let C = c.powi(2) + 3.0 * d;
-        let Delta = B.powi(2) - 4.0 * A * C;
-        if Delta.is_sign_negative() {
-            let theta3 = ((-2.0 * A - 3.0 * B) / (2.0 * A * A.sqrt())).acos() / 3.0;
-            let x1 = (1.0 - 2.0 * A.sqrt() * theta3.cos()) / 3.0;
-            let x2 = (1.0 + A.sqrt() * (theta3.cos() + 3_f64.sqrt() * theta3.sin())) / 3.0;
-            let x3 = (1.0 + A.sqrt() * (theta3.cos() - 3_f64.sqrt() * theta3.sin())) / 3.0;
-            let Zv = x1.max(x2).max(x3);
-            let Zl = x1.min(x2).min(x3);
-            if Zl.is_sign_negative() {
-                self.Z = Zv;
-                self.is_single_phase = true;
-            } else {
-                self.Zv = Zv;
-                self.Zl = Zl;
-                self.is_single_phase = false;
-            }
-        } else {
-            let Y1 = -A + 1.5 * (-B + Delta.sqrt());
-            let Y2 = -A + 1.5 * (-B - Delta.sqrt());
-            self.Z = (1.0 - (Y1.cbrt() + Y2.cbrt())) / 3.0;
+        let (Zv, Zl) = shengjin_roots(-1.0, self.A - self.B - self.B.powi(2), -self.A * self.B);
+        if Zl == 0.0 {
+            self.Z = Zv;
             self.is_single_phase = true;
+        } else {
+            (self.Zv, self.Zl) = (Zv, Zl);
+            self.is_single_phase = false;
         }
     }
     fn calc_lnfp(&self, Z: f64) -> f64 {
