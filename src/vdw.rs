@@ -5,8 +5,8 @@ enum VdwErr {
     NotConvForT,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
+    #[error("property only in double phase")]
+    OnlyInDoublePhase,
 }
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
@@ -183,28 +183,28 @@ impl Vdw {
     }
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(VdwErr::NotInSinglePhase))
+            Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
             Ok(self.T)
         }
     }
     pub fn p_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(VdwErr::NotInSinglePhase))
+            Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
             Ok(self.p)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(VdwErr::NotInSinglePhase))
+            Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
             Ok(self.p / (self.Zv * self.R * self.T))
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(VdwErr::NotInSinglePhase))
+            Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
             Ok(self.p / (self.Zl * self.R * self.T))
         }
