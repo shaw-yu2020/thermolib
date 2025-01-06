@@ -5,8 +5,8 @@ enum RkErr {
     NotConvForT,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
+    #[error("property only in double phase")]
+    OnlyInDoublePhase,
 }
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
@@ -183,28 +183,28 @@ impl Rk {
     }
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(RkErr::NotInSinglePhase))
+            Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
             Ok(self.T)
         }
     }
     pub fn p_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(RkErr::NotInSinglePhase))
+            Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
             Ok(self.p)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(RkErr::NotInSinglePhase))
+            Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
             Ok(self.p / (self.Zv * self.R * self.T))
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(RkErr::NotInSinglePhase))
+            Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
             Ok(self.p / (self.Zl * self.R * self.T))
         }
