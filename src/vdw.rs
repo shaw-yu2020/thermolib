@@ -32,7 +32,6 @@ use pyo3::{pyclass, pymethods};
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Vdw {
-    pc: f64,
     T: f64,
     p: f64,
     a: f64,
@@ -42,15 +41,14 @@ pub struct Vdw {
     Z: f64,
     Zv: f64,
     Zl: f64,
+    pc: f64,
     is_single_phase: bool,
 }
 impl Vdw {
-    #[allow(non_snake_case)]
-    pub fn new_fluid(Tc: f64, pc: f64) -> Self {
+    pub fn new_fluid(temp_c: f64, pc: f64) -> Self {
         let mut vdw = Vdw {
-            pc,
-            a: AC_COEF / pc * (R * Tc).powi(2),
-            b: BC_COEF / pc * R * Tc,
+            a: AC_COEF / pc * (R * temp_c).powi(2),
+            b: BC_COEF / pc * R * temp_c,
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -58,28 +56,28 @@ impl Vdw {
             Z: 0.0,
             Zv: 0.0,
             Zl: 0.0,
+            pc,
             is_single_phase: false,
         };
         vdw.tp_flash(273.15, 0.1E6);
         vdw
     }
 }
-#[allow(non_snake_case)]
 impl Vdw {
     fn calc_root(&mut self) {
         self.A = self.a * self.p / (R * self.T).powi(2);
         self.B = self.b * self.p / (R * self.T);
-        let (Zv, Zl) = shengjin_roots(-self.B - 1.0, self.A, -self.A * self.B);
-        if Zl == 0.0 {
-            self.Z = Zv;
+        let (zv, zl) = shengjin_roots(-self.B - 1.0, self.A, -self.A * self.B);
+        if zl == 0.0 {
+            self.Z = zv;
             self.is_single_phase = true;
         } else {
-            (self.Zv, self.Zl) = (Zv, Zl);
+            (self.Zv, self.Zl) = (zv, zl);
             self.is_single_phase = false;
         }
     }
-    fn calc_lnfp(&self, Z: f64) -> f64 {
-        Z - 1.0 - (Z - self.B).ln() - self.A / Z
+    fn calc_lnfp(&self, z: f64) -> f64 {
+        z - 1.0 - (z - self.B).ln() - self.A / z
     }
     fn calc_diff_lnfpvl(&mut self) -> f64 {
         self.calc_root();
@@ -95,15 +93,14 @@ impl Vdw {
     }
 }
 #[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
 impl Vdw {
     #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_py(Tc: f64, pc: f64, M: f64) -> Self {
-        Self::new_fluid(Tc, pc, M)
+    pub fn new_py(temp_c: f64, pc: f64) -> Self {
+        Self::new_fluid(temp_c, pc)
     }
-    pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
-        self.T = T;
+    pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
+        self.T = temp;
         let ps_max = self.pc - 1.0;
         let ps = crate::algorithms::brent_zero(
             |ps| {
@@ -119,8 +116,8 @@ impl Vdw {
             Ok(())
         }
     }
-    pub fn tp_flash(&mut self, T: f64, p: f64) {
-        self.T = T;
+    pub fn tp_flash(&mut self, temp: f64, p: f64) {
+        self.T = temp;
         self.p = p;
         self.calc_root();
         if !self.is_single_phase {
@@ -134,6 +131,7 @@ impl Vdw {
             self.is_single_phase = true;
         }
     }
+    #[allow(non_snake_case)]
     pub fn T(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.T)
@@ -155,6 +153,7 @@ impl Vdw {
             Err(anyhow!(VdwErr::OnlyInSinglePhase))
         }
     }
+    #[allow(non_snake_case)]
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(VdwErr::OnlyInDoublePhase))
