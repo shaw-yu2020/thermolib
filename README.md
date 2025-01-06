@@ -4,147 +4,62 @@ thermolib
 
 An open-source library for the calculation of fluid properties.
 
-# Vdw
+# Cubic EOS {Vdw, Rk, Srk, Pr}
 
 | Flash Calculation | Get Corresponding Properties |
 | :---: | :---: |
 | `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
 | `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
 
+## Flash Calculation
+
 ```rust
-use thermolib::Vdw;
+use thermolib::{Vdw, Rk, Srk, Pr};
+let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+let acentric_factor = 0.256;
+let mut fluid_vdw = Vdw::new_fluid(crit_t, crit_p);
+let mut fluid_rk = Rk::new_fluid(crit_t, crit_p);
+let mut fluid_srk = Srk::new_fluid(crit_t, crit_p, acentric_factor);
+let mut fluid_pr = Pr::new_fluid(crit_t, crit_p, acentric_factor);
+```
 
-let Tc = 430.64; // K
-let pc = 7886600.0; // Pa
-let M = 0.064064; // kg/mol
-let mut SO2 = Vdw::new_fluid(Tc, pc, M);
-let _ = SO2.set_molar_unit();
+```python
+from thermolib import Vdw, Rk, Srk, Pr
+TC = 430.64
+PC = 7886600
+OMEGA = 0.256
+fluid_vdw = Vdw(TC, PC)
+fluid_rk = Rk(TC, PC)
+fluid_srk = Srk(TC, PC, OMEGA)
+fluid_pr = Pr(TC, PC, OMEGA)
+```
 
-if let Ok(_) = SO2.t_flash(273.15) {
-    println!("T_s={}", SO2.T_s().unwrap());
-    println!("p_s={}", SO2.p_s().unwrap());
-    println!("rho_v={}", SO2.rho_v().unwrap());
-    println!("rho_l={}", SO2.rho_l().unwrap());
+## Get Corresponding Properties
+
+```rust
+if let Ok(_) = fluid.t_flash(273.15) {
+    println!("T_s={}", fluid.T_s().unwrap());
+    println!("p_s={}", fluid.p_s().unwrap());
+    println!("rho_v={}", fluid.rho_v().unwrap());
+    println!("rho_l={}", fluid.rho_l().unwrap());
 }
-
-SO2.tp_flash(273.15, 0.1e6);
-println!("T={}", SO2.T().unwrap());
-println!("p={}", SO2.p().unwrap());
-println!("rho={}", SO2.rho().unwrap());
-
+fluid.tp_flash(273.15, 0.1e6);
+println!("T={}", fluid.T().unwrap());
+println!("p={}", fluid.p().unwrap());
+println!("rho={}", fluid.rho().unwrap());
 ```
 
 ```python
-from thermolib import Vdw
-
-Tc = 430.64
-pc = 7886600
-M = 0.064064
-SO2 = Vdw(Tc, pc, M)
-SO2.set_molar_unit()
-
-SO2.t_flash(273.15)
-print("T_s =", SO2.T_s())
-print("p_s =", SO2.p_s())
-print("rho_v =", SO2.rho_v())
-print("rho_l =", SO2.rho_l())
-
+fluid.t_flash(273.15)
+print("T_s =", fluid.T_s())
+print("p_s =", fluid.p_s())
+print("rho_v =", fluid.rho_v())
+print("rho_l =", fluid.rho_l())
 SO2.tp_flash(273.15, 0.1e6)
-print("T =", SO2.T())
-print("p =", SO2.p())
-print("rho =", SO2.rho())
-
-```
-
-# Rk
-
-| Flash Calculation | Get Corresponding Properties |
-| :---: | :---: |
-| `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
-| `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
-
-```rust
-use thermolib::Rk;
-
-let Tc = 430.64; // K
-let pc = 7886600.0; // Pa
-let M = 0.064064; // kg/mol
-let mut SO2 = Rk::new_fluid(Tc, pc, M);
-let _ = SO2.set_molar_unit();
-
-```
-
-```python
-from thermolib import Rk
-
-Tc = 430.64
-pc = 7886600
-M = 0.064064
-SO2 = Rk(Tc, pc, M)
-SO2.set_molar_unit()
-
-```
-
-# Srk
-
-| Flash Calculation | Get Corresponding Properties |
-| :---: | :---: |
-| `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
-| `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
-
-```rust
-use thermolib::Srk;
-
-let Tc = 430.64; // K
-let pc = 7886600.0; // Pa
-let omega = 0.256;
-let M = 0.064064; // kg/mol
-let mut SO2 = Srk::new_fluid(Tc, pc, omega, M);
-let _ = SO2.set_molar_unit();
-
-```
-
-```python
-from thermolib import Srk
-
-Tc = 430.64
-pc = 7886600
-omega = 0.256
-M = 0.064064
-SO2 = Srk(Tc, Pc, omega, M)
-SO2.set_molar_unit()
-
-```
-
-# Pr
-
-| Flash Calculation | Get Corresponding Properties |
-| :---: | :---: |
-| `t_flash(Ts)` | `T_s()` <br> `p_s()` <br> `rho_v()` <br> `rho_l()` <br> |
-| `tp_flash(T,p)` | `T()` <br> `p()` <br> `rho()` <br> |
-
-```rust
-use thermolib::Pr;
-
-let Tc = 430.64; // K
-let pc = 7886600.0; // Pa
-let omega = 0.256;
-let M = 0.064064; // kg/mol
-let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
-let _ = SO2.set_molar_unit();
-
-```
-
-```python
-from thermolib import Pr
-
-Tc = 430.64
-pc = 7886600
-omega = 0.256
-M = 0.064064
-SO2 = Pr(Tc, Pc, omega, M)
-SO2.set_molar_unit()
-
+print("T =", fluid.T())
+print("p =", fluid.p())
+print("rho =", fluid.rho())
 ```
 
 # Helmholtz
