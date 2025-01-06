@@ -5,68 +5,55 @@ enum PrErr {
     NotConvForT,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
+    #[error("property only in double phase")]
+    OnlyInDoublePhase,
 }
+use std::f64::consts::SQRT_2;
+const SQRT2_ADD_POS1: f64 = SQRT_2 + 1.0;
+const SQRT2_ADD_NEG1: f64 = SQRT_2 - 1.0;
+const R: f64 = 8.314462618;
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::f64::consts::SQRT_2;
 /// Pr EOS
 /// ```
 /// use thermolib::Pr;
-/// let Tc = 430.64; // K
-/// let pc = 7886600.0; // Pa
-/// let omega = 0.256;
-/// let M = 0.064064; // kg/mol
-/// let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
-/// let _ = SO2.set_molar_unit();
-/// if let Ok(_) = SO2.t_flash(273.15) {
-///     println!("T_s={}", SO2.T_s().unwrap());
-///     println!("p_s={}", SO2.p_s().unwrap());
-///     println!("rho_v={}", SO2.rho_v().unwrap());
-///     println!("rho_l={}", SO2.rho_l().unwrap());
-/// }
-/// SO2.tp_flash(273.15, 0.1e6);
-/// println!("T={}", SO2.T().unwrap());
-/// println!("p={}", SO2.p().unwrap());
-/// println!("rho={}", SO2.rho().unwrap());
+/// let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+/// let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+/// let acentric_factor = 0.256;
+/// let mut fluid = Pr::new_fluid(crit_t, crit_p, acentric_factor);
+/// fluid.t_flash(273.15).unwrap();
+/// assert_eq!(fluid.p_s().unwrap().round(), 156208.0);
+/// assert_eq!(fluid.rho_v().unwrap().round(), 71.0);
+/// assert_eq!(fluid.rho_l().unwrap().round(), 22693.0);
+/// fluid.tp_flash(273.15, 0.1e6);
+/// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Pr {
-    Tc: f64,
-    pc: f64,
-    T: f64,
-    p: f64,
     kappa: f64,
     ac: f64,
     bc: f64,
+    T: f64,
+    p: f64,
     A: f64,
     B: f64,
-    R: f64,
-    M: f64,
     Z: f64,
-    Zc: f64,
     Zv: f64,
     Zl: f64,
+    Tc: f64,
+    Zc: f64,
+    pc: f64,
     is_single_phase: bool,
 }
 impl Pr {
-    #[allow(non_snake_case)]
-    pub fn new_fluid(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
-        let R = 8.314462618;
-        let Zc = 0.307;
+    pub fn new_fluid(temp_c: f64, pc: f64, omega: f64) -> Self {
         let mut pr = Pr {
-            Zc,
-            Tc,
-            pc,
-            R,
-            M,
             kappa: 0.37464 + 1.54226 * omega - 0.26992 * omega.powi(2),
-            ac: 0.45724 * (R * Tc).powi(2) / pc,
-            bc: 0.07780 * R * Tc / pc,
+            ac: 0.45724 / pc * (R * temp_c).powi(2),
+            bc: 0.07780 / pc * R * temp_c,
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -74,36 +61,40 @@ impl Pr {
             Z: 0.0,
             Zv: 0.0,
             Zl: 0.0,
+            Tc: temp_c,
+            Zc: 0.307,
+            pc,
             is_single_phase: false,
         };
         pr.tp_flash(273.15, 0.1E6);
         pr
     }
 }
-#[allow(non_snake_case)]
 impl Pr {
     fn calc_root(&mut self) {
         self.A = self.ac * (1.0 + self.kappa * (1.0 - (self.T / self.Tc).sqrt())).powi(2) * self.p
-            / (self.R * self.T).powi(2);
-        self.B = self.bc * self.p / (self.R * self.T);
-        let (Zv, Zl) = shengjin_roots(
+            / (R * self.T).powi(2);
+        self.B = self.bc * self.p / (R * self.T);
+        let (zv, zl) = shengjin_roots(
             self.B - 1.0,
             self.A - 3.0 * self.B.powi(2) - 2.0 * self.B,
             -self.A * self.B + self.B.powi(2) + self.B.powi(3),
         );
-        if Zl == 0.0 {
-            self.Z = Zv;
+        if zl == 0.0 {
+            self.Z = zv;
             self.is_single_phase = true;
         } else {
-            (self.Zv, self.Zl) = (Zv, Zl);
+            (self.Zv, self.Zl) = (zv, zl);
             self.is_single_phase = false;
         }
     }
-    fn calc_lnfp(&self, Z: f64) -> f64 {
-        Z - 1.0
-            - (Z - self.B).ln()
+    fn calc_lnfp(&self, z: f64) -> f64 {
+        z - 1.0
+            - (z - self.B).ln()
             - self.A / (2.0 * SQRT_2 * self.B)
-                * ((Z + 2.414 * self.B) / (Z - 0.414 * self.B)).abs().ln()
+                * ((z + SQRT2_ADD_POS1 * self.B) / (z - SQRT2_ADD_NEG1 * self.B))
+                    .abs()
+                    .ln()
     }
     fn calc_diff_lnfpvl(&mut self) -> f64 {
         self.calc_root();
@@ -119,29 +110,14 @@ impl Pr {
     }
 }
 #[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
 impl Pr {
     #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_py(Tc: f64, pc: f64, omega: f64, M: f64) -> Self {
-        Self::new_fluid(Tc, pc, omega, M)
+    pub fn new_py(temp_c: f64, pc: f64, omega: f64) -> Self {
+        Self::new_fluid(temp_c, pc, omega)
     }
-    pub fn set_molar_unit(&mut self) {
-        if self.R > 10.0 {
-            self.R *= self.M;
-        }
-        self.ac = 0.45724 * (self.R * self.Tc).powi(2) / self.pc;
-        self.bc = 0.07780 * self.R * self.Tc / self.pc;
-    }
-    pub fn set_mass_unit(&mut self) {
-        if self.R < 10.0 {
-            self.R /= self.M;
-        }
-        self.ac = 0.45724 * (self.R * self.Tc).powi(2) / self.pc;
-        self.bc = 0.07780 * self.R * self.Tc / self.pc;
-    }
-    pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
-        self.T = T;
+    pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
+        self.T = temp;
         let ps_max = self.pc - 1.0;
         let ps = crate::algorithms::brent_zero(
             |ps| {
@@ -157,8 +133,8 @@ impl Pr {
             Ok(())
         }
     }
-    pub fn tp_flash(&mut self, T: f64, p: f64) {
-        self.T = T;
+    pub fn tp_flash(&mut self, temp: f64, p: f64) {
+        self.T = temp;
         self.p = p;
         self.calc_root();
         if !self.is_single_phase {
@@ -172,6 +148,7 @@ impl Pr {
             self.is_single_phase = true;
         }
     }
+    #[allow(non_snake_case)]
     pub fn T(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.T)
@@ -188,37 +165,38 @@ impl Pr {
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok(self.p / (self.Z * self.R * self.T))
+            Ok(self.p / (self.Z * R * self.T))
         } else {
             Err(anyhow!(PrErr::OnlyInSinglePhase))
         }
     }
+    #[allow(non_snake_case)]
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PrErr::NotInSinglePhase))
+            Err(anyhow!(PrErr::OnlyInDoublePhase))
         } else {
             Ok(self.T)
         }
     }
     pub fn p_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PrErr::NotInSinglePhase))
+            Err(anyhow!(PrErr::OnlyInDoublePhase))
         } else {
             Ok(self.p)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PrErr::NotInSinglePhase))
+            Err(anyhow!(PrErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zv * self.R * self.T))
+            Ok(self.p / (self.Zv * R * self.T))
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PrErr::NotInSinglePhase))
+            Err(anyhow!(PrErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zl * self.R * self.T))
+            Ok(self.p / (self.Zl * R * self.T))
         }
     }
 }
@@ -226,18 +204,25 @@ impl Pr {
 mod tests {
     use super::*;
     #[test]
-    #[allow(non_snake_case)]
     fn test_pr() {
-        let Tc: f64 = 430.64; // K
-        let pc = 7886600.0; // Pa
-        let omega = 0.256;
-        let M = 0.064064; // kg/mol
-        let mut SO2 = Pr::new_fluid(Tc, pc, omega, M);
-        let Tmin = (0.7 * Tc).floor() as i32;
-        let Tmax = Tc.ceil() as i32;
-        for T in Tmin..Tmax {
-            if let Err(_) = SO2.t_flash(T as f64) {
-                panic!();
+        let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+        let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+        let acentric_factor = 0.256;
+        let mut fluid = Pr::new_fluid(crit_t, crit_p, acentric_factor);
+        let temp_min = (0.6 * crit_t).floor() as u32;
+        let temp_max = crit_t.ceil() as u32;
+        let (mut p_s, mut rho_v, mut rho_l): (f64, f64, f64) = (0.0, 0.0, f64::INFINITY);
+        for temp in temp_min..temp_max {
+            fluid.t_flash(temp as f64).unwrap();
+            if fluid.p_s().unwrap() < p_s
+                || fluid.rho_v().unwrap() < rho_v
+                || fluid.rho_l().unwrap() > rho_l
+            {
+                panic!()
+            } else {
+                p_s = fluid.p_s().unwrap();
+                rho_v = fluid.rho_v().unwrap();
+                rho_l = fluid.rho_l().unwrap();
             }
         }
     }
