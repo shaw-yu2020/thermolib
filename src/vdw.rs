@@ -19,21 +19,15 @@ use pyo3::{pyclass, pymethods};
 /// Vdw EOS
 /// ```
 /// use thermolib::Vdw;
-/// let Tc = 430.64; // K
-/// let pc = 7886600.0; // Pa
-/// let M = 0.064064; // kg/mol
-/// let mut SO2 = Vdw::new_fluid(Tc, pc, M);
-/// let _ = SO2.set_molar_unit();
-/// if let Ok(_) = SO2.t_flash(273.15) {
-///     println!("T_s={}", SO2.T_s().unwrap());
-///     println!("p_s={}", SO2.p_s().unwrap());
-///     println!("rho_v={}", SO2.rho_v().unwrap());
-///     println!("rho_l={}", SO2.rho_l().unwrap());
-/// }
-/// SO2.tp_flash(273.15, 0.1e6);
-/// println!("T={}", SO2.T().unwrap());
-/// println!("p={}", SO2.p().unwrap());
-/// println!("rho={}", SO2.rho().unwrap());
+/// let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+/// let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+/// let mut fluid = Vdw::new_fluid(crit_t, crit_p);
+/// fluid.t_flash(273.15).unwrap();
+/// assert_eq!(fluid.p_s().unwrap().round(), 937361.0);
+/// assert_eq!(fluid.rho_v().unwrap().round(), 466.0);
+/// assert_eq!(fluid.rho_l().unwrap().round(), 13251.0);
+/// fluid.tp_flash(273.15, 0.1e6);
+/// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
@@ -194,16 +188,24 @@ impl Vdw {
 mod tests {
     use super::*;
     #[test]
-    #[allow(non_snake_case)]
     fn test_vdw() {
-        let Tc: f64 = 430.64; // K
-        let pc = 7886600.0; // Pa
-        let mut SO2 = Vdw::new_fluid(Tc, pc);
-        let Tmin = (0.7 * Tc).floor() as i32;
-        let Tmax = Tc.ceil() as i32;
-        for T in Tmin..Tmax {
-            if let Err(_) = SO2.t_flash(T as f64) {
-                panic!();
+        let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+        let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+        let mut fluid = Vdw::new_fluid(crit_t, crit_p);
+        let temp_min = (0.6 * crit_t).floor() as u32;
+        let temp_max = crit_t.ceil() as u32;
+        let (mut p_s, mut rho_v, mut rho_l): (f64, f64, f64) = (0.0, 0.0, f64::INFINITY);
+        for temp in temp_min..temp_max {
+            fluid.t_flash(temp as f64).unwrap();
+            if fluid.p_s().unwrap() < p_s
+                || fluid.rho_v().unwrap() < rho_v
+                || fluid.rho_l().unwrap() > rho_l
+            {
+                panic!()
+            } else {
+                p_s = fluid.p_s().unwrap();
+                rho_v = fluid.rho_v().unwrap();
+                rho_l = fluid.rho_l().unwrap();
             }
         }
     }
