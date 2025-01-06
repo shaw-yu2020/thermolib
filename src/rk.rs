@@ -8,6 +8,8 @@ enum RkErr {
     #[error("property only in double phase")]
     OnlyInDoublePhase,
 }
+const R: f64 = 8.314462618;
+const ZC: f64 = 1.0 / 3.0;
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
@@ -15,54 +17,36 @@ use pyo3::{pyclass, pymethods};
 /// Rk EOS
 /// ```
 /// use thermolib::Rk;
-/// let Tc = 430.64; // K
-/// let pc = 7886600.0; // Pa
-/// let M = 0.064064; // kg/mol
-/// let mut SO2 = Rk::new_fluid(Tc, pc, M);
-/// let _ = SO2.set_molar_unit();
-/// if let Ok(_) = SO2.t_flash(273.15) {
-///     println!("T_s={}", SO2.T_s().unwrap());
-///     println!("p_s={}", SO2.p_s().unwrap());
-///     println!("rho_v={}", SO2.rho_v().unwrap());
-///     println!("rho_l={}", SO2.rho_l().unwrap());
-/// }
-/// SO2.tp_flash(273.15, 0.1e6);
-/// println!("T={}", SO2.T().unwrap());
-/// println!("p={}", SO2.p().unwrap());
-/// println!("rho={}", SO2.rho().unwrap());
+/// let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+/// let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+/// let mut fluid = Rk::new_fluid(crit_t, crit_p);
+/// fluid.t_flash(273.15).unwrap();
+/// assert_eq!(fluid.p_s().unwrap().round(), 282854.0);
+/// assert_eq!(fluid.rho_v().unwrap().round(), 130.0);
+/// assert_eq!(fluid.rho_l().unwrap().round(), 19422.0);
+/// fluid.tp_flash(273.15, 0.1e6);
+/// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Rk {
-    Tc: f64,
-    pc: f64,
     T: f64,
     p: f64,
     a: f64,
     b: f64,
     A: f64,
     B: f64,
-    R: f64,
-    M: f64,
     Z: f64,
-    Zc: f64,
     Zv: f64,
     Zl: f64,
+    pc: f64,
     is_single_phase: bool,
 }
 impl Rk {
-    #[allow(non_snake_case)]
-    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
-        let R = 8.314462618;
-        let Zc = 1.0 / 3.0;
+    pub fn new_fluid(temp_c: f64, pc: f64) -> Self {
         let mut rk = Rk {
-            Zc,
-            Tc,
-            pc,
-            R,
-            M,
-            a: 0.42748 * R.powi(2) * Tc.powf(2.5) / pc,
-            b: 0.08664 * R * Tc / pc,
+            a: 0.42748 / pc * R.powi(2) * temp_c.powf(2.5),
+            b: 0.08664 / pc * R * temp_c,
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -70,33 +54,33 @@ impl Rk {
             Z: 0.0,
             Zv: 0.0,
             Zl: 0.0,
+            pc,
             is_single_phase: false,
         };
         rk.tp_flash(273.15, 0.1E6);
         rk
     }
 }
-#[allow(non_snake_case)]
 impl Rk {
     fn calc_root(&mut self) {
-        self.A = self.a * self.p / self.R.powi(2) / self.T.powf(2.5);
-        self.B = self.b * self.p / self.R / self.T;
-        let (Zv, Zl) = shengjin_roots(-1.0, self.A - self.B - self.B.powi(2), -self.A * self.B);
-        if Zl == 0.0 {
-            self.Z = Zv;
+        self.A = self.a * self.p / R.powi(2) / self.T.powf(2.5);
+        self.B = self.b * self.p / R / self.T;
+        let (zv, zl) = shengjin_roots(-1.0, self.A - self.B - self.B.powi(2), -self.A * self.B);
+        if zl == 0.0 {
+            self.Z = zv;
             self.is_single_phase = true;
         } else {
-            (self.Zv, self.Zl) = (Zv, Zl);
+            (self.Zv, self.Zl) = (zv, zl);
             self.is_single_phase = false;
         }
     }
-    fn calc_lnfp(&self, Z: f64) -> f64 {
-        Z - 1.0 - (Z - self.B).ln() + self.A / self.B * (Z / (Z + self.B)).abs().ln()
+    fn calc_lnfp(&self, z: f64) -> f64 {
+        z - 1.0 - (z - self.B).ln() + self.A / self.B * (z / (z + self.B)).abs().ln()
     }
     fn calc_diff_lnfpvl(&mut self) -> f64 {
         self.calc_root();
         if self.is_single_phase {
-            if self.Z > self.Zc {
+            if self.Z > ZC {
                 self.calc_lnfp(self.Z)
             } else {
                 -self.calc_lnfp(self.Z)
@@ -107,29 +91,14 @@ impl Rk {
     }
 }
 #[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
 impl Rk {
     #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_py(Tc: f64, pc: f64, M: f64) -> Self {
-        Self::new_fluid(Tc, pc, M)
+    pub fn new_py(temp_c: f64, pc: f64) -> Self {
+        Self::new_fluid(temp_c, pc)
     }
-    pub fn set_molar_unit(&mut self) {
-        if self.R > 10.0 {
-            self.R *= self.M;
-        }
-        self.a = 0.42748 * self.R.powi(2) * self.Tc.powf(2.5) / self.pc;
-        self.b = 0.08664 * self.R * self.Tc / self.pc;
-    }
-    pub fn set_mass_unit(&mut self) {
-        if self.R < 10.0 {
-            self.R /= self.M;
-        }
-        self.a = 0.42748 * self.R.powi(2) * self.Tc.powf(2.5) / self.pc;
-        self.b = 0.08664 * self.R * self.Tc / self.pc;
-    }
-    pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
-        self.T = T;
+    pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
+        self.T = temp;
         let ps_max = self.pc - 1.0;
         let ps = crate::algorithms::brent_zero(
             |ps| {
@@ -145,8 +114,8 @@ impl Rk {
             Ok(())
         }
     }
-    pub fn tp_flash(&mut self, T: f64, p: f64) {
-        self.T = T;
+    pub fn tp_flash(&mut self, temp: f64, p: f64) {
+        self.T = temp;
         self.p = p;
         self.calc_root();
         if !self.is_single_phase {
@@ -160,6 +129,7 @@ impl Rk {
             self.is_single_phase = true;
         }
     }
+    #[allow(non_snake_case)]
     pub fn T(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.T)
@@ -176,11 +146,12 @@ impl Rk {
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok(self.p / (self.Z * self.R * self.T))
+            Ok(self.p / (self.Z * R * self.T))
         } else {
             Err(anyhow!(RkErr::OnlyInSinglePhase))
         }
     }
+    #[allow(non_snake_case)]
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(RkErr::OnlyInDoublePhase))
@@ -199,14 +170,14 @@ impl Rk {
         if self.is_single_phase {
             Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zv * self.R * self.T))
+            Ok(self.p / (self.Zv * R * self.T))
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(RkErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zl * self.R * self.T))
+            Ok(self.p / (self.Zl * R * self.T))
         }
     }
 }
@@ -214,17 +185,24 @@ impl Rk {
 mod tests {
     use super::*;
     #[test]
-    #[allow(non_snake_case)]
     fn test_rk() {
-        let Tc: f64 = 430.64; // K
-        let pc = 7886600.0; // Pa
-        let M = 0.064064; // kg/mol
-        let mut SO2 = Rk::new_fluid(Tc, pc, M);
-        let Tmin = (0.7 * Tc).floor() as i32;
-        let Tmax = Tc.ceil() as i32;
-        for T in Tmin..Tmax {
-            if let Err(_) = SO2.t_flash(T as f64) {
-                panic!();
+        let crit_t = 430.64; // critical temperature of sulfur dioxide // K
+        let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
+        let mut fluid = Rk::new_fluid(crit_t, crit_p);
+        let temp_min = (0.6 * crit_t).floor() as u32;
+        let temp_max = crit_t.ceil() as u32;
+        let (mut p_s, mut rho_v, mut rho_l): (f64, f64, f64) = (0.0, 0.0, f64::INFINITY);
+        for temp in temp_min..temp_max {
+            fluid.t_flash(temp as f64).unwrap();
+            if fluid.p_s().unwrap() < p_s
+                || fluid.rho_v().unwrap() < rho_v
+                || fluid.rho_l().unwrap() > rho_l
+            {
+                panic!()
+            } else {
+                p_s = fluid.p_s().unwrap();
+                rho_v = fluid.rho_v().unwrap();
+                rho_l = fluid.rho_l().unwrap();
             }
         }
     }
