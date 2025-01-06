@@ -8,6 +8,10 @@ enum VdwErr {
     #[error("property only in double phase")]
     OnlyInDoublePhase,
 }
+const R: f64 = 8.314462618;
+const ZC: f64 = 3.0 / 8.0;
+const AC_COEF: f64 = 27.0 / 64.0;
+const BC_COEF: f64 = 1.0 / 8.0;
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
@@ -34,7 +38,6 @@ use pyo3::{pyclass, pymethods};
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)]
 pub struct Vdw {
-    Tc: f64,
     pc: f64,
     T: f64,
     p: f64,
@@ -42,27 +45,18 @@ pub struct Vdw {
     b: f64,
     A: f64,
     B: f64,
-    R: f64,
-    M: f64,
     Z: f64,
-    Zc: f64,
     Zv: f64,
     Zl: f64,
     is_single_phase: bool,
 }
 impl Vdw {
     #[allow(non_snake_case)]
-    pub fn new_fluid(Tc: f64, pc: f64, M: f64) -> Self {
-        let R = 8.314462618;
-        let Zc = 3.0 / 8.0;
+    pub fn new_fluid(Tc: f64, pc: f64) -> Self {
         let mut vdw = Vdw {
-            Zc,
-            Tc,
             pc,
-            R,
-            M,
-            a: 27.0 * (R * Tc).powi(2) / (64.0 * pc),
-            b: R * Tc / (8.0 * pc),
+            a: AC_COEF / pc * (R * Tc).powi(2),
+            b: BC_COEF / pc * R * Tc,
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -79,8 +73,8 @@ impl Vdw {
 #[allow(non_snake_case)]
 impl Vdw {
     fn calc_root(&mut self) {
-        self.A = self.a * self.p / (self.R * self.T).powi(2);
-        self.B = self.b * self.p / (self.R * self.T);
+        self.A = self.a * self.p / (R * self.T).powi(2);
+        self.B = self.b * self.p / (R * self.T);
         let (Zv, Zl) = shengjin_roots(-self.B - 1.0, self.A, -self.A * self.B);
         if Zl == 0.0 {
             self.Z = Zv;
@@ -96,7 +90,7 @@ impl Vdw {
     fn calc_diff_lnfpvl(&mut self) -> f64 {
         self.calc_root();
         if self.is_single_phase {
-            if self.Z > self.Zc {
+            if self.Z > ZC {
                 self.calc_lnfp(self.Z)
             } else {
                 -self.calc_lnfp(self.Z)
@@ -113,20 +107,6 @@ impl Vdw {
     #[new]
     pub fn new_py(Tc: f64, pc: f64, M: f64) -> Self {
         Self::new_fluid(Tc, pc, M)
-    }
-    pub fn set_molar_unit(&mut self) {
-        if self.R > 10.0 {
-            self.R *= self.M;
-        }
-        self.a = 27.0 * (self.R * self.Tc).powi(2) / 64.0 / self.pc;
-        self.b = self.R * self.Tc / 8.0 / self.pc;
-    }
-    pub fn set_mass_unit(&mut self) {
-        if self.R < 10.0 {
-            self.R /= self.M;
-        }
-        self.a = 27.0 * (self.R * self.Tc).powi(2) / 64.0 / self.pc;
-        self.b = self.R * self.Tc / 8.0 / self.pc;
     }
     pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
         self.T = T;
@@ -176,7 +156,7 @@ impl Vdw {
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok(self.p / (self.Z * self.R * self.T))
+            Ok(self.p / (self.Z * R * self.T))
         } else {
             Err(anyhow!(VdwErr::OnlyInSinglePhase))
         }
@@ -199,14 +179,14 @@ impl Vdw {
         if self.is_single_phase {
             Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zv * self.R * self.T))
+            Ok(self.p / (self.Zv * R * self.T))
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Err(anyhow!(VdwErr::OnlyInDoublePhase))
         } else {
-            Ok(self.p / (self.Zl * self.R * self.T))
+            Ok(self.p / (self.Zl * R * self.T))
         }
     }
 }
@@ -218,8 +198,7 @@ mod tests {
     fn test_vdw() {
         let Tc: f64 = 430.64; // K
         let pc = 7886600.0; // Pa
-        let M = 0.064064; // kg/mol
-        let mut SO2 = Vdw::new_fluid(Tc, pc, M);
+        let mut SO2 = Vdw::new_fluid(Tc, pc);
         let Tmin = (0.7 * Tc).floor() as i32;
         let Tmax = Tc.ceil() as i32;
         for T in Tmin..Tmax {
