@@ -12,10 +12,33 @@ use std::f64::consts::SQRT_2;
 const SQRT2_ADD_POS1: f64 = SQRT_2 + 1.0;
 const SQRT2_ADD_NEG1: f64 = SQRT_2 - 1.0;
 const R: f64 = 8.314462618;
+fn c() -> &'static f64 {
+    static C: OnceLock<f64> = OnceLock::new();
+    C.get_or_init(|| ((6.0 * SQRT_2 + 8.0).cbrt() - (6.0 * SQRT_2 - 8.0).cbrt() - 1.0) / 3.0)
+}
+fn zc() -> &'static f64 {
+    static AC_COEF: OnceLock<f64> = OnceLock::new();
+    AC_COEF
+        .get_or_init(|| (1.0 - 2.0 * c() - c().powi(2)) / (1.0 + c()) / (1.0 - c()).powi(2) / 2.0)
+}
+fn ac_coef() -> &'static f64 {
+    static AC_COEF: OnceLock<f64> = OnceLock::new();
+    AC_COEF.get_or_init(|| {
+        ((1.0 + 2.0 * c() - c().powi(2)) / (1.0 + c()) / (1.0 - c()).powi(2) / 2.0).powi(2)
+            * (1.0 - 2.0 * c() - c().powi(2))
+    })
+}
+fn bc_coef() -> &'static f64 {
+    static BC_COEF: OnceLock<f64> = OnceLock::new();
+    BC_COEF.get_or_init(|| {
+        c() * (1.0 - 2.0 * c() - c().powi(2)) / (1.0 + c()) / (1.0 - c()).powi(2) / 2.0
+    })
+}
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
+use std::sync::OnceLock;
 /// Pr EOS
 /// ```
 /// use thermolib::Pr;
@@ -24,9 +47,9 @@ use pyo3::{pyclass, pymethods};
 /// let acentric_factor = 0.256;
 /// let mut fluid = Pr::new_fluid(crit_t, crit_p, acentric_factor);
 /// fluid.t_flash(273.15).unwrap();
-/// assert_eq!(fluid.p_s().unwrap().round(), 156208.0);
+/// assert_eq!(fluid.p_s().unwrap().round(), 156174.0);
 /// assert_eq!(fluid.rho_v().unwrap().round(), 71.0);
-/// assert_eq!(fluid.rho_l().unwrap().round(), 22693.0);
+/// assert_eq!(fluid.rho_l().unwrap().round(), 22695.0);
 /// fluid.tp_flash(273.15, 0.1e6);
 /// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// ```
@@ -44,7 +67,6 @@ pub struct Pr {
     Zv: f64,
     Zl: f64,
     Tc: f64,
-    Zc: f64,
     pc: f64,
     is_single_phase: bool,
 }
@@ -52,8 +74,8 @@ impl Pr {
     pub fn new_fluid(temp_c: f64, pc: f64, omega: f64) -> Self {
         let mut pr = Pr {
             kappa: 0.37464 + 1.54226 * omega - 0.26992 * omega.powi(2),
-            ac: 0.45724 / pc * (R * temp_c).powi(2),
-            bc: 0.07780 / pc * R * temp_c,
+            ac: ac_coef() / pc * (R * temp_c).powi(2),
+            bc: bc_coef() / pc * R * temp_c,
             T: 0.0,
             p: 0.0,
             A: 0.0,
@@ -62,7 +84,6 @@ impl Pr {
             Zv: 0.0,
             Zl: 0.0,
             Tc: temp_c,
-            Zc: 0.307,
             pc,
             is_single_phase: false,
         };
@@ -99,7 +120,7 @@ impl Pr {
     fn calc_diff_lnfpvl(&mut self) -> f64 {
         self.calc_root();
         if self.is_single_phase {
-            if self.Z > self.Zc {
+            if self.Z > *zc() {
                 self.calc_lnfp(self.Z)
             } else {
                 -self.calc_lnfp(self.Z)
