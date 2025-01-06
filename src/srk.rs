@@ -10,10 +10,19 @@ enum SrkErr {
 }
 const R: f64 = 8.314462618;
 const ZC: f64 = 1.0 / 3.0;
+fn ac_coef() -> &'static f64 {
+    static AC_COEF: OnceLock<f64> = OnceLock::new();
+    AC_COEF.get_or_init(|| 4_f64.cbrt() / (2.0 - 4_f64.cbrt()) / 9.0)
+}
+fn bc_coef() -> &'static f64 {
+    static BC_COEF: OnceLock<f64> = OnceLock::new();
+    BC_COEF.get_or_init(|| (2_f64.cbrt() - 1.0) / 3.0)
+}
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
+use std::sync::OnceLock;
 /// Srk EOS
 /// ```
 /// use thermolib::Srk;
@@ -22,7 +31,7 @@ use pyo3::{pyclass, pymethods};
 /// let acentric_factor = 0.256;
 /// let mut fluid = Srk::new_fluid(crit_t, crit_p, acentric_factor);
 /// fluid.t_flash(273.15).unwrap();
-/// assert_eq!(fluid.p_s().unwrap().round(), 154519.0);
+/// assert_eq!(fluid.p_s().unwrap().round(), 154498.0);
 /// assert_eq!(fluid.rho_v().unwrap().round(), 70.0);
 /// assert_eq!(fluid.rho_l().unwrap().round(), 20085.0);
 /// fluid.tp_flash(273.15, 0.1e6);
@@ -48,8 +57,8 @@ pub struct Srk {
 impl Srk {
     pub fn new_fluid(temp_c: f64, pc: f64, omega: f64) -> Self {
         let mut srk = Srk {
-            ac: 0.42747 / pc * (R * temp_c).powi(2),
-            bc: 0.08664 / pc * R * temp_c,
+            ac: ac_coef() / pc * (R * temp_c).powi(2),
+            bc: bc_coef() / pc * R * temp_c,
             m: 0.48 + 1.574 * omega - 0.176 * omega.powi(2),
             T: 0.0,
             p: 0.0,
@@ -100,8 +109,8 @@ impl Srk {
 impl Srk {
     #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_py(Tc: f64, pc: f64, omega: f64) -> Self {
-        Self::new_fluid(Tc, pc, omega)
+    pub fn new_py(temp_c: f64, pc: f64, omega: f64) -> Self {
+        Self::new_fluid(temp_c, pc, omega)
     }
     pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
         self.T = temp;
