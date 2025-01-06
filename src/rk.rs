@@ -10,10 +10,19 @@ enum RkErr {
 }
 const R: f64 = 8.314462618;
 const ZC: f64 = 1.0 / 3.0;
+fn ac_coef() -> &'static f64 {
+    static AC_COEF: OnceLock<f64> = OnceLock::new();
+    AC_COEF.get_or_init(|| 4_f64.cbrt() / (2.0 - 4_f64.cbrt()) / 9.0)
+}
+fn bc_coef() -> &'static f64 {
+    static BC_COEF: OnceLock<f64> = OnceLock::new();
+    BC_COEF.get_or_init(|| (2_f64.cbrt() - 1.0) / 3.0)
+}
 use crate::algorithms::shengjin_roots;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
+use std::sync::OnceLock;
 /// Rk EOS
 /// ```
 /// use thermolib::Rk;
@@ -21,7 +30,7 @@ use pyo3::{pyclass, pymethods};
 /// let crit_p = 7886600.0; // critical pressure of sulfur dioxide // Pa
 /// let mut fluid = Rk::new_fluid(crit_t, crit_p);
 /// fluid.t_flash(273.15).unwrap();
-/// assert_eq!(fluid.p_s().unwrap().round(), 282854.0);
+/// assert_eq!(fluid.p_s().unwrap().round(), 282859.0);
 /// assert_eq!(fluid.rho_v().unwrap().round(), 130.0);
 /// assert_eq!(fluid.rho_l().unwrap().round(), 19422.0);
 /// fluid.tp_flash(273.15, 0.1e6);
@@ -45,8 +54,8 @@ pub struct Rk {
 impl Rk {
     pub fn new_fluid(temp_c: f64, pc: f64) -> Self {
         let mut rk = Rk {
-            a: 0.42748 / pc * R.powi(2) * temp_c.powf(2.5),
-            b: 0.08664 / pc * R * temp_c,
+            a: ac_coef() / pc * R.powi(2) * temp_c.powf(2.5),
+            b: bc_coef() / pc * R * temp_c,
             T: 0.0,
             p: 0.0,
             A: 0.0,
