@@ -34,18 +34,17 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 /// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
-#[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct PcSaftPure {
     m: f64,
     sigma: f64,
     epsilon: f64,
-    T: f64,
+    temp: f64,
     rho_num: f64,
     rhov_num: f64,
     rhol_num: f64,
     is_single_phase: bool,
-    // changed from T and rho_num
+    // changed from temp and rho_num
     eta: f64,
     eta1: f64,
     eta2: f64,
@@ -92,12 +91,12 @@ impl PcSaftPure {
             m,
             sigma,
             epsilon,
-            T: 1.0,
+            temp: 1.0,
             rho_num: 1E-10,
             rhov_num: 0.0,
             rhol_num: 0.0,
             is_single_phase: true,
-            // changed from T and rho_num
+            // changed from temp and rho_num
             eta: 0.0,
             eta1: 0.0,
             eta2: 0.0,
@@ -138,7 +137,390 @@ impl PcSaftPure {
         }
     }
 }
-#[derive(Clone)]
+#[cfg_attr(feature = "with_pyo3", pymethods)]
+#[allow(non_snake_case)]
+impl PcSaftPure {
+    #[cfg(feature = "with_pyo3")]
+    #[new]
+    pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
+        Self::new_fluid(m, sigma, epsilon)
+    }
+    pub fn set_1_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
+        self.assoc_type = AssocType::Type1 { X: 1.0 };
+        self.epsilon_AB = epsilon_AB;
+        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+    }
+    pub fn set_2B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
+        self.assoc_type = AssocType::Type2B { X: 1.0 };
+        self.epsilon_AB = epsilon_AB;
+        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+    }
+    pub fn set_3B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
+        self.assoc_type = AssocType::Type3B { XA: 1.0 };
+        self.epsilon_AB = epsilon_AB;
+        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+    }
+    pub fn set_3Bm_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) {
+        self.assoc_type = AssocType::Type3Bm {
+            XA: 1.0,
+            b: b.abs().min(b.abs().recip()),
+        };
+        self.epsilon_AB = epsilon_AB;
+        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+    }
+    pub fn set_aly_lee_cp0(&mut self, B: f64, C: f64, D: f64, E: f64, F: f64) {
+        self.mB = B / R - 1.0; // mB = B/R -1
+        self.mC = C / R; // mC = C/R
+        self.mD = D; // mD = D
+        self.mE = E / R; // mE = E/R
+        self.mF = F; // mF = F
+    }
+    pub fn print_derivatives(&mut self) {
+        self.check_derivatives(true);
+    }
+    pub fn td_unchecked(&mut self, temp: f64, rho_mol: f64) {
+        self.set_temperature_and_number_density(temp, rho_mol * FRAC_NA_1E30);
+        self.is_single_phase = true;
+    }
+    pub fn c_flash(&mut self) -> anyhow::Result<()> {
+        // Iteration from temp_c = 1000 eta_c = 1E-10
+        let mut temp_c = 1000.0;
+        let mut dens_c = (1E-10)
+            / (FRAC_PI_6
+                * self.m
+                * (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp_c).exp())).powi(3));
+        // Define variables
+        let mut Dp_Drho_T = self.calc_Dp_Drho_T(temp_c, dens_c);
+        let mut D2p_DTrho;
+        let mut D2p_Drho2_T = self.calc_D2p_Drho2_T(temp_c, dens_c);
+        let mut D3p_DTrho2;
+        let mut D3p_Drho3_T;
+        for _i in 1..100000 {
+            D2p_DTrho = self.calc_D2p_DTrho(temp_c, dens_c);
+            D3p_DTrho2 = self.calc_D3p_DTrho2(temp_c, dens_c);
+            D3p_Drho3_T = self.calc_D3p_Drho3_T(temp_c, dens_c);
+            temp_c -= (Dp_Drho_T * D3p_Drho3_T - D2p_Drho2_T * D2p_Drho2_T)
+                / (D2p_DTrho * D3p_Drho3_T - D3p_DTrho2 * D2p_Drho2_T);
+            dens_c -= (Dp_Drho_T * D3p_DTrho2 - D2p_Drho2_T * D2p_DTrho)
+                / (D2p_Drho2_T * D3p_DTrho2 - D3p_Drho3_T * D2p_DTrho);
+            Dp_Drho_T = self.calc_Dp_Drho_T(temp_c, dens_c);
+            D2p_Drho2_T = self.calc_D2p_Drho2_T(temp_c, dens_c);
+            if Dp_Drho_T.abs() < 1E3 && D2p_Drho2_T.abs() < 1E6 {
+                self.set_temperature_and_number_density(temp_c, dens_c);
+                self.is_single_phase = true;
+                return Ok(());
+            }
+        }
+        Err(anyhow!(PcSaftPureErr::NotConvForC))
+    }
+    pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
+        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp())).powi(3);
+        // Vapor phase: eta = 1E-10
+        let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
+        let mut rhov_num = rhov_num_guess;
+        let mut Dp_Drhov_T = self.calc_Dp_Drho_T(temp, rhov_num);
+        for _i in 1..100000 {
+            if Dp_Drhov_T.abs() < 1.0 {
+                break;
+            } else {
+                rhov_num -= Dp_Drhov_T / self.calc_D2p_Drho2_T(temp, rhov_num);
+                Dp_Drhov_T = self.calc_Dp_Drho_T(temp, rhov_num);
+            }
+        }
+        let pv_limit = self.calc_p(temp, rhov_num);
+        if pv_limit.is_sign_negative() {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        // Liquid phase: eta = 0.5
+        let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
+        let mut rhol_num = rhol_num_guess;
+        let mut Dp_Drhol_T = self.calc_Dp_Drho_T(temp, rhol_num);
+        for _i in 1..100000 {
+            if Dp_Drhol_T.abs() < 1.0 {
+                break;
+            } else {
+                rhol_num -= Dp_Drhol_T / self.calc_D2p_Drho2_T(temp, rhol_num);
+                Dp_Drhol_T = self.calc_Dp_Drho_T(temp, rhol_num);
+            }
+        }
+        if rhol_num < rhov_num {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        let pl_limit = self.calc_p(temp, rhol_num);
+        if pl_limit > pv_limit {
+            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+        }
+        // Iteration for saturation state
+        let rhov_max = rhov_num;
+        let lnphi_diff = |p: f64| {
+            rhov_num = self.calc_density(temp, p, rhov_num_guess);
+            if rhov_num.is_nan() && (p / pv_limit - 1.0).abs() < 1E-2 {
+                rhov_num = rhov_max;
+            };
+            rhol_num = self.calc_density(temp, p, rhol_num_guess);
+            self.calc_lnphi(temp, rhov_num) - self.calc_lnphi(temp, rhol_num)
+        };
+        let ps = brent_zero(lnphi_diff, pv_limit - 1.0, pl_limit.max(1.0));
+        if ps.is_nan() {
+            Err(anyhow!(PcSaftPureErr::NotConvForT))
+        } else {
+            self.is_single_phase = false;
+            self.temp = temp;
+            self.rhov_num = rhov_num;
+            self.rhol_num = rhol_num;
+            Ok(())
+        }
+    }
+    pub fn tp_flash(&mut self, temp: f64, p: f64) -> anyhow::Result<()> {
+        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp())).powi(3);
+        // Iteration from gas phase: eta = 1E-10
+        let rhov_num = self.calc_density(temp, p, 1E-10 / (FRAC_PI_6 * self.m * d3));
+        let lnphi_v = if rhov_num.is_nan() {
+            f64::INFINITY
+        } else {
+            self.calc_lnphi(temp, rhov_num)
+        };
+        // Iteration from liquid phase: eta = 0.5
+        let rhol_num = self.calc_density(temp, p, 0.5 / (FRAC_PI_6 * self.m * d3));
+        let lnphi_l = if rhol_num.is_nan() {
+            f64::INFINITY
+        } else {
+            self.calc_lnphi(temp, rhol_num)
+        };
+        // Select the correct output
+        if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
+            Err(anyhow!(PcSaftPureErr::NotConvForTP))
+        } else if lnphi_v.is_infinite() {
+            self.set_temperature_and_number_density(temp, rhol_num);
+            self.is_single_phase = true;
+            Ok(())
+        } else if lnphi_l.is_infinite() {
+            self.set_temperature_and_number_density(temp, rhov_num);
+            self.is_single_phase = true;
+            Ok(())
+        } else {
+            if lnphi_v < lnphi_l {
+                self.set_temperature_and_number_density(temp, rhov_num);
+            } else {
+                self.set_temperature_and_number_density(temp, rhol_num);
+            }
+            self.is_single_phase = true;
+            Ok(())
+        }
+    }
+    pub fn T(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.temp)
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn rho(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.rho_num / FRAC_NA_1E30)
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn p(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_p(self.temp, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn w(&mut self, M: f64) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok((self.calc_w2(self.temp, self.rho_num) / M).sqrt())
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn cv(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cv(self.temp, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn cp(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cp(self.temp, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn cp_res(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_cp_res(self.temp, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn h_res(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Ok(self.calc_h_res(self.temp, self.rho_num))
+        } else {
+            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+        }
+    }
+    pub fn p_s(&mut self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+        } else {
+            Ok(self.calc_p(self.temp, self.rhov_num) / 2.0
+                + self.calc_p(self.temp, self.rhol_num) / 2.0)
+        }
+    }
+    pub fn T_s(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+        } else {
+            Ok(self.temp)
+        }
+    }
+    pub fn rho_v(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+        } else {
+            Ok(self.rhov_num / FRAC_NA_1E30)
+        }
+    }
+    pub fn rho_l(&self) -> anyhow::Result<f64> {
+        if self.is_single_phase {
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+        } else {
+            Ok(self.rhol_num / FRAC_NA_1E30)
+        }
+    }
+    pub fn B(&mut self, temp: f64) -> f64 {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D1(temp, rho_num) / rho_num;
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D1(temp, rho_num) / rho_num;
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        val_new * FRAC_NA_1E30
+    }
+    pub fn C(&mut self, temp: f64) -> f64 {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        val_new * FRAC_NA_1E30.powi(2)
+    }
+    pub fn D(&mut self, temp: f64) -> f64 {
+        let mut rho_num: f64 = 1E-9;
+        let mut val_old: f64 = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
+        let mut val_new: f64 = 0.0;
+        loop {
+            rho_num /= 10.0;
+            if rho_num < 1E-30 {
+                break;
+            }
+            val_new = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
+            if (val_new / val_old - 1.0).abs() < 1E-9 {
+                break;
+            }
+            val_old = val_new;
+        }
+        val_new * FRAC_NA_1E30.powi(3) / 2.0
+    }
+    pub fn vec_t_flash_g(&mut self, temp: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .map(|t| {
+                if self.t_flash(t).is_err() {
+                    println!("t_flash_g diverge in {} K", t);
+                    f64::NAN
+                } else {
+                    self.rhov_num
+                }
+            })
+            .collect()
+    }
+    pub fn vec_t_flash_l(&mut self, temp: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .map(|t| {
+                if self.t_flash(t).is_err() {
+                    println!("t_flash_l diverge in {} K", t);
+                    f64::NAN
+                } else {
+                    self.rhol_num
+                }
+            })
+            .collect()
+    }
+    pub fn vec_p(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
+            .map(|(t, d)| self.calc_p(t, d))
+            .collect()
+    }
+    pub fn vec_tp_flash(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
+            .map(|(t, p)| {
+                if self.tp_flash(t, p).is_err() {
+                    println!("tp_flash diverge in {} K {} Pa", t, p);
+                    f64::NAN
+                } else {
+                    self.rho_num
+                }
+            })
+            .collect()
+    }
+    pub fn vec_tp_flash_g(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
+            .map(|(t, p)| {
+                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                // Iteration from gas phase: eta = 1E-10
+                self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
+            })
+            .collect()
+    }
+    pub fn vec_tp_flash_l(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
+            .map(|(t, p)| {
+                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                // Iteration from gas phase: eta = 0.5
+                self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
+            })
+            .collect()
+    }
+    pub fn vec_cp(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
+            .map(|(t, d)| self.calc_cp(t, d))
+            .collect()
+    }
+    pub fn vec_w(&mut self, temp: Vec<f64>, dens_num: Vec<f64>, M: f64) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
+            .map(|(t, d)| (self.calc_w2(t, d) / M).sqrt()) // m/s
+            .collect()
+    }
+}
+
 #[allow(non_snake_case)]
 enum AssocType {
     Type0,
@@ -232,388 +614,6 @@ impl AssocType {
             }
             _ => 0.0,
         }
-    }
-}
-#[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
-impl PcSaftPure {
-    #[cfg(feature = "with_pyo3")]
-    #[new]
-    pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
-        Self::new_fluid(m, sigma, epsilon)
-    }
-    pub fn set_1_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
-        self.assoc_type = AssocType::Type1 { X: 1.0 };
-        self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-    }
-    pub fn set_2B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
-        self.assoc_type = AssocType::Type2B { X: 1.0 };
-        self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-    }
-    pub fn set_3B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
-        self.assoc_type = AssocType::Type3B { XA: 1.0 };
-        self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-    }
-    pub fn set_3Bm_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) {
-        self.assoc_type = AssocType::Type3Bm {
-            XA: 1.0,
-            b: b.abs().min(b.abs().recip()),
-        };
-        self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
-    }
-    pub fn set_aly_lee_cp0(&mut self, B: f64, C: f64, D: f64, E: f64, F: f64) {
-        self.mB = B / R - 1.0; // mB = B/R -1
-        self.mC = C / R; // mC = C/R
-        self.mD = D; // mD = D
-        self.mE = E / R; // mE = E/R
-        self.mF = F; // mF = F
-    }
-    pub fn print_derivatives(&mut self) {
-        Self::check_derivatives(self, true);
-    }
-    pub fn td_unchecked(&mut self, T: f64, rho_mol: f64) {
-        self.set_temperature_and_number_density(T, rho_mol * FRAC_NA_1E30);
-        self.is_single_phase = true;
-    }
-    pub fn c_flash(&mut self) -> anyhow::Result<()> {
-        // Iteration from T_c = 1000 eta_c = 1E-10
-        let mut Tc = 1000.0;
-        let mut rhoc = (1E-10)
-            / (FRAC_PI_6
-                * self.m
-                * (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / Tc).exp())).powi(3));
-        // Define variables
-        let mut Dp_Drho_T = self.calc_Dp_Drho_T(Tc, rhoc);
-        let mut D2p_DTrho;
-        let mut D2p_Drho2_T = self.calc_D2p_Drho2_T(Tc, rhoc);
-        let mut D3p_DTrho2;
-        let mut D3p_Drho3_T;
-        for _i in 1..100000 {
-            D2p_DTrho = self.calc_D2p_DTrho(Tc, rhoc);
-            D3p_DTrho2 = self.calc_D3p_DTrho2(Tc, rhoc);
-            D3p_Drho3_T = self.calc_D3p_Drho3_T(Tc, rhoc);
-            Tc -= (Dp_Drho_T * D3p_Drho3_T - D2p_Drho2_T * D2p_Drho2_T)
-                / (D2p_DTrho * D3p_Drho3_T - D3p_DTrho2 * D2p_Drho2_T);
-            rhoc -= (Dp_Drho_T * D3p_DTrho2 - D2p_Drho2_T * D2p_DTrho)
-                / (D2p_Drho2_T * D3p_DTrho2 - D3p_Drho3_T * D2p_DTrho);
-            Dp_Drho_T = self.calc_Dp_Drho_T(Tc, rhoc);
-            D2p_Drho2_T = self.calc_D2p_Drho2_T(Tc, rhoc);
-            if Dp_Drho_T.abs() < 1E3 && D2p_Drho2_T.abs() < 1E6 {
-                self.set_temperature_and_number_density(Tc, rhoc);
-                self.is_single_phase = true;
-                return Ok(());
-            }
-        }
-        Err(anyhow!(PcSaftPureErr::NotConvForC))
-    }
-    pub fn t_flash(&mut self, T: f64) -> anyhow::Result<()> {
-        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
-        // Vapor phase: eta = 1E-10
-        let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
-        let mut rhov_num = rhov_num_guess;
-        let mut Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
-        for _i in 1..100000 {
-            if Dp_Drhov_T.abs() < 1.0 {
-                break;
-            } else {
-                rhov_num -= Dp_Drhov_T / self.calc_D2p_Drho2_T(T, rhov_num);
-                Dp_Drhov_T = self.calc_Dp_Drho_T(T, rhov_num);
-            }
-        }
-        let pv_limit = self.calc_p(T, rhov_num);
-        if pv_limit.is_sign_negative() {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
-        }
-        // Liquid phase: eta = 0.5
-        let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
-        let mut rhol_num = rhol_num_guess;
-        let mut Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
-        for _i in 1..100000 {
-            if Dp_Drhol_T.abs() < 1.0 {
-                break;
-            } else {
-                rhol_num -= Dp_Drhol_T / self.calc_D2p_Drho2_T(T, rhol_num);
-                Dp_Drhol_T = self.calc_Dp_Drho_T(T, rhol_num);
-            }
-        }
-        if rhol_num < rhov_num {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
-        }
-        let pl_limit = self.calc_p(T, rhol_num);
-        if pl_limit > pv_limit {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
-        }
-        // Iteration for saturation state
-        let rhov_max = rhov_num;
-        let lnphi_diff = |p: f64| {
-            rhov_num = self.calc_density(T, p, rhov_num_guess);
-            if rhov_num.is_nan() && (p / pv_limit - 1.0).abs() < 1E-2 {
-                rhov_num = rhov_max;
-            };
-            rhol_num = self.calc_density(T, p, rhol_num_guess);
-            self.calc_lnphi(T, rhov_num) - self.calc_lnphi(T, rhol_num)
-        };
-        let ps = brent_zero(lnphi_diff, pv_limit - 1.0, pl_limit.max(1.0));
-        if ps.is_nan() {
-            Err(anyhow!(PcSaftPureErr::NotConvForT))
-        } else {
-            self.is_single_phase = false;
-            self.T = T;
-            self.rhov_num = rhov_num;
-            self.rhol_num = rhol_num;
-            Ok(())
-        }
-    }
-    pub fn tp_flash(&mut self, T: f64, p: f64) -> anyhow::Result<()> {
-        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / T).exp())).powi(3);
-        // Iteration from gas phase: eta = 1E-10
-        let rhov_num = self.calc_density(T, p, 1E-10 / (FRAC_PI_6 * self.m * d3));
-        let lnphi_v = if rhov_num.is_nan() {
-            f64::INFINITY
-        } else {
-            self.calc_lnphi(T, rhov_num)
-        };
-        // Iteration from liquid phase: eta = 0.5
-        let rhol_num = self.calc_density(T, p, 0.5 / (FRAC_PI_6 * self.m * d3));
-        let lnphi_l = if rhol_num.is_nan() {
-            f64::INFINITY
-        } else {
-            self.calc_lnphi(T, rhol_num)
-        };
-        // Select the correct output
-        if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
-            Err(anyhow!(PcSaftPureErr::NotConvForTP))
-        } else if lnphi_v.is_infinite() {
-            self.set_temperature_and_number_density(T, rhol_num);
-            self.is_single_phase = true;
-            Ok(())
-        } else if lnphi_l.is_infinite() {
-            self.set_temperature_and_number_density(T, rhov_num);
-            self.is_single_phase = true;
-            Ok(())
-        } else {
-            if lnphi_v < lnphi_l {
-                self.set_temperature_and_number_density(T, rhov_num);
-            } else {
-                self.set_temperature_and_number_density(T, rhol_num);
-            }
-            self.is_single_phase = true;
-            Ok(())
-        }
-    }
-    pub fn T(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.T)
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn rho(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.rho_num / FRAC_NA_1E30)
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn p(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.calc_p(self.T, self.rho_num))
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn w(&mut self, M: f64) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok((self.calc_w2(self.T, self.rho_num) / M).sqrt())
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn cv(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.calc_cv(self.T, self.rho_num))
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn cp(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.calc_cp(self.T, self.rho_num))
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn cp_res(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.calc_cp_res(self.T, self.rho_num))
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn h_res(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Ok(self.calc_h_res(self.T, self.rho_num))
-        } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
-        }
-    }
-    pub fn p_s(&mut self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
-        } else {
-            Ok((self.calc_p(self.T, self.rhov_num) + self.calc_p(self.T, self.rhol_num)) / 2.0)
-        }
-    }
-    pub fn T_s(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
-        } else {
-            Ok(self.T)
-        }
-    }
-    pub fn rho_v(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
-        } else {
-            Ok(self.rhov_num / FRAC_NA_1E30)
-        }
-    }
-    pub fn rho_l(&self) -> anyhow::Result<f64> {
-        if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
-        } else {
-            Ok(self.rhol_num / FRAC_NA_1E30)
-        }
-    }
-    pub fn B(&mut self, T: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D1(T, rho_num) / rho_num;
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D1(T, rho_num) / rho_num;
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30
-    }
-    pub fn C(&mut self, T: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D2(T, rho_num) / rho_num.powi(2);
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D2(T, rho_num) / rho_num.powi(2);
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30.powi(2)
-    }
-    pub fn D(&mut self, T: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D3(T, rho_num) / rho_num.powi(3);
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D3(T, rho_num) / rho_num.powi(3);
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30.powi(3) / 2.0
-    }
-    pub fn vec_t_flash_g(&mut self, temp: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .map(|t| {
-                if self.t_flash(t).is_err() {
-                    println!("t_flash_g diverge in {} K", t);
-                    f64::NAN
-                } else {
-                    self.rhov_num
-                }
-            })
-            .collect()
-    }
-    pub fn vec_t_flash_l(&mut self, temp: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .map(|t| {
-                if self.t_flash(t).is_err() {
-                    println!("t_flash_l diverge in {} K", t);
-                    f64::NAN
-                } else {
-                    self.rhol_num
-                }
-            })
-            .collect()
-    }
-    pub fn vec_p(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
-            .map(|(t, d)| self.calc_p(t, d))
-            .collect()
-    }
-    pub fn vec_tp_flash(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
-            .map(|(t, p)| {
-                if self.tp_flash(t, p).is_err() {
-                    println!("tp_flash diverge in {} K {} Pa", t, p);
-                    f64::NAN
-                } else {
-                    self.rho_num
-                }
-            })
-            .collect()
-    }
-    pub fn vec_tp_flash_g(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
-            .map(|(t, p)| {
-                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
-                // Iteration from gas phase: eta = 1E-10
-                self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
-            })
-            .collect()
-    }
-    pub fn vec_tp_flash_l(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
-            .map(|(t, p)| {
-                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
-                // Iteration from gas phase: eta = 0.5
-                self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
-            })
-            .collect()
-    }
-    pub fn vec_cp(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
-            .map(|(t, d)| self.calc_cp(t, d))
-            .collect()
-    }
-    pub fn vec_w(&mut self, temp: Vec<f64>, dens_num: Vec<f64>, M: f64) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
-            .map(|(t, d)| (self.calc_w2(t, d) / M).sqrt()) // m/s
-            .collect()
     }
 }
 #[allow(non_snake_case)]
@@ -716,8 +716,8 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn set_temperature_and_number_density(&mut self, T: f64, rho_num: f64) {
-        if T != self.T {
-            self.T = T;
+        if T != self.temp {
+            self.temp = T;
             self.m2e1s3 = self.m.powi(2) * (self.epsilon / T) * self.sigma.powi(3);
             self.m2e2s3 = self.m.powi(2) * (self.epsilon / T).powi(2) * self.sigma.powi(3);
         } else if rho_num != self.rho_num {
@@ -1790,42 +1790,42 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn DeltaT0D0(&mut self) -> f64 {
-        self.giiT0D0() * ((self.epsilon_AB / self.T).exp() - 1.0)
+        self.giiT0D0() * ((self.epsilon_AB / self.temp).exp() - 1.0)
     }
     fn DeltaT0D1(&mut self) -> f64 {
-        self.giiT0D1() * ((self.epsilon_AB / self.T).exp() - 1.0)
+        self.giiT0D1() * ((self.epsilon_AB / self.temp).exp() - 1.0)
     }
     fn DeltaT0D2(&self) -> f64 {
-        self.giiT0D2() * ((self.epsilon_AB / self.T).exp() - 1.0)
+        self.giiT0D2() * ((self.epsilon_AB / self.temp).exp() - 1.0)
     }
     fn DeltaT0D3(&self) -> f64 {
-        self.giiT0D3() * ((self.epsilon_AB / self.T).exp() - 1.0)
+        self.giiT0D3() * ((self.epsilon_AB / self.temp).exp() - 1.0)
     }
     fn DeltaT0D4(&self) -> f64 {
-        self.giiT0D4() * ((self.epsilon_AB / self.T).exp() - 1.0)
+        self.giiT0D4() * ((self.epsilon_AB / self.temp).exp() - 1.0)
     }
     fn DeltaT1D0(&mut self) -> f64 {
-        let epsilon_AB_T = self.epsilon_AB / self.T;
+        let epsilon_AB_T = self.epsilon_AB / self.temp;
         self.giiT1D0() * (epsilon_AB_T.exp() - 1.0)
             - self.giiT0D0() * epsilon_AB_T.exp() * epsilon_AB_T
     }
     fn DeltaT1D1(&mut self) -> f64 {
-        let epsilon_AB_T = self.epsilon_AB / self.T;
+        let epsilon_AB_T = self.epsilon_AB / self.temp;
         self.giiT1D1() * (epsilon_AB_T.exp() - 1.0)
             - self.giiT0D1() * epsilon_AB_T.exp() * epsilon_AB_T
     }
     fn DeltaT1D2(&self) -> f64 {
-        let epsilon_AB_T = self.epsilon_AB / self.T;
+        let epsilon_AB_T = self.epsilon_AB / self.temp;
         self.giiT1D2() * (epsilon_AB_T.exp() - 1.0)
             - self.giiT0D2() * epsilon_AB_T.exp() * epsilon_AB_T
     }
     fn DeltaT1D3(&self) -> f64 {
-        let epsilon_AB_T = self.epsilon_AB / self.T;
+        let epsilon_AB_T = self.epsilon_AB / self.temp;
         self.giiT1D3() * (epsilon_AB_T.exp() - 1.0)
             - self.giiT0D3() * epsilon_AB_T.exp() * epsilon_AB_T
     }
     fn DeltaT2D0(&mut self) -> f64 {
-        let epsilon_AB_T = self.epsilon_AB / self.T;
+        let epsilon_AB_T = self.epsilon_AB / self.temp;
         self.giiT2D0() * (epsilon_AB_T.exp() - 1.0)
             - 2.0 * self.giiT1D0() * epsilon_AB_T.exp() * epsilon_AB_T
             + self.giiT0D0() * epsilon_AB_T.exp() * epsilon_AB_T * (epsilon_AB_T + 2.0)
@@ -1877,7 +1877,7 @@ const B25: f64 = 93.626774077;
 const B26: f64 = -29.666905585;
 impl PcSaftPure {
     pub fn check_derivatives(&mut self, print_val: bool) {
-        let temp = self.T;
+        let temp = self.temp;
         let rho = self.rho_num;
         if print_val {
             println!(
