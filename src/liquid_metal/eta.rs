@@ -10,15 +10,14 @@ pub struct EtaParams {
     a1: f64,
     eta0: f64,
 }
-#[allow(non_snake_case)]
 impl EtaParams {
-    pub fn calc(&self, T: f64) -> anyhow::Result<f64> {
-        if T < self.Tmin {
+    pub fn calc(&self, temp: f64) -> anyhow::Result<f64> {
+        if temp < self.Tmin {
             Err(anyhow!(LiquidMetalErr::TisTooMin))
-        } else if T > self.Tmax {
+        } else if temp > self.Tmax {
             Err(anyhow!(LiquidMetalErr::TisTooMax))
         } else {
-            Ok(10.0_f64.powf(self.a0 + self.a1 / T) * self.eta0)
+            Ok(10.0_f64.powf(self.a0 + self.a1 / temp) * self.eta0)
         }
     }
 }

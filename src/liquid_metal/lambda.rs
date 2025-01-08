@@ -11,15 +11,14 @@ pub struct LambdaParams {
     d1: f64,
     d2: f64,
 }
-#[allow(non_snake_case)]
 impl LambdaParams {
-    pub fn calc(&self, T: f64) -> anyhow::Result<f64> {
-        if T < self.Tmin {
+    pub fn calc(&self, temp: f64) -> anyhow::Result<f64> {
+        if temp < self.Tmin {
             Err(anyhow!(LiquidMetalErr::TisTooMin))
-        } else if T > self.Tmax {
+        } else if temp > self.Tmax {
             Err(anyhow!(LiquidMetalErr::TisTooMax))
         } else {
-            Ok(self.d0 + self.d1 * (T - self.Tm) + self.d2 * (T - self.Tm).powi(2))
+            Ok(self.d0 + self.d1 * (temp - self.Tm) + self.d2 * (temp - self.Tm).powi(2))
         }
     }
 }

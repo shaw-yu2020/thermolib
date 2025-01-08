@@ -10,15 +10,14 @@ pub struct RhoParams {
     c0: f64,
     c1: f64,
 }
-#[allow(non_snake_case)]
 impl RhoParams {
-    pub fn calc(&self, T: f64) -> anyhow::Result<f64> {
-        if T < self.Tmin {
+    pub fn calc(&self, temp: f64) -> anyhow::Result<f64> {
+        if temp < self.Tmin {
             Err(anyhow!(LiquidMetalErr::TisTooMin))
-        } else if T > self.Tmax {
+        } else if temp > self.Tmax {
             Err(anyhow!(LiquidMetalErr::TisTooMax))
         } else {
-            Ok(self.c0 + self.c1 * (T - self.Tm))
+            Ok(self.c0 + self.c1 * (temp - self.Tm))
         }
     }
 }

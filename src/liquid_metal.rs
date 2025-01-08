@@ -42,7 +42,6 @@ pub struct LiquidMetal {
     metal: Metals,
 }
 impl LiquidMetal {
-    #[allow(non_snake_case)]
     pub fn new_metal(name: &str) -> anyhow::Result<LiquidMetal> {
         if let Some(metal) = string2metals().get(name) {
             Ok(Self {
@@ -54,7 +53,6 @@ impl LiquidMetal {
     }
 }
 #[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
 impl LiquidMetal {
     #[cfg(feature = "with_pyo3")]
     #[new]
@@ -62,25 +60,25 @@ impl LiquidMetal {
         Self::new_metal(name)
     }
     /// calculate density of liquid metals at 0.1 MPa, unit: kg/m3
-    pub fn calc_rho(&self, T: f64) -> anyhow::Result<f64> {
+    pub fn calc_rho(&self, temp: f64) -> anyhow::Result<f64> {
         if let Some(rho_params) = metals2rhoparams().get(&self.metal) {
-            rho_params.calc(T)
+            rho_params.calc(temp)
         } else {
             Err(anyhow!(LiquidMetalErr::NoProperty))
         }
     }
     /// calculate thermal conductivity of liquid metals at 0.1 MPa, unit: W/m/K
-    pub fn calc_lambda(&self, T: f64) -> anyhow::Result<f64> {
+    pub fn calc_lambda(&self, temp: f64) -> anyhow::Result<f64> {
         if let Some(lambda_params) = metals2lambdaparams().get(&self.metal) {
-            lambda_params.calc(T)
+            lambda_params.calc(temp)
         } else {
             Err(anyhow!(LiquidMetalErr::NoProperty))
         }
     }
     /// calculate viscosity of liquid metals at 0.1 MPa, unit: mPa*s
-    pub fn calc_eta(&self, T: f64) -> anyhow::Result<f64> {
+    pub fn calc_eta(&self, temp: f64) -> anyhow::Result<f64> {
         if let Some(eta_params) = metals2etaparams().get(&self.metal) {
-            eta_params.calc(T)
+            eta_params.calc(temp)
         } else {
             Err(anyhow!(LiquidMetalErr::NoProperty))
         }

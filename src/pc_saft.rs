@@ -1408,7 +1408,6 @@ impl PcSaftPure {
                     + self.Bi6 * 6.0 * eta.powi(5))
     }
 }
-
 #[allow(non_snake_case)]
 enum AssocType {
     Type0,
