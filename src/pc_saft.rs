@@ -37,7 +37,7 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 #[allow(non_snake_case)]
 pub struct PcSaftPure {
     m: f64,
-    sigma: f64,
+    sigma3: f64,
     epsilon: f64,
     temp: f64,
     rho_num: f64,
@@ -92,7 +92,7 @@ impl PcSaftPure {
         let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
         Self {
             m,
-            sigma,
+            sigma3: sigma.powi(3),
             epsilon,
             temp: 1.0,
             rho_num: 1E-10,
@@ -154,17 +154,17 @@ impl PcSaftPure {
     pub fn set_1_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type1 { X: 1.0 };
         self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+        self.kappa_AB_plus = kappa_AB * self.sigma3;
     }
     pub fn set_2B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type2B { X: 1.0 };
         self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+        self.kappa_AB_plus = kappa_AB * self.sigma3;
     }
     pub fn set_3B_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64) {
         self.assoc_type = AssocType::Type3B { XA: 1.0 };
         self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+        self.kappa_AB_plus = kappa_AB * self.sigma3;
     }
     pub fn set_3Bm_assoc_type(&mut self, epsilon_AB: f64, kappa_AB: f64, b: f64) {
         self.assoc_type = AssocType::Type3Bm {
@@ -172,7 +172,7 @@ impl PcSaftPure {
             b: b.abs().min(b.abs().recip()),
         };
         self.epsilon_AB = epsilon_AB;
-        self.kappa_AB_plus = kappa_AB * self.sigma.powi(3);
+        self.kappa_AB_plus = kappa_AB * self.sigma3;
     }
     pub fn set_aly_lee_cp0(&mut self, B: f64, C: f64, D: f64, E: f64, F: f64) {
         self.mB = B / R - 1.0; // mB = B/R -1
@@ -194,7 +194,8 @@ impl PcSaftPure {
         let mut dens_c = (1E-10)
             / (FRAC_PI_6
                 * self.m
-                * (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp_c).exp())).powi(3));
+                * self.sigma3
+                * (1.0 - 0.12 * (-3.0 * self.epsilon / temp_c).exp()).powi(3));
         // Define variables
         let mut Dp_Drho_T = self.calc_Dp_Drho_T(temp_c, dens_c);
         let mut D2p_DTrho;
@@ -220,7 +221,7 @@ impl PcSaftPure {
         Err(anyhow!(PcSaftPureErr::NotConvForC))
     }
     pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
-        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp())).powi(3);
+        let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
         // Vapor phase: eta = 1E-10
         let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
         let mut rhov_num = rhov_num_guess;
@@ -278,7 +279,7 @@ impl PcSaftPure {
         }
     }
     pub fn tp_flash(&mut self, temp: f64, p: f64) -> anyhow::Result<()> {
-        let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp())).powi(3);
+        let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
         // Iteration from gas phase: eta = 1E-10
         let rhov_num = self.calc_density(temp, p, 1E-10 / (FRAC_PI_6 * self.m * d3));
         let lnphi_v = if rhov_num.is_nan() {
@@ -497,7 +498,7 @@ impl PcSaftPure {
         temp.into_iter()
             .zip(pres)
             .map(|(t, p)| {
-                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
                 // Iteration from gas phase: eta = 1E-10
                 self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
             })
@@ -507,7 +508,7 @@ impl PcSaftPure {
         temp.into_iter()
             .zip(pres)
             .map(|(t, p)| {
-                let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
+                let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
                 // Iteration from gas phase: eta = 0.5
                 self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
             })
@@ -628,20 +629,20 @@ impl PcSaftPure {
     fn set_temperature_and_number_density(&mut self, temp: f64, rho_num: f64) {
         if temp != self.temp {
             self.temp = temp;
-            self.m2e1s3 = self.m.powi(2) * (self.epsilon / temp) * self.sigma.powi(3);
-            self.m2e2s3 = self.m.powi(2) * (self.epsilon / temp).powi(2) * self.sigma.powi(3);
+            self.m2e1s3 = self.m.powi(2) * (self.epsilon / temp) * self.sigma3;
+            self.m2e2s3 = self.m.powi(2) * (self.epsilon / temp).powi(2) * self.sigma3;
         } else if rho_num != self.rho_num {
         } else {
             return;
         }
         self.rho_num = rho_num;
-        let d = self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp());
-        let d1 = -0.36 * self.sigma * (-3.0 * self.epsilon / temp).exp() * self.epsilon / temp;
+        let d = 1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp();
+        let d1 = -0.36 * (-3.0 * self.epsilon / temp).exp() * self.epsilon / temp;
         let d2 = d1 * (3.0 * self.epsilon / temp - 2.0);
-        self.eta = FRAC_PI_6 * rho_num * self.m * d.powi(3);
-        self.eta1 = FRAC_PI_2 * rho_num * self.m * d.powi(2) * d1;
-        self.eta2 =
-            PI * rho_num * self.m * d * d1.powi(2) + FRAC_PI_2 * rho_num * self.m * d.powi(2) * d2;
+        self.eta = FRAC_PI_6 * rho_num * self.m * self.sigma3 * d.powi(3);
+        self.eta1 = FRAC_PI_2 * rho_num * self.m * self.sigma3 * d.powi(2) * d1;
+        self.eta2 = PI * rho_num * self.m * self.sigma3 * d * d1.powi(2)
+            + FRAC_PI_2 * rho_num * self.m * self.sigma3 * d.powi(2) * d2;
         if let AssocType::Type0 = self.assoc_type {
         } else {
             let t = self.tT0D0();
