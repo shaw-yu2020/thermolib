@@ -7,17 +7,16 @@ enum PcSaftPureErr {
     NotConvForT,
     #[error("tp_flash diverge")]
     NotConvForTP,
-    #[error("property not in single phase")]
-    NotInSinglePhase,
     #[error("property only in single phase")]
     OnlyInSinglePhase,
+    #[error("property only in double phase")]
+    OnlyInDoublePhase,
 }
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
-use std::iter::zip;
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftPure;
@@ -444,28 +443,28 @@ impl PcSaftPure {
     }
     pub fn p_s(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
         } else {
             Ok((self.calc_p(self.T, self.rhov_num) + self.calc_p(self.T, self.rhol_num)) / 2.0)
         }
     }
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
         } else {
             Ok(self.T)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
         } else {
             Ok(self.rhov_num / FRAC_NA_1E30)
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::NotInSinglePhase))
+            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
         } else {
             Ok(self.rhol_num / FRAC_NA_1E30)
         }
@@ -521,9 +520,9 @@ impl PcSaftPure {
         }
         val_new * FRAC_NA_1E30.powi(3) / 2.0
     }
-    pub fn vec_t_flash_g(&mut self, T: Vec<f64>) -> Vec<f64> {
-        T.iter()
-            .map(|&t| {
+    pub fn vec_t_flash_g(&mut self, temp: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .map(|t| {
                 if self.t_flash(t).is_err() {
                     println!("t_flash_g diverge in {} K", t);
                     f64::NAN
@@ -533,9 +532,9 @@ impl PcSaftPure {
             })
             .collect()
     }
-    pub fn vec_t_flash_l(&mut self, T: Vec<f64>) -> Vec<f64> {
-        T.iter()
-            .map(|&t| {
+    pub fn vec_t_flash_l(&mut self, temp: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .map(|t| {
                 if self.t_flash(t).is_err() {
                     println!("t_flash_l diverge in {} K", t);
                     f64::NAN
@@ -545,11 +544,15 @@ impl PcSaftPure {
             })
             .collect()
     }
-    pub fn vec_p(&mut self, T: Vec<f64>, rho_num: Vec<f64>) -> Vec<f64> {
-        zip(T, rho_num).map(|(t, d)| self.calc_p(t, d)).collect()
+    pub fn vec_p(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
+            .map(|(t, d)| self.calc_p(t, d))
+            .collect()
     }
-    pub fn vec_tp_flash(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
-        zip(T, P)
+    pub fn vec_tp_flash(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
             .map(|(t, p)| {
                 if self.tp_flash(t, p).is_err() {
                     println!("tp_flash diverge in {} K {} Pa", t, p);
@@ -560,8 +563,9 @@ impl PcSaftPure {
             })
             .collect()
     }
-    pub fn vec_tp_flash_g(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
-        zip(T, P)
+    pub fn vec_tp_flash_g(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
             .map(|(t, p)| {
                 let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
                 // Iteration from gas phase: eta = 1E-10
@@ -569,8 +573,9 @@ impl PcSaftPure {
             })
             .collect()
     }
-    pub fn vec_tp_flash_l(&mut self, T: Vec<f64>, P: Vec<f64>) -> Vec<f64> {
-        zip(T, P)
+    pub fn vec_tp_flash_l(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(pres)
             .map(|(t, p)| {
                 let d3 = (self.sigma * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp())).powi(3);
                 // Iteration from gas phase: eta = 0.5
@@ -578,11 +583,15 @@ impl PcSaftPure {
             })
             .collect()
     }
-    pub fn vec_cp(&mut self, T: Vec<f64>, rho_num: Vec<f64>) -> Vec<f64> {
-        zip(T, rho_num).map(|(t, d)| self.calc_cp(t, d)).collect()
+    pub fn vec_cp(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
+            .map(|(t, d)| self.calc_cp(t, d))
+            .collect()
     }
-    pub fn vec_w(&mut self, T: Vec<f64>, rho_num: Vec<f64>, M: f64) -> Vec<f64> {
-        zip(T, rho_num)
+    pub fn vec_w(&mut self, temp: Vec<f64>, dens_num: Vec<f64>, M: f64) -> Vec<f64> {
+        temp.into_iter()
+            .zip(dens_num)
             .map(|(t, d)| (self.calc_w2(t, d) / M).sqrt()) // m/s
             .collect()
     }
