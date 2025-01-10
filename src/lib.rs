@@ -23,6 +23,8 @@ pub use srk::Srk;
 /// Pr EOS
 mod pr;
 pub use pr::Pr;
+mod pr_mix;
+pub use pr_mix::PrMix;
 /// Helmholtz EOS
 mod helmholtz;
 pub use helmholtz::Helmholtz;
