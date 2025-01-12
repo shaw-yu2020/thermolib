@@ -1,7 +1,8 @@
 use crate::algorithms::shengjin_roots;
 use std::f64::consts::SQRT_2;
-const SQRT2_ADD_POS1: f64 = SQRT_2 + 1.0;
-const SQRT2_ADD_NEG1: f64 = SQRT_2 - 1.0;
+use std::iter::zip;
+const SQRT2ADD1: f64 = SQRT_2 + 1.0;
+const SQRT2SUB1: f64 = SQRT_2 - 1.0;
 const R_CONST: f64 = 8.314462618;
 const AC_COEF: f64 = 0.45724;
 const BC_COEF: f64 = 0.07780;
@@ -26,21 +27,13 @@ impl PrMix {
     }
     #[allow(non_snake_case)]
     pub fn calc_fi(&mut self, temp: f64, pres: f64, z: &Vec<f64>, is_liquid: bool) -> Vec<f64> {
-        let sum_zaj = z
-            .iter()
-            .zip(&mut self.params)
+        let sum_zaj = zip(z, &mut self.params)
             .map(|(z, j)| z * j.sqrt_a(temp))
             .sum::<f64>();
-        let a = z
-            .iter()
-            .zip(&mut self.params)
+        let a = zip(z, &mut self.params)
             .map(|(z, i)| z * i.sqrt_a(temp) * sum_zaj)
             .sum::<f64>();
-        let b = z
-            .iter()
-            .zip(&mut self.params)
-            .map(|(z, i)| z * i.b())
-            .sum::<f64>();
+        let b = zip(z, &self.params).map(|(z, i)| z * i.b()).sum::<f64>();
         let (A, B) = (
             a * pres / (R_CONST * temp).powi(2),
             b * pres / (R_CONST * temp),
@@ -51,18 +44,14 @@ impl PrMix {
             -A * B + B.powi(2) + B.powi(3),
         );
         let Z = if is_liquid && Zl > 0.0 { Zl } else { Zv };
-        self.params
-            .iter()
-            .zip(z)
-            .map(|(i, z)| {
+        zip(z, &self.params)
+            .map(|(z, i)| {
                 z * pres
                     * (i.b() / b * (Z - 1.0)
                         - (Z - B).ln()
                         - A / (2.0 * SQRT_2 * B)
                             * (2.0 * sum_zaj / a - i.b() / b)
-                            * ((Z + SQRT2_ADD_POS1 * B) / (Z - SQRT2_ADD_NEG1 * B))
-                                .abs()
-                                .ln())
+                            * ((Z + SQRT2ADD1 * B) / (Z - SQRT2SUB1 * B)).abs().ln())
                     .exp()
             })
             .collect()
