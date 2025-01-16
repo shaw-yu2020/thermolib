@@ -59,15 +59,15 @@ impl PrMix {
             })
             .collect()
     }
-    pub fn tpz_flash(&mut self, temp: f64, pres: f64, z: &Vec<f64>) {
-        let mut alpha: f64;
+    pub fn tpz_flash(&mut self, temp: f64, pres: f64, z: &Vec<f64>) -> f64 {
+        let mut alpha: f64 = 0.5;
         let mut k = self
             .params
             .iter()
             .map(|i| i.p_s(temp) / pres)
             .collect::<Vec<f64>>();
         let mut k0 = k.clone();
-        for i in 0..100 {
+        for _i in 0..200 {
             alpha = brent_alpha(z, &k);
             let x = zip(z, &k)
                 .map(|(zi, ki)| zi / (1.0 + alpha * (ki - 1.0)))
@@ -84,15 +84,18 @@ impl PrMix {
                 .map(|(ki, k0i)| (ki - k0i).abs())
                 .fold(f64::NEG_INFINITY, |x, y| x.max(y))
                 < EPSILON
+                || ((alpha == 0.0 || alpha == 1.0)
+                    && k.iter()
+                        .map(|i| (i - 1.0).abs())
+                        .fold(f64::NEG_INFINITY, |x, y| x.max(y))
+                        < 1E-2)
             {
-                println!("i={},x={:?}", i, x);
-                println!("i={},y={:?}", i, y);
-                println!("i={},k={:?}", i, k);
                 break;
             } else {
                 k0 = k.clone();
             }
         }
+        alpha
     }
 }
 struct PrParams {
@@ -163,6 +166,19 @@ mod tests {
             &[n2.2, c1.2, c2.2, c3.2, c4.2],
             &[n2.3, c1.3, c2.3, c3.3, c4.3],
         );
-        example1.tpz_flash(250.0, 5.5e6, &vec![n2.0, c1.0, c2.0, c3.0, c4.0]);
+        let (temp0, mut alpha0) = (
+            205.0,
+            example1.tpz_flash(205.0, 5.5e6, &vec![n2.0, c1.0, c2.0, c3.0, c4.0]),
+        );
+        let (mut temp, mut alpha): (f64, f64);
+        for i in 1..950 {
+            temp = temp0 + 0.1 * i as f64;
+            alpha = example1.tpz_flash(temp, 5.5e6, &vec![n2.0, c1.0, c2.0, c3.0, c4.0]);
+            if alpha < alpha0 {
+                panic!("temp={},alpha={},alpha0={}", temp, alpha, alpha0);
+            } else {
+                alpha0 = alpha;
+            }
+        }
     }
 }
