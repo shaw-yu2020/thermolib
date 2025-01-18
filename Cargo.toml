@@ -19,7 +19,7 @@ features = ["derive"]
 
 [dependencies.pyo3]
 version = "0.22.6"
-features = ["anyhow", "extension-module"]
+features = ["extension-module", "abi3-py39", "anyhow"]
 
 [lib]
 name = "thermolib"
