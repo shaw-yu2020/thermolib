@@ -1,3 +1,4 @@
+use crate::f64consts::R;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 #[cfg_attr(feature = "with_pyo3", pyclass)]
@@ -49,7 +50,6 @@ impl IdealGas {
         self.calc_cv(T) + R
     }
 }
-const R: f64 = 8.314462618; // CODATA2018 (molar gas constant) J mol^-1 K^-1
 const C: f64 = 299792458.0; // CODATA2018 (speed of light in vacuum) m s^-1
 const H: f64 = 6.62607015E-34; // CODATA2018 (Planck constant) J Hz^-1
 const K: f64 = 1.380649e-23; // CODATA2018 (Boltzmann constant) J K^-1

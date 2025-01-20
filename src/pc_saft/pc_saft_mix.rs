@@ -2,9 +2,7 @@ use super::{A00, A01, A02, A03, A04, A05, A06, B00, B01, B02, B03, B04, B05, B06
 use super::{A10, A11, A12, A13, A14, A15, A16, B10, B11, B12, B13, B14, B15, B16};
 use super::{A20, A21, A22, A23, A24, A25, A26, B20, B21, B22, B23, B24, B25, B26};
 use crate::algorithms::romberg_diff;
-use std::f64::consts::{FRAC_PI_6, PI};
-const R: f64 = 8.314462618;
-const FRAC_NA_1E30: f64 = 6.02214076E-7; // const NA: f64 = 6.02214076E23;
+use crate::f64consts::{FRAC_NA_1E30, FRAC_PI_6, PI, R};
 #[allow(non_snake_case)]
 pub struct PcSaftMix {
     params: Vec<PcSaftParams>,

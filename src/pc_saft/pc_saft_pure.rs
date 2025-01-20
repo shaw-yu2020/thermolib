@@ -3,10 +3,10 @@ use super::{A00, A01, A02, A03, A04, A05, A06, B00, B01, B02, B03, B04, B05, B06
 use super::{A10, A11, A12, A13, A14, A15, A16, B10, B11, B12, B13, B14, B15, B16};
 use super::{A20, A21, A22, A23, A24, A25, A26, B20, B21, B22, B23, B24, B25, B26};
 use crate::algorithms::{brent_zero, romberg_diff};
+use crate::f64consts::{FRAC_NA_1E30, FRAC_PI_2, FRAC_PI_6, PI, R};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI};
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftPure;
@@ -1843,8 +1843,6 @@ impl PcSaftPure {
     }
 }
 const FRAC_RE30_NA: f64 = R / FRAC_NA_1E30;
-const FRAC_NA_1E30: f64 = 6.02214076E-7; // const NA: f64 = 6.02214076E23;
-const R: f64 = 8.314462618;
 impl PcSaftPure {
     pub fn check_derivatives(&mut self, print_val: bool) {
         let (t, d) = (self.temp, self.rho_num);

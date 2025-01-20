@@ -8,10 +8,6 @@ enum PrErr {
     #[error("property only in double phase")]
     OnlyInDoublePhase,
 }
-use std::f64::consts::SQRT_2;
-const SQRT2_ADD_POS1: f64 = SQRT_2 + 1.0;
-const SQRT2_ADD_NEG1: f64 = SQRT_2 - 1.0;
-const R: f64 = 8.314462618;
 fn c() -> &'static f64 {
     static C: OnceLock<f64> = OnceLock::new();
     C.get_or_init(|| ((6.0 * SQRT_2 + 8.0).cbrt() - (6.0 * SQRT_2 - 8.0).cbrt() - 1.0) / 3.0)
@@ -35,6 +31,7 @@ fn bc_coef() -> &'static f64 {
     })
 }
 use crate::algorithms::shengjin_roots;
+use crate::f64consts::{R, SQRT2ADD1, SQRT2SUB1, SQRT_2};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
@@ -113,7 +110,7 @@ impl Pr {
         z - 1.0
             - (z - self.B).ln()
             - self.A / (2.0 * SQRT_2 * self.B)
-                * ((z + SQRT2_ADD_POS1 * self.B) / (z - SQRT2_ADD_NEG1 * self.B))
+                * ((z + SQRT2ADD1 * self.B) / (z - SQRT2SUB1 * self.B))
                     .abs()
                     .ln()
     }

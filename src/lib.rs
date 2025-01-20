@@ -39,3 +39,13 @@ pub use pc_saft::PcSaftPure;
 /// Ideal Gas
 mod ideal_gas;
 pub use ideal_gas::IdealGas;
+/// Fundamental Constants
+mod f64consts {
+    pub use std::f64::consts::{FRAC_PI_2, FRAC_PI_6, PI, SQRT_2};
+    pub const SQRT2ADD1: f64 = SQRT_2 + 1.0;
+    pub const SQRT2SUB1: f64 = SQRT_2 - 1.0;
+    // CODATA2018 (molar gas constant) J mol^-1 K^-1
+    pub const R: f64 = 8.314462618;
+    // pub const NA: f64 = 6.02214076E23; // CODATA2018 (Avogadro constant) mol^-1
+    pub const FRAC_NA_1E30: f64 = 6.02214076E-7; // const NA: f64 = 6.02214076E23;
+}

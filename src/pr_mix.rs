@@ -1,9 +1,6 @@
 use crate::algorithms::{brent_zero, shengjin_roots};
-use std::f64::consts::SQRT_2;
+use crate::f64consts::{R, SQRT2ADD1, SQRT2SUB1, SQRT_2};
 use std::iter::zip;
-const SQRT2ADD1: f64 = SQRT_2 + 1.0;
-const SQRT2SUB1: f64 = SQRT_2 - 1.0;
-const R_CONST: f64 = 8.314462618;
 const AC_COEF: f64 = 0.45724;
 const BC_COEF: f64 = 0.07780;
 const EPSILON: f64 = f64::EPSILON * 1E8;
@@ -16,12 +13,12 @@ impl PrMix {
         if omega.len() == crit_t.len() && omega.len() == crit_p.len() {
             for i in 0..omega.len() {
                 params.push(PrParams {
-                    bc: BC_COEF / crit_p[i] * R_CONST * crit_t[i],
+                    bc: BC_COEF / crit_p[i] * R * crit_t[i],
                     kappa: 0.37464 + 1.54226 * omega[i] - 0.26992 * omega[i].powi(2),
                     omega1: 7.0 / 3.0 * (omega[i] + 1.0),
                     crit_t: crit_t[i],
                     crit_p: crit_p[i],
-                    sqrt_ac: (AC_COEF / crit_p[i]).sqrt() * R_CONST * crit_t[i],
+                    sqrt_ac: (AC_COEF / crit_p[i]).sqrt() * R * crit_t[i],
                     sqrt_a: (0.0, 0.0),
                 });
             }
@@ -37,10 +34,7 @@ impl PrMix {
             .map(|(zi, i)| zi * i.sqrt_a(temp) * sum_zi_mul_sqrt_ai)
             .sum::<f64>();
         let b_mix = zip(z, &self.params).map(|(zi, i)| zi * i.b()).sum::<f64>();
-        let (A, B) = (
-            a_mix * pres / (R_CONST * temp).powi(2),
-            b_mix * pres / (R_CONST * temp),
-        );
+        let (A, B) = (a_mix * pres / (R * temp).powi(2), b_mix * pres / (R * temp));
         let (Zv, Zl) = shengjin_roots(
             B - 1.0,
             A - 3.0 * B.powi(2) - 2.0 * B,

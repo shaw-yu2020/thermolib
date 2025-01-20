@@ -8,11 +8,11 @@ enum VdwErr {
     #[error("property only in double phase")]
     OnlyInDoublePhase,
 }
-const R: f64 = 8.314462618;
 const ZC: f64 = 3.0 / 8.0;
 const AC_COEF: f64 = 27.0 / 64.0;
 const BC_COEF: f64 = 1.0 / 8.0;
 use crate::algorithms::shengjin_roots;
+use crate::f64consts::R;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};

@@ -8,7 +8,6 @@ enum SrkErr {
     #[error("property only in double phase")]
     OnlyInDoublePhase,
 }
-const R: f64 = 8.314462618;
 const ZC: f64 = 1.0 / 3.0;
 fn ac_coef() -> &'static f64 {
     static AC_COEF: OnceLock<f64> = OnceLock::new();
@@ -19,6 +18,7 @@ fn bc_coef() -> &'static f64 {
     BC_COEF.get_or_init(|| (2_f64.cbrt() - 1.0) / 3.0)
 }
 use crate::algorithms::shengjin_roots;
+use crate::f64consts::R;
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
