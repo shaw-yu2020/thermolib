@@ -1,17 +1,4 @@
-use thiserror::Error;
-#[derive(Debug, Error)]
-enum PcSaftPureErr {
-    #[error("c_flash diverge")]
-    NotConvForC,
-    #[error("t_flash diverge")]
-    NotConvForT,
-    #[error("tp_flash diverge")]
-    NotConvForTP,
-    #[error("property only in single phase")]
-    OnlyInSinglePhase,
-    #[error("property only in double phase")]
-    OnlyInDoublePhase,
-}
+use super::PcSaftErr;
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
@@ -220,7 +207,7 @@ impl PcSaftPure {
                 return Ok(());
             }
         }
-        Err(anyhow!(PcSaftPureErr::NotConvForC))
+        Err(anyhow!(PcSaftErr::NotConvForC))
     }
     pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
         let d3 = self.sigma_plus * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
@@ -238,7 +225,7 @@ impl PcSaftPure {
         }
         let pv_limit = self.calc_p(temp, rhov_num);
         if pv_limit.is_sign_negative() {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+            return Err(anyhow!(PcSaftErr::NotConvForT));
         }
         // Liquid phase: eta = 0.5
         let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
@@ -253,11 +240,11 @@ impl PcSaftPure {
             }
         }
         if rhol_num < rhov_num {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+            return Err(anyhow!(PcSaftErr::NotConvForT));
         }
         let pl_limit = self.calc_p(temp, rhol_num);
         if pl_limit > pv_limit {
-            return Err(anyhow!(PcSaftPureErr::NotConvForT));
+            return Err(anyhow!(PcSaftErr::NotConvForT));
         }
         // Iteration for saturation state
         let rhov_max = rhov_num;
@@ -271,7 +258,7 @@ impl PcSaftPure {
         };
         let ps = brent_zero(lnphi_diff, pv_limit - 1.0, pl_limit.max(1.0));
         if ps.is_nan() {
-            Err(anyhow!(PcSaftPureErr::NotConvForT))
+            Err(anyhow!(PcSaftErr::NotConvForT))
         } else {
             self.is_single_phase = false;
             self.temp = temp;
@@ -298,7 +285,7 @@ impl PcSaftPure {
         };
         // Select the correct output
         if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
-            Err(anyhow!(PcSaftPureErr::NotConvForTP))
+            Err(anyhow!(PcSaftErr::NotConvForTP))
         } else if lnphi_v.is_infinite() {
             self.set_temperature_and_number_density(temp, rhol_num);
             self.is_single_phase = true;
@@ -321,61 +308,61 @@ impl PcSaftPure {
         if self.is_single_phase {
             Ok(self.temp)
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn rho(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.rho_num / FRAC_NA_1E30)
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn p(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_p(self.temp, self.rho_num))
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn w(&mut self, M: f64) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok((self.calc_w2(self.temp, self.rho_num) / M).sqrt())
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn cv(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_cv(self.temp, self.rho_num))
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn cp(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_cp(self.temp, self.rho_num))
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn cp_res(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_cp_res(self.temp, self.rho_num))
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn h_res(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
             Ok(self.calc_h_res(self.temp, self.rho_num))
         } else {
-            Err(anyhow!(PcSaftPureErr::OnlyInSinglePhase))
+            Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
     pub fn p_s(&mut self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+            Err(anyhow!(PcSaftErr::OnlyInDoublePhase))
         } else {
             Ok(self.calc_p(self.temp, self.rhov_num) / 2.0
                 + self.calc_p(self.temp, self.rhol_num) / 2.0)
@@ -383,21 +370,21 @@ impl PcSaftPure {
     }
     pub fn T_s(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+            Err(anyhow!(PcSaftErr::OnlyInDoublePhase))
         } else {
             Ok(self.temp)
         }
     }
     pub fn rho_v(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+            Err(anyhow!(PcSaftErr::OnlyInDoublePhase))
         } else {
             Ok(self.rhov_num / FRAC_NA_1E30)
         }
     }
     pub fn rho_l(&self) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Err(anyhow!(PcSaftPureErr::OnlyInDoublePhase))
+            Err(anyhow!(PcSaftErr::OnlyInDoublePhase))
         } else {
             Ok(self.rhol_num / FRAC_NA_1E30)
         }
