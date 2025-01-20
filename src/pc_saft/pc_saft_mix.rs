@@ -1,3 +1,6 @@
+use super::{A00, A01, A02, A03, A04, A05, A06, B00, B01, B02, B03, B04, B05, B06};
+use super::{A10, A11, A12, A13, A14, A15, A16, B10, B11, B12, B13, B14, B15, B16};
+use super::{A20, A21, A22, A23, A24, A25, A26, B20, B21, B22, B23, B24, B25, B26};
 use crate::algorithms::romberg_diff;
 use std::f64::consts::{FRAC_PI_6, PI};
 const R: f64 = 8.314462618;
@@ -289,70 +292,43 @@ impl PcSaftMix {
 #[allow(non_snake_case)]
 impl PcSaftMix {
     fn i1T0D0(&self, eta: f64) -> f64 {
-        (A0[0] + self.m1 * A1[0] + self.m12 * A2[0])
-            + (A0[1] + self.m1 * A1[1] + self.m12 * A2[1]) * eta
-            + (A0[2] + self.m1 * A1[2] + self.m12 * A2[2]) * eta.powi(2)
-            + (A0[3] + self.m1 * A1[3] + self.m12 * A2[3]) * eta.powi(3)
-            + (A0[4] + self.m1 * A1[4] + self.m12 * A2[4]) * eta.powi(4)
-            + (A0[5] + self.m1 * A1[5] + self.m12 * A2[5]) * eta.powi(5)
-            + (A0[6] + self.m1 * A1[6] + self.m12 * A2[6]) * eta.powi(6)
+        (A00 + self.m1 * A10 + self.m12 * A20)
+            + (A01 + self.m1 * A11 + self.m12 * A21) * eta
+            + (A02 + self.m1 * A12 + self.m12 * A22) * eta.powi(2)
+            + (A03 + self.m1 * A13 + self.m12 * A23) * eta.powi(3)
+            + (A04 + self.m1 * A14 + self.m12 * A24) * eta.powi(4)
+            + (A05 + self.m1 * A15 + self.m12 * A25) * eta.powi(5)
+            + (A06 + self.m1 * A16 + self.m12 * A26) * eta.powi(6)
     }
     fn i1T0D1(&self, eta: f64) -> f64 {
-        (A0[1] + self.m1 * A1[1] + self.m12 * A2[1]) * eta
-            + (A0[2] + self.m1 * A1[2] + self.m12 * A2[2]) * 2.0 * eta.powi(2)
-            + (A0[3] + self.m1 * A1[3] + self.m12 * A2[3]) * 3.0 * eta.powi(3)
-            + (A0[4] + self.m1 * A1[4] + self.m12 * A2[4]) * 4.0 * eta.powi(4)
-            + (A0[5] + self.m1 * A1[5] + self.m12 * A2[5]) * 5.0 * eta.powi(5)
-            + (A0[6] + self.m1 * A1[6] + self.m12 * A2[6]) * 6.0 * eta.powi(6)
+        (A01 + self.m1 * A11 + self.m12 * A21) * eta
+            + (A02 + self.m1 * A12 + self.m12 * A22) * 2.0 * eta.powi(2)
+            + (A03 + self.m1 * A13 + self.m12 * A23) * 3.0 * eta.powi(3)
+            + (A04 + self.m1 * A14 + self.m12 * A24) * 4.0 * eta.powi(4)
+            + (A05 + self.m1 * A15 + self.m12 * A25) * 5.0 * eta.powi(5)
+            + (A06 + self.m1 * A16 + self.m12 * A26) * 6.0 * eta.powi(6)
     }
     fn i1T0D2(&self, eta: f64) -> f64 {
-        (A0[2] + self.m1 * A1[2] + self.m12 * A2[2]) * 2.0 * eta.powi(2)
-            + (A0[3] + self.m1 * A1[3] + self.m12 * A2[3]) * 6.0 * eta.powi(3)
-            + (A0[4] + self.m1 * A1[4] + self.m12 * A2[4]) * 12.0 * eta.powi(4)
-            + (A0[5] + self.m1 * A1[5] + self.m12 * A2[5]) * 20.0 * eta.powi(5)
-            + (A0[6] + self.m1 * A1[6] + self.m12 * A2[6]) * 30.0 * eta.powi(6)
+        (A02 + self.m1 * A12 + self.m12 * A22) * 2.0 * eta.powi(2)
+            + (A03 + self.m1 * A13 + self.m12 * A23) * 6.0 * eta.powi(3)
+            + (A04 + self.m1 * A14 + self.m12 * A24) * 12.0 * eta.powi(4)
+            + (A05 + self.m1 * A15 + self.m12 * A25) * 20.0 * eta.powi(5)
+            + (A06 + self.m1 * A16 + self.m12 * A26) * 30.0 * eta.powi(6)
     }
 }
-const A0: [f64; 7] = [
-    0.9105631445,
-    0.6361281449,
-    2.6861347891,
-    -26.547362491,
-    97.759208784,
-    -159.59154087,
-    91.297774084,
-];
-const A1: [f64; 7] = [
-    -0.3084016918,
-    0.1860531159,
-    -2.5030047259,
-    21.419793629,
-    -65.255885330,
-    83.318680481,
-    -33.746922930,
-];
-const A2: [f64; 7] = [
-    -0.0906148351,
-    0.4527842806,
-    0.5962700728,
-    -1.7241829131,
-    -4.1302112531,
-    13.776631870,
-    -8.6728470368,
-];
 #[allow(non_snake_case)]
 impl PcSaftMix {
     fn i2T0D0(&mut self, eta: f64) -> f64 {
         if eta != self.i2T0D0.0 {
             self.i2T0D0 = (
                 eta,
-                (B0[0] + self.m1 * B1[0] + self.m12 * B2[0])
-                    + (B0[1] + self.m1 * B1[1] + self.m12 * B2[1]) * eta
-                    + (B0[2] + self.m1 * B1[2] + self.m12 * B2[2]) * eta.powi(2)
-                    + (B0[3] + self.m1 * B1[3] + self.m12 * B2[3]) * eta.powi(3)
-                    + (B0[4] + self.m1 * B1[4] + self.m12 * B2[4]) * eta.powi(4)
-                    + (B0[5] + self.m1 * B1[5] + self.m12 * B2[5]) * eta.powi(5)
-                    + (B0[6] + self.m1 * B1[6] + self.m12 * B2[6]) * eta.powi(6),
+                (B00 + self.m1 * B10 + self.m12 * B20)
+                    + (B01 + self.m1 * B11 + self.m12 * B21) * eta
+                    + (B02 + self.m1 * B12 + self.m12 * B22) * eta.powi(2)
+                    + (B03 + self.m1 * B13 + self.m12 * B23) * eta.powi(3)
+                    + (B04 + self.m1 * B14 + self.m12 * B24) * eta.powi(4)
+                    + (B05 + self.m1 * B15 + self.m12 * B25) * eta.powi(5)
+                    + (B06 + self.m1 * B16 + self.m12 * B26) * eta.powi(6),
             );
         }
         self.i2T0D0.1
@@ -361,51 +337,24 @@ impl PcSaftMix {
         if eta != self.i2T0D1.0 {
             self.i2T0D1 = (
                 eta,
-                (B0[1] + self.m1 * B1[1] + self.m12 * B2[1]) * eta
-                    + (B0[2] + self.m1 * B1[2] + self.m12 * B2[2]) * 2.0 * eta.powi(2)
-                    + (B0[3] + self.m1 * B1[3] + self.m12 * B2[3]) * 3.0 * eta.powi(3)
-                    + (B0[4] + self.m1 * B1[4] + self.m12 * B2[4]) * 4.0 * eta.powi(4)
-                    + (B0[5] + self.m1 * B1[5] + self.m12 * B2[5]) * 5.0 * eta.powi(5)
-                    + (B0[6] + self.m1 * B1[6] + self.m12 * B2[6]) * 6.0 * eta.powi(6),
+                (B01 + self.m1 * B11 + self.m12 * B21) * eta
+                    + (B02 + self.m1 * B12 + self.m12 * B22) * 2.0 * eta.powi(2)
+                    + (B03 + self.m1 * B13 + self.m12 * B23) * 3.0 * eta.powi(3)
+                    + (B04 + self.m1 * B14 + self.m12 * B24) * 4.0 * eta.powi(4)
+                    + (B05 + self.m1 * B15 + self.m12 * B25) * 5.0 * eta.powi(5)
+                    + (B06 + self.m1 * B16 + self.m12 * B26) * 6.0 * eta.powi(6),
             )
         }
         self.i2T0D1.1
     }
     fn i2T0D2(&self, eta: f64) -> f64 {
-        (B0[2] + self.m1 * B1[2] + self.m12 * B2[2]) * 2.0 * eta.powi(2)
-            + (B0[3] + self.m1 * B1[3] + self.m12 * B2[3]) * 6.0 * eta.powi(3)
-            + (B0[4] + self.m1 * B1[4] + self.m12 * B2[4]) * 12.0 * eta.powi(4)
-            + (B0[5] + self.m1 * B1[5] + self.m12 * B2[5]) * 20.0 * eta.powi(5)
-            + (B0[6] + self.m1 * B1[6] + self.m12 * B2[6]) * 30.0 * eta.powi(6)
+        (B02 + self.m1 * B12 + self.m12 * B22) * 2.0 * eta.powi(2)
+            + (B03 + self.m1 * B13 + self.m12 * B23) * 6.0 * eta.powi(3)
+            + (B04 + self.m1 * B14 + self.m12 * B24) * 12.0 * eta.powi(4)
+            + (B05 + self.m1 * B15 + self.m12 * B25) * 20.0 * eta.powi(5)
+            + (B06 + self.m1 * B16 + self.m12 * B26) * 30.0 * eta.powi(6)
     }
 }
-const B0: [f64; 7] = [
-    0.7240946941,
-    2.2382791861,
-    -4.0025849485,
-    -21.003576815,
-    26.855641363,
-    206.55133841,
-    -355.60235612,
-];
-const B1: [f64; 7] = [
-    -0.5755498075,
-    0.6995095521,
-    3.8925673390,
-    -17.215471648,
-    192.67226447,
-    -161.82646165,
-    -165.20769346,
-];
-const B2: [f64; 7] = [
-    0.0976883116,
-    -0.2557574982,
-    -9.1558561530,
-    20.642075974,
-    -38.804430052,
-    93.626774077,
-    -29.666905585,
-];
 impl PcSaftMix {
     fn sum_xmd1(&mut self, temp: f64) -> f64 {
         if temp != self.sum_xmd1.0 {
