@@ -154,11 +154,6 @@ impl PcSaftGlyPure {
     pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self::new_fluid(m, sigma, epsilon)
     }
-    pub fn set_1_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64) {
-        self.assoc_type = AssocType::Type1 { X: 1.0 };
-        self.kappa_AB_plus = kappa_AB * self.sigma_plus;
-        self.epsilon_AB = epsilon_AB;
-    }
     pub fn set_2B_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc_type = AssocType::Type2B { X: 1.0 };
         self.kappa_AB_plus = kappa_AB * self.sigma_plus;
@@ -397,57 +392,6 @@ impl PcSaftGlyPure {
         } else {
             Ok(self.rhol_num / FRAC_NA_1E30)
         }
-    }
-    pub fn B(&mut self, temp: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D1(temp, rho_num) / rho_num;
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D1(temp, rho_num) / rho_num;
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30
-    }
-    pub fn C(&mut self, temp: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30.powi(2)
-    }
-    pub fn D(&mut self, temp: f64) -> f64 {
-        let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
-        let mut val_new: f64 = 0.0;
-        loop {
-            rho_num /= 10.0;
-            if rho_num < 1E-30 {
-                break;
-            }
-            val_new = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
-            if (val_new / val_old - 1.0).abs() < 1E-9 {
-                break;
-            }
-            val_old = val_new;
-        }
-        val_new * FRAC_NA_1E30.powi(3) / 2.0
     }
     pub fn vec_t_flash_g(&mut self, temp: Vec<f64>) -> Vec<f64> {
         temp.into_iter()
@@ -1408,14 +1352,13 @@ impl PcSaftGlyPure {
 #[allow(non_snake_case)]
 enum AssocType {
     Type0,
-    Type1 { X: f64 },
     Type2B { X: f64 },
     Type3B { XA: f64 },
 }
 impl AssocType {
     fn set_t(&mut self, t: f64) {
         match self {
-            AssocType::Type1 { X } | AssocType::Type2B { X } => {
+            AssocType::Type2B { X } => {
                 *X = (-1.0 + (1.0 + 4.0 * t).sqrt()) / (2.0 * t);
             }
             AssocType::Type3B { XA } => {
@@ -1427,7 +1370,7 @@ impl AssocType {
     }
     fn t1(&self) -> f64 {
         match self {
-            AssocType::Type1 { X } | AssocType::Type2B { X } => X.powi(3) / (X - 2.0),
+            AssocType::Type2B { X } => X.powi(3) / (X - 2.0),
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(2) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0)
             }
@@ -1437,9 +1380,7 @@ impl AssocType {
     }
     fn t2(&self) -> f64 {
         2.0 * match self {
-            AssocType::Type1 { X } | AssocType::Type2B { X } => {
-                X.powi(5) / (X - 2.0).powi(3) * (X - 3.0)
-            }
+            AssocType::Type2B { X } => X.powi(5) / (X - 2.0).powi(3) * (X - 3.0),
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(3) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0).powi(3)
                     * (4.0 * XA.powi(3) - 12.0 * XA.powi(2) + 6.0 * XA - 1.0)
@@ -1450,9 +1391,7 @@ impl AssocType {
     }
     fn t3(&self) -> f64 {
         6.0 * match self {
-            AssocType::Type1 { X } | AssocType::Type2B { X } => {
-                X.powi(7) / (X - 2.0).powi(5) * (X.powi(2) - 6.0 * X + 10.0)
-            }
+            AssocType::Type2B { X } => X.powi(7) / (X - 2.0).powi(5) * (X.powi(2) - 6.0 * X + 10.0),
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(4) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0).powi(5)
                     * (16.0 * XA.powi(6) - 96.0 * XA.powi(5)
@@ -1464,7 +1403,7 @@ impl AssocType {
     }
     fn t4(&self) -> f64 {
         24.0 * match self {
-            AssocType::Type1 { X } | AssocType::Type2B { X } => {
+            AssocType::Type2B { X } => {
                 X.powi(9) / (X - 2.0).powi(7) * (X.powi(3) - 9.0 * X.powi(2) + 29.0 * X - 35.0)
             }
             AssocType::Type3B { XA } => {
@@ -1484,7 +1423,6 @@ impl PcSaftGlyPure {
     fn assocT0D0(&self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => X.ln() - X / 2.0 + 0.5,
             AssocType::Type2B { X } => 2.0 * X.ln() - X + 1.0,
             AssocType::Type3B { XA } => 2.0 * XA.ln() + (2.0 * XA - 1.0).ln() - 2.0 * XA + 2.0,
         }
@@ -1492,7 +1430,6 @@ impl PcSaftGlyPure {
     fn assocT0D1(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT0D1(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT0D1(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D1(1.0, XA) + self.siteT0D1(2.0, 2.0 * XA - 1.0)
@@ -1502,7 +1439,6 @@ impl PcSaftGlyPure {
     fn assocT0D2(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT0D2(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT0D2(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D2(1.0, XA) + self.siteT0D2(2.0, 2.0 * XA - 1.0)
@@ -1512,7 +1448,6 @@ impl PcSaftGlyPure {
     fn assocT0D3(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT0D3(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT0D3(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D3(1.0, XA) + self.siteT0D3(2.0, 2.0 * XA - 1.0)
@@ -1522,7 +1457,6 @@ impl PcSaftGlyPure {
     fn assocT0D4(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT0D4(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT0D4(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D4(1.0, XA) + self.siteT0D4(2.0, 2.0 * XA - 1.0)
@@ -1532,7 +1466,6 @@ impl PcSaftGlyPure {
     fn assocT1D0(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT1D0(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT1D0(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D0(1.0, XA) + self.siteT1D0(2.0, 2.0 * XA - 1.0)
@@ -1542,7 +1475,6 @@ impl PcSaftGlyPure {
     fn assocT1D1(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT1D1(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT1D1(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D1(1.0, XA) + self.siteT1D1(2.0, 2.0 * XA - 1.0)
@@ -1552,7 +1484,6 @@ impl PcSaftGlyPure {
     fn assocT1D2(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT1D2(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT1D2(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D2(1.0, XA) + self.siteT1D2(2.0, 2.0 * XA - 1.0)
@@ -1562,7 +1493,6 @@ impl PcSaftGlyPure {
     fn assocT1D3(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT1D3(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT1D3(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D3(1.0, XA) + self.siteT1D3(2.0, 2.0 * XA - 1.0)
@@ -1572,7 +1502,6 @@ impl PcSaftGlyPure {
     fn assocT2D0(&mut self) -> f64 {
         match self.assoc_type {
             AssocType::Type0 => 0.0,
-            AssocType::Type1 { X } => self.siteT2D0(1.0, X),
             AssocType::Type2B { X } => 2.0 * self.siteT2D0(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT2D0(1.0, XA) + self.siteT2D0(2.0, 2.0 * XA - 1.0)
