@@ -33,11 +33,9 @@ mod liquid_metal;
 pub use liquid_metal::LiquidMetal;
 /// PC-SAFT EOS
 mod pc_saft;
-mod pc_saft_g;
-mod pc_saft_mix;
+pub use pc_saft::PcSaftGlyPure;
+pub use pc_saft::PcSaftMix;
 pub use pc_saft::PcSaftPure;
-pub use pc_saft_g::PcSaftGlyPure;
-pub use pc_saft_mix::PcSaftMix;
 /// Ideal Gas
 mod ideal_gas;
 pub use ideal_gas::IdealGas;
