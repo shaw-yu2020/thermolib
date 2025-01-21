@@ -9,6 +9,7 @@ use crate::IdealGas;
 use crate::LiquidMetal;
 use crate::PcSaftGlyPure;
 use crate::PcSaftPure;
+use crate::PcSaftYglPure;
 use crate::Pr;
 use crate::Rk;
 use crate::Srk;
@@ -24,6 +25,7 @@ pub fn pylib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Pr>()?;
     m.add_class::<Helmholtz>()?;
     m.add_class::<LiquidMetal>()?;
+    m.add_class::<PcSaftYglPure>()?;
     m.add_class::<PcSaftGlyPure>()?;
     m.add_class::<PcSaftPure>()?;
     m.add_class::<IdealGas>()?;
