@@ -119,14 +119,6 @@ impl PcSaftPure {
         self.kappa_AB_plus = kappa_AB * self.sigma_plus;
         self.epsilon_AB = epsilon_AB;
     }
-    pub fn set_3Bm_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64, b: f64) {
-        self.assoc_type = AssocType::Type3Bm {
-            XA: 1.0,
-            b: b.abs().min(b.abs().recip()),
-        };
-        self.kappa_AB_plus = kappa_AB * self.sigma_plus;
-        self.epsilon_AB = epsilon_AB;
-    }
     pub fn set_aly_lee_cp0(&mut self, B: f64, C: f64, D: f64, E: f64, F: f64) {
         self.mB = B / R - 1.0; // mB = B/R -1
         self.mC = C / R; // mC = C/R
@@ -1125,7 +1117,6 @@ enum AssocType {
     Type1 { X: f64 },
     Type2B { X: f64 },
     Type3B { XA: f64 },
-    Type3Bm { XA: f64, b: f64 },
 }
 impl AssocType {
     fn set_t(&mut self, t: f64) {
@@ -1136,11 +1127,6 @@ impl AssocType {
             AssocType::Type3B { XA } => {
                 *XA = (-(1.0 - t) + ((1.0 - t).powi(2) + 8.0 * t).sqrt()) / (4.0 * t);
             }
-            AssocType::Type3Bm { XA, b } => {
-                let b = *b;
-                *XA = (-(1.0 - b * t) + ((1.0 - b * t).powi(2) + 4.0 * (1.0 + b) * t).sqrt())
-                    / (2.0 * (1.0 + b) * t);
-            }
             _ => (),
         }
     }
@@ -1149,10 +1135,6 @@ impl AssocType {
             AssocType::Type1 { X } | AssocType::Type2B { X } => X.powi(3) / (X - 2.0),
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(2) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                (XA * (XA + b * XA - b)).powi(2)
-                    / ((1.0 + b) * XA.powi(2) - 2.0 * (1.0 + b) * XA + b)
             }
             _ => 0.0,
         }
@@ -1165,12 +1147,6 @@ impl AssocType {
             AssocType::Type3B { XA } => {
                 (XA * (2.0 * XA - 1.0)).powi(3) / (2.0 * XA.powi(2) - 4.0 * XA + 1.0).powi(3)
                     * (4.0 * XA.powi(3) - 12.0 * XA.powi(2) + 6.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                (XA * (XA + b * XA - b)).powi(3)
-                    / ((1.0 + b) * XA.powi(2) - 2.0 * (1.0 + b) * XA + b).powi(3)
-                    * ((1.0 + b).powi(2) * XA.powi(3) - 3.0 * (1.0 + b).powi(2) * XA.powi(2)
-                        + (3.0 * b * (1.0 + b) * XA - b.powi(2)))
             }
             _ => 0.0,
         }
@@ -1185,15 +1161,6 @@ impl AssocType {
                     * (16.0 * XA.powi(6) - 96.0 * XA.powi(5)
                         + (200.0 * XA.powi(4) - 160.0 * XA.powi(3))
                         + (62.0 * XA.powi(2) - 12.0 * XA + 1.0))
-            }
-            AssocType::Type3Bm { XA, b } => {
-                (XA * (XA + b * XA - b)).powi(4)
-                    / ((1.0 + b) * XA.powi(2) - 2.0 * (1.0 + b) * XA + b).powi(5)
-                    * ((1.0 + b).powi(4) * XA.powi(6) - 6.0 * (1.0 + b).powi(4) * XA.powi(5)
-                        + 5.0 * (3.0 * b + 2.0) * (1.0 + b).powi(3) * XA.powi(4)
-                        - 20.0 * b * (1.0 + b).powi(3) * XA.powi(3)
-                        + b.powi(2) * (15.0 * b + 16.0) * (1.0 + b) * XA.powi(2)
-                        - (6.0 * b.powi(3) * (1.0 + b) * XA - b.powi(4)))
             }
             _ => 0.0,
         }
@@ -1211,21 +1178,6 @@ impl AssocType {
                         + (716.0 * XA.powi(3) - 150.0 * XA.powi(2))
                         + (18.0 * XA - 1.0))
             }
-            AssocType::Type3Bm { XA, b } => {
-                (XA * (XA + b * XA - b)).powi(5)
-                    / ((1.0 + b) * XA.powi(2) - 2.0 * (1.0 + b) * XA + b).powi(7)
-                    * ((1.0 + b).powi(6) * XA.powi(9) - 9.0 * (1.0 + b).powi(6) * XA.powi(8)
-                        + (36.0 * b + 29.0) * (1.0 + b).powi(5) * XA.powi(7)
-                        - 7.0 * (12.0 * b + 5.0) * (1.0 + b).powi(5) * XA.powi(6)
-                        + 21.0 * b * (6.0 * b + 5.0) * (1.0 + b).powi(4) * XA.powi(5)
-                        - b.powi(2)
-                            * (126.0 * b.powi(2) + 260.0 * b + 135.0)
-                            * (1.0 + b).powi(2)
-                            * XA.powi(4)
-                        + b.powi(3) * (84.0 * b + 95.0) * (1.0 + b).powi(2) * XA.powi(3)
-                        - 3.0 * b.powi(4) * (12.0 * b + 13.0) * (1.0 + b) * XA.powi(2)
-                        + (9.0 * b.powi(5) * (1.0 + b) * XA - b.powi(6)))
-            }
             _ => 0.0,
         }
     }
@@ -1238,10 +1190,6 @@ impl PcSaftPure {
             AssocType::Type1 { X } => X.ln() - X / 2.0 + 0.5,
             AssocType::Type2B { X } => 2.0 * X.ln() - X + 1.0,
             AssocType::Type3B { XA } => 2.0 * XA.ln() + (2.0 * XA - 1.0).ln() - 2.0 * XA + 2.0,
-            AssocType::Type3Bm { XA, b } => {
-                XA.ln() + (b * XA + 1.0 - b).ln() + ((1.0 + b) * XA - b).ln() - (1.0 + b) * XA
-                    + (1.0 + b)
-            }
         }
     }
     fn assocT0D1(&mut self) -> f64 {
@@ -1251,11 +1199,6 @@ impl PcSaftPure {
             AssocType::Type2B { X } => 2.0 * self.siteT0D1(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D1(1.0, XA) + self.siteT0D1(2.0, 2.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT0D1(1.0, XA)
-                    + self.siteT0D1(b, b * XA + 1.0 - b)
-                    + self.siteT0D1(1.0 + b, (1.0 + b) * XA - b)
             }
         }
     }
@@ -1267,11 +1210,6 @@ impl PcSaftPure {
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D2(1.0, XA) + self.siteT0D2(2.0, 2.0 * XA - 1.0)
             }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT0D2(1.0, XA)
-                    + self.siteT0D2(b, b * XA + 1.0 - b)
-                    + self.siteT0D2(1.0 + b, (1.0 + b) * XA - b)
-            }
         }
     }
     fn assocT0D3(&mut self) -> f64 {
@@ -1281,11 +1219,6 @@ impl PcSaftPure {
             AssocType::Type2B { X } => 2.0 * self.siteT0D3(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D3(1.0, XA) + self.siteT0D3(2.0, 2.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT0D3(1.0, XA)
-                    + self.siteT0D3(b, b * XA + 1.0 - b)
-                    + self.siteT0D3(1.0 + b, (1.0 + b) * XA - b)
             }
         }
     }
@@ -1297,11 +1230,6 @@ impl PcSaftPure {
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT0D4(1.0, XA) + self.siteT0D4(2.0, 2.0 * XA - 1.0)
             }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT0D4(1.0, XA)
-                    + self.siteT0D4(b, b * XA + 1.0 - b)
-                    + self.siteT0D4(1.0 + b, (1.0 + b) * XA - b)
-            }
         }
     }
     fn assocT1D0(&mut self) -> f64 {
@@ -1311,11 +1239,6 @@ impl PcSaftPure {
             AssocType::Type2B { X } => 2.0 * self.siteT1D0(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D0(1.0, XA) + self.siteT1D0(2.0, 2.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT1D0(1.0, XA)
-                    + self.siteT1D0(b, b * XA + 1.0 - b)
-                    + self.siteT1D0(1.0 + b, (1.0 + b) * XA - b)
             }
         }
     }
@@ -1327,11 +1250,6 @@ impl PcSaftPure {
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D1(1.0, XA) + self.siteT1D1(2.0, 2.0 * XA - 1.0)
             }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT1D1(1.0, XA)
-                    + self.siteT1D1(b, b * XA + 1.0 - b)
-                    + self.siteT1D1(1.0 + b, (1.0 + b) * XA - b)
-            }
         }
     }
     fn assocT1D2(&mut self) -> f64 {
@@ -1341,11 +1259,6 @@ impl PcSaftPure {
             AssocType::Type2B { X } => 2.0 * self.siteT1D2(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D2(1.0, XA) + self.siteT1D2(2.0, 2.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT1D2(1.0, XA)
-                    + self.siteT1D2(b, b * XA + 1.0 - b)
-                    + self.siteT1D2(1.0 + b, (1.0 + b) * XA - b)
             }
         }
     }
@@ -1357,11 +1270,6 @@ impl PcSaftPure {
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT1D3(1.0, XA) + self.siteT1D3(2.0, 2.0 * XA - 1.0)
             }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT1D3(1.0, XA)
-                    + self.siteT1D3(b, b * XA + 1.0 - b)
-                    + self.siteT1D3(1.0 + b, (1.0 + b) * XA - b)
-            }
         }
     }
     fn assocT2D0(&mut self) -> f64 {
@@ -1371,11 +1279,6 @@ impl PcSaftPure {
             AssocType::Type2B { X } => 2.0 * self.siteT2D0(1.0, X),
             AssocType::Type3B { XA } => {
                 2.0 * self.siteT2D0(1.0, XA) + self.siteT2D0(2.0, 2.0 * XA - 1.0)
-            }
-            AssocType::Type3Bm { XA, b } => {
-                self.siteT2D0(1.0, XA)
-                    + self.siteT2D0(b, b * XA + 1.0 - b)
-                    + self.siteT2D0(1.0 + b, (1.0 + b) * XA - b)
             }
         }
     }
@@ -1710,15 +1613,7 @@ mod tests {
         methanol.td_unchecked(300.0, 24514.0);
         methanol.check_derivatives(false);
         let mut methanol = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
-        methanol.set_3Bm_assoc_type(0.035176, 2899.5, 0.0);
-        methanol.td_unchecked(300.0, 24514.0);
-        methanol.check_derivatives(false);
-        let mut methanol = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
         methanol.set_3B_assoc_type(0.035176, 2899.5);
-        methanol.td_unchecked(300.0, 24514.0);
-        methanol.check_derivatives(false);
-        let mut methanol = PcSaftPure::new_fluid(1.5255, 3.23, 188.9);
-        methanol.set_3Bm_assoc_type(0.035176, 2899.5, 1.0);
         methanol.td_unchecked(300.0, 24514.0);
         methanol.check_derivatives(false);
     }
