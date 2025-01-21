@@ -1,7 +1,4 @@
-use super::PcSaftErr;
-use super::{A00, A01, A02, A03, A04, A05, A06, B00, B01, B02, B03, B04, B05, B06};
-use super::{A10, A11, A12, A13, A14, A15, A16, B10, B11, B12, B13, B14, B15, B16};
-use super::{A20, A21, A22, A23, A24, A25, A26, B20, B21, B22, B23, B24, B25, B26};
+use super::{CTerm, I1Term, I2Term, PcSaftErr};
 use crate::algorithms::{brent_zero, romberg_diff};
 use crate::f64consts::{FRAC_NA_1E30, FRAC_PI_2, FRAC_PI_6, PI, R};
 use anyhow::anyhow;
@@ -55,40 +52,20 @@ pub struct PcSaftGlyPure {
     mD: f64, // mD=D
     mE: f64, // mE=E/R
     mF: f64, // mF=F
-    // A & B
-    Ai0: f64,
-    Ai1: f64,
-    Ai2: f64,
-    Ai3: f64,
-    Ai4: f64,
-    Ai5: f64,
-    Ai6: f64,
-    Bi0: f64,
-    Bi1: f64,
-    Bi2: f64,
-    Bi3: f64,
-    Bi4: f64,
-    Bi5: f64,
-    Bi6: f64,
     // cached variables
     giiT0D0: (f64, f64),
     giiT0D1: (f64, f64),
     giiT0D2: (f64, f64),
-    cT0D0: (f64, f64),
-    cT0D1: (f64, f64),
-    cT0D2: (f64, f64),
-    i2T0D0: (f64, f64),
-    i2T0D1: (f64, f64),
-    i2T0D2: (f64, f64),
     // parameters for gly
     c0: f64,
     c1: f64,
     c2: f64,
+    i1: I1Term, // I1Term
+    i2: I2Term, // I2Term
+    c: CTerm,   // Cterm
 }
 impl PcSaftGlyPure {
     pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
-        let m1 = (m - 1.0) / m; // (m-1)/m
-        let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
         Self {
             m,
             epsilon,
@@ -114,35 +91,17 @@ impl PcSaftGlyPure {
             mD: 1.0,
             mE: 0.0,
             mF: 1.0,
-            // A & B
-            Ai0: A00 + m1 * A10 + m12 * A20,
-            Ai1: A01 + m1 * A11 + m12 * A21,
-            Ai2: A02 + m1 * A12 + m12 * A22,
-            Ai3: A03 + m1 * A13 + m12 * A23,
-            Ai4: A04 + m1 * A14 + m12 * A24,
-            Ai5: A05 + m1 * A15 + m12 * A25,
-            Ai6: A06 + m1 * A16 + m12 * A26,
-            Bi0: B00 + m1 * B10 + m12 * B20,
-            Bi1: B01 + m1 * B11 + m12 * B21,
-            Bi2: B02 + m1 * B12 + m12 * B22,
-            Bi3: B03 + m1 * B13 + m12 * B23,
-            Bi4: B04 + m1 * B14 + m12 * B24,
-            Bi5: B05 + m1 * B15 + m12 * B25,
-            Bi6: B06 + m1 * B16 + m12 * B26,
             // cached variables
             giiT0D0: (0.0, 0.0),
             giiT0D1: (0.0, 0.0),
             giiT0D2: (0.0, 0.0),
-            cT0D0: (0.0, 0.0),
-            cT0D1: (0.0, 0.0),
-            cT0D2: (0.0, 0.0),
-            i2T0D0: (0.0, 0.0),
-            i2T0D1: (0.0, 0.0),
-            i2T0D2: (0.0, 0.0),
             // parameters for gly
             c0: 1.0,
             c1: -0.5,
             c2: 0.0,
+            i1: I1Term::new(m), // I1Term
+            i2: I2Term::new(m), // I1Term
+            c: CTerm::new(m),   // CTerm
         }
     }
 }
@@ -1014,339 +973,100 @@ impl PcSaftGlyPure {
 #[allow(non_snake_case)]
 impl PcSaftGlyPure {
     fn cT0D0(&mut self) -> f64 {
-        if self.eta != self.cT0D0.0 {
-            self.cT0D0 = (
-                self.eta,
-                1.0 + 2.0 * self.m * (4.0 * self.eta - self.eta.powi(2)) / (1.0 - self.eta).powi(4)
-                    + (1.0 - self.m)
-                        * (20.0 * self.eta - 27.0 * self.eta.powi(2) + 12.0 * self.eta.powi(3)
-                            - 2.0 * self.eta.powi(4))
-                        / ((1.0 - self.eta) * (2.0 - self.eta)).powi(2),
-            )
-        }
-        self.cT0D0.1
+        self.c.eta0(self.eta)
     }
     fn cT0D1(&mut self) -> f64 {
-        if self.eta != self.cT0D1.0 {
-            self.cT0D1 = (
-                self.eta,
-                self.eta
-                    * 2.0
-                    * (2.0 * self.m * (-self.eta.powi(2) + 5.0 * self.eta + 2.0)
-                        / (1.0 - self.eta).powi(5)
-                        + (1.0 - self.m)
-                            * (self.eta.powi(3) + 6.0 * self.eta.powi(2) - 24.0 * self.eta + 20.0)
-                            / ((1.0 - self.eta) * (2.0 - self.eta)).powi(3)),
-            )
-        }
-        self.cT0D1.1
+        self.eta * self.c.eta1(self.eta)
     }
     fn cT0D2(&mut self) -> f64 {
-        if self.eta != self.cT0D2.0 {
-            self.cT0D2 = (
-                self.eta,
-                self.eta.powi(2)
-                    * 6.0
-                    * (2.0 * self.m * (-self.eta.powi(2) + 6.0 * self.eta + 5.0)
-                        / (1.0 - self.eta).powi(6)
-                        + (1.0 - self.m)
-                            * (-self.eta.powi(4) - 8.0 * self.eta.powi(3)
-                                + 48.0 * self.eta.powi(2)
-                                - 80.0 * self.eta
-                                + 44.0)
-                            / ((1.0 - self.eta) * (2.0 - self.eta)).powi(4)),
-            )
-        }
-        self.cT0D2.1
+        self.eta.powi(2) * self.c.eta2(self.eta)
     }
-    fn cT0D3(&self, eta: f64) -> f64 {
-        eta.powi(3)
-            * 24.0
-            * (2.0 * self.m * (-eta.powi(2) + 7.0 * eta + 9.0) / (1.0 - eta).powi(7)
-                + (1.0 - self.m)
-                    * (eta.powi(5) + 10.0 * eta.powi(4) - 80.0 * eta.powi(3) + 200.0 * eta.powi(2)
-                        - 220.0 * eta
-                        + 92.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(5))
+    fn cT0D3(&mut self, eta: f64) -> f64 {
+        eta.powi(3) * self.c.eta3(eta)
     }
-    fn cT0D4(&self, eta: f64) -> f64 {
-        eta.powi(4)
-            * 120.0
-            * (2.0 * self.m * (-eta.powi(2) + 8.0 * eta + 14.0) / (1.0 - eta).powi(8)
-                + (1.0 - self.m)
-                    * (-eta.powi(6) - 12.0 * eta.powi(5) + 120.0 * eta.powi(4)
-                        - 400.0 * eta.powi(3)
-                        + 660.0 * eta.powi(2)
-                        - 552.0 * eta
-                        + 188.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(6))
+    fn cT0D4(&mut self, eta: f64) -> f64 {
+        eta.powi(4) * self.c.eta4(eta)
     }
-    fn cT1D0(&self, eta: f64) -> f64 {
-        self.eta1
-            * 2.0
-            * (2.0 * self.m * (-eta.powi(2) + 5.0 * eta + 2.0) / (1.0 - eta).powi(5)
-                + (1.0 - self.m) * (eta.powi(3) + 6.0 * eta.powi(2) - 24.0 * eta + 20.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(3))
+    fn cT1D0(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.c.eta1(eta)
     }
-    fn cT1D1(&self, eta: f64) -> f64 {
-        self.eta1
-            * 2.0
-            * (2.0 * self.m * (-eta.powi(2) + 5.0 * eta + 2.0) / (1.0 - eta).powi(5)
-                + (1.0 - self.m) * (eta.powi(3) + 6.0 * eta.powi(2) - 24.0 * eta + 20.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(3))
-            + self.eta1
-                * self.eta
-                * 6.0
-                * (2.0 * self.m * (-eta.powi(2) + 6.0 * eta + 5.0) / (1.0 - eta).powi(6)
-                    + (1.0 - self.m)
-                        * (-eta.powi(4) - 8.0 * eta.powi(3) + 48.0 * eta.powi(2) - 80.0 * eta
-                            + 44.0)
-                        / ((1.0 - eta) * (2.0 - eta)).powi(4))
+    fn cT1D1(&mut self, eta: f64) -> f64 {
+        self.eta1 * (self.c.eta1(eta) + self.eta * self.c.eta2(eta))
     }
-    fn cT1D2(&self, eta: f64) -> f64 {
-        self.eta1
-            * self.eta
-            * 12.0
-            * (2.0 * self.m * (-eta.powi(2) + 6.0 * eta + 5.0) / (1.0 - eta).powi(6)
-                + (1.0 - self.m)
-                    * (-eta.powi(4) - 8.0 * eta.powi(3) + 48.0 * eta.powi(2) - 80.0 * eta + 44.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(4))
-            + self.eta1
-                * self.eta.powi(2)
-                * 24.0
-                * (2.0 * self.m * (-eta.powi(2) + 7.0 * eta + 9.0) / (1.0 - eta).powi(7)
-                    + (1.0 - self.m)
-                        * (eta.powi(5) + 10.0 * eta.powi(4) - 80.0 * eta.powi(3)
-                            + 200.0 * eta.powi(2)
-                            - 220.0 * eta
-                            + 92.0)
-                        / ((1.0 - eta) * (2.0 - eta)).powi(5))
+    fn cT1D2(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta * (2.0 * self.c.eta2(eta) + self.eta * self.c.eta3(eta))
     }
-    fn cT1D3(&self, eta: f64) -> f64 {
-        self.eta1
-            * self.eta.powi(2)
-            * 72.0
-            * (2.0 * self.m * (-eta.powi(2) + 7.0 * eta + 9.0) / (1.0 - eta).powi(7)
-                + (1.0 - self.m)
-                    * (eta.powi(5) + 10.0 * eta.powi(4) - 80.0 * eta.powi(3) + 200.0 * eta.powi(2)
-                        - 220.0 * eta
-                        + 92.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(5))
-            + self.eta1
-                * self.eta.powi(3)
-                * 120.0
-                * (2.0 * self.m * (-eta.powi(2) + 8.0 * eta + 14.0) / (1.0 - eta).powi(8)
-                    + (1.0 - self.m)
-                        * (-eta.powi(6) - 12.0 * eta.powi(5) + 120.0 * eta.powi(4)
-                            - 400.0 * eta.powi(3)
-                            + 660.0 * eta.powi(2)
-                            - 552.0 * eta
-                            + 188.0)
-                        / ((1.0 - eta) * (2.0 - eta)).powi(6))
+    fn cT1D3(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta.powi(2) * (3.0 * self.c.eta3(eta) + self.eta * self.c.eta4(eta))
     }
-    fn cT2D0(&self, eta: f64) -> f64 {
-        self.eta2
-            * 2.0
-            * (2.0 * self.m * (-eta.powi(2) + 5.0 * eta + 2.0) / (1.0 - eta).powi(5)
-                + (1.0 - self.m) * (eta.powi(3) + 6.0 * eta.powi(2) - 24.0 * eta + 20.0)
-                    / ((1.0 - eta) * (2.0 - eta)).powi(3))
-            + self.eta1.powi(2)
-                * 6.0
-                * (2.0 * self.m * (-eta.powi(2) + 6.0 * eta + 5.0) / (1.0 - eta).powi(6)
-                    + (1.0 - self.m)
-                        * (-eta.powi(4) - 8.0 * eta.powi(3) + 48.0 * eta.powi(2) - 80.0 * eta
-                            + 44.0)
-                        / ((1.0 - eta) * (2.0 - eta)).powi(4))
+    fn cT2D0(&mut self, eta: f64) -> f64 {
+        self.eta2 * self.c.eta1(eta) + self.eta1.powi(2) * self.c.eta2(eta)
     }
 }
 #[allow(non_snake_case)]
 impl PcSaftGlyPure {
-    fn i1T0D0(&self, eta: f64) -> f64 {
-        self.Ai0
-            + self.Ai1 * eta
-            + self.Ai2 * eta.powi(2)
-            + self.Ai3 * eta.powi(3)
-            + self.Ai4 * eta.powi(4)
-            + self.Ai5 * eta.powi(5)
-            + self.Ai6 * eta.powi(6)
+    fn i1T0D0(&mut self, eta: f64) -> f64 {
+        self.i1.eta0(eta)
     }
-    fn i1T0D1(&self, eta: f64) -> f64 {
-        self.Ai1 * eta
-            + self.Ai2 * 2.0 * eta.powi(2)
-            + self.Ai3 * 3.0 * eta.powi(3)
-            + self.Ai4 * 4.0 * eta.powi(4)
-            + self.Ai5 * 5.0 * eta.powi(5)
-            + self.Ai6 * 6.0 * eta.powi(6)
+    fn i1T0D1(&mut self, eta: f64) -> f64 {
+        eta * self.i1.eta1(eta)
     }
-    fn i1T0D2(&self, eta: f64) -> f64 {
-        self.Ai2 * 2.0 * eta.powi(2)
-            + self.Ai3 * 6.0 * eta.powi(3)
-            + self.Ai4 * 12.0 * eta.powi(4)
-            + self.Ai5 * 20.0 * eta.powi(5)
-            + self.Ai6 * 30.0 * eta.powi(6)
+    fn i1T0D2(&mut self, eta: f64) -> f64 {
+        eta.powi(2) * self.i1.eta2(eta)
     }
-    fn i1T0D3(&self, eta: f64) -> f64 {
-        self.Ai3 * 6.0 * eta.powi(3)
-            + self.Ai4 * 24.0 * eta.powi(4)
-            + self.Ai5 * 60.0 * eta.powi(5)
-            + self.Ai6 * 120.0 * eta.powi(6)
+    fn i1T0D3(&mut self, eta: f64) -> f64 {
+        eta.powi(3) * self.i1.eta3(eta)
     }
-    fn i1T0D4(&self, eta: f64) -> f64 {
-        self.Ai4 * 24.0 * eta.powi(4)
-            + self.Ai5 * 120.0 * eta.powi(5)
-            + self.Ai6 * 360.0 * eta.powi(6)
+    fn i1T0D4(&mut self, eta: f64) -> f64 {
+        eta.powi(4) * self.i1.eta4(eta)
     }
-    fn i1T1D0(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Ai1
-                + self.Ai2 * 2.0 * eta
-                + self.Ai3 * 3.0 * eta.powi(2)
-                + self.Ai4 * 4.0 * eta.powi(3)
-                + self.Ai5 * 5.0 * eta.powi(4)
-                + self.Ai6 * 6.0 * eta.powi(5))
+    fn i1T1D0(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.i1.eta1(eta)
     }
-    fn i1T1D1(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Ai1
-                + self.Ai2 * 4.0 * eta
-                + self.Ai3 * 9.0 * eta.powi(2)
-                + self.Ai4 * 16.0 * eta.powi(3)
-                + self.Ai5 * 25.0 * eta.powi(4)
-                + self.Ai6 * 36.0 * eta.powi(5))
+    fn i1T1D1(&mut self, eta: f64) -> f64 {
+        self.eta1 * (self.i1.eta1(eta) + self.eta * self.i1.eta2(eta))
     }
-    fn i1T1D2(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Ai2 * 4.0 * eta
-                + self.Ai3 * 18.0 * eta.powi(2)
-                + self.Ai4 * 48.0 * eta.powi(3)
-                + self.Ai5 * 100.0 * eta.powi(4)
-                + self.Ai6 * 180.0 * eta.powi(5))
+    fn i1T1D2(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta * (2.0 * self.i1.eta2(eta) + self.eta * self.i1.eta3(eta))
     }
-    fn i1T1D3(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Ai3 * 18.0 * eta.powi(2)
-                + self.Ai4 * 96.0 * eta.powi(3)
-                + self.Ai5 * 300.0 * eta.powi(4)
-                + self.Ai6 * 720.0 * eta.powi(5))
+    fn i1T1D3(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta.powi(2) * (3.0 * self.i1.eta3(eta) + self.eta * self.i1.eta4(eta))
     }
-    fn i1T2D0(&self, eta: f64) -> f64 {
-        self.eta1.powi(2)
-            * (self.Ai2 * 2.0
-                + self.Ai3 * 6.0 * eta
-                + self.Ai4 * 12.0 * eta.powi(2)
-                + self.Ai5 * 20.0 * eta.powi(3)
-                + self.Ai6 * 30.0 * eta.powi(4))
-            + self.eta2
-                * (self.Ai1
-                    + self.Ai2 * 2.0 * eta
-                    + self.Ai3 * 3.0 * eta.powi(2)
-                    + self.Ai4 * 4.0 * eta.powi(3)
-                    + self.Ai5 * 5.0 * eta.powi(4)
-                    + self.Ai6 * 6.0 * eta.powi(5))
+    fn i1T2D0(&mut self, eta: f64) -> f64 {
+        self.eta2 * self.i1.eta1(eta) + self.eta1.powi(2) * self.i1.eta2(eta)
     }
 }
 #[allow(non_snake_case)]
 impl PcSaftGlyPure {
     fn i2T0D0(&mut self) -> f64 {
-        if self.eta != self.i2T0D0.0 {
-            self.i2T0D0 = (
-                self.eta,
-                self.Bi0
-                    + self.Bi1 * self.eta
-                    + self.Bi2 * self.eta.powi(2)
-                    + self.Bi3 * self.eta.powi(3)
-                    + self.Bi4 * self.eta.powi(4)
-                    + self.Bi5 * self.eta.powi(5)
-                    + self.Bi6 * self.eta.powi(6),
-            )
-        }
-        self.i2T0D0.1
+        self.i2.eta0(self.eta)
     }
     fn i2T0D1(&mut self) -> f64 {
-        if self.eta != self.i2T0D1.0 {
-            self.i2T0D1 = (
-                self.eta,
-                self.Bi1 * self.eta
-                    + self.Bi2 * 2.0 * self.eta.powi(2)
-                    + self.Bi3 * 3.0 * self.eta.powi(3)
-                    + self.Bi4 * 4.0 * self.eta.powi(4)
-                    + self.Bi5 * 5.0 * self.eta.powi(5)
-                    + self.Bi6 * 6.0 * self.eta.powi(6),
-            )
-        }
-        self.i2T0D1.1
+        self.eta * self.i2.eta1(self.eta)
     }
     fn i2T0D2(&mut self) -> f64 {
-        if self.eta != self.i2T0D2.0 {
-            self.i2T0D2 = (
-                self.eta,
-                self.Bi2 * 2.0 * self.eta.powi(2)
-                    + self.Bi3 * 6.0 * self.eta.powi(3)
-                    + self.Bi4 * 12.0 * self.eta.powi(4)
-                    + self.Bi5 * 20.0 * self.eta.powi(5)
-                    + self.Bi6 * 30.0 * self.eta.powi(6),
-            )
-        }
-        self.i2T0D2.1
+        self.eta.powi(2) * self.i2.eta2(self.eta)
     }
-    fn i2T0D3(&self, eta: f64) -> f64 {
-        self.Bi3 * 6.0 * eta.powi(3)
-            + self.Bi4 * 24.0 * eta.powi(4)
-            + self.Bi5 * 60.0 * eta.powi(5)
-            + self.Bi6 * 120.0 * eta.powi(6)
+    fn i2T0D3(&mut self, eta: f64) -> f64 {
+        eta.powi(3) * self.i2.eta3(eta)
     }
-    fn i2T0D4(&self, eta: f64) -> f64 {
-        self.Bi4 * 24.0 * eta.powi(4)
-            + self.Bi5 * 120.0 * eta.powi(5)
-            + self.Bi6 * 360.0 * eta.powi(6)
+    fn i2T0D4(&mut self, eta: f64) -> f64 {
+        eta.powi(4) * self.i2.eta4(eta)
     }
-    fn i2T1D0(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Bi1
-                + self.Bi2 * 2.0 * eta
-                + self.Bi3 * 3.0 * eta.powi(2)
-                + self.Bi4 * 4.0 * eta.powi(3)
-                + self.Bi5 * 5.0 * eta.powi(4)
-                + self.Bi6 * 6.0 * eta.powi(5))
+    fn i2T1D0(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.i2.eta1(eta)
     }
-    fn i2T1D1(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Bi1
-                + self.Bi2 * 4.0 * eta
-                + self.Bi3 * 9.0 * eta.powi(2)
-                + self.Bi4 * 16.0 * eta.powi(3)
-                + self.Bi5 * 25.0 * eta.powi(4)
-                + self.Bi6 * 36.0 * eta.powi(5))
+    fn i2T1D1(&mut self, eta: f64) -> f64 {
+        self.eta1 * (self.i2.eta1(eta) + self.eta * self.i2.eta2(eta))
     }
-    fn i2T1D2(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Bi2 * 4.0 * eta
-                + self.Bi3 * 18.0 * eta.powi(2)
-                + self.Bi4 * 48.0 * eta.powi(3)
-                + self.Bi5 * 100.0 * eta.powi(4)
-                + self.Bi6 * 180.0 * eta.powi(5))
+    fn i2T1D2(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta * (2.0 * self.i2.eta2(eta) + self.eta * self.i2.eta3(eta))
     }
-    fn i2T1D3(&self, eta: f64) -> f64 {
-        self.eta1
-            * (self.Bi3 * 18.0 * eta.powi(2)
-                + self.Bi4 * 96.0 * eta.powi(3)
-                + self.Bi5 * 300.0 * eta.powi(4)
-                + self.Bi6 * 720.0 * eta.powi(5))
+    fn i2T1D3(&mut self, eta: f64) -> f64 {
+        self.eta1 * self.eta.powi(2) * (3.0 * self.i2.eta3(eta) + self.eta * self.i2.eta4(eta))
     }
-    fn i2T2D0(&self, eta: f64) -> f64 {
-        self.eta1.powi(2)
-            * (self.Bi2 * 2.0
-                + self.Bi3 * 6.0 * eta
-                + self.Bi4 * 12.0 * eta.powi(2)
-                + self.Bi5 * 20.0 * eta.powi(3)
-                + self.Bi6 * 30.0 * eta.powi(4))
-            + self.eta2
-                * (self.Bi1
-                    + self.Bi2 * 2.0 * eta
-                    + self.Bi3 * 3.0 * eta.powi(2)
-                    + self.Bi4 * 4.0 * eta.powi(3)
-                    + self.Bi5 * 5.0 * eta.powi(4)
-                    + self.Bi6 * 6.0 * eta.powi(5))
+    fn i2T2D0(&mut self, eta: f64) -> f64 {
+        self.eta2 * self.i2.eta1(eta) + self.eta1.powi(2) * self.i2.eta2(eta)
     }
 }
 #[allow(non_snake_case)]
