@@ -59,6 +59,16 @@ pub struct PcSaftPure {
     c: CTerm,   // Cterm
     i1: I1Term, // I1Term
     i2: I2Term, // I2Term
+    c_t0d0: (f64, f64),
+    c_t0d1: (f64, f64),
+    c_t0d2: (f64, f64),
+    c_t0d3: (f64, f64),
+    c_t0d4: (f64, f64),
+    c_t1d0: (f64, f64),
+    c_t1d1: (f64, f64),
+    c_t1d2: (f64, f64),
+    c_t1d3: (f64, f64),
+    c_t2d0: (f64, f64),
     c1_t0d0: (f64, f64),
     c1_t0d1: (f64, f64),
     c1_t0d2: (f64, f64),
@@ -124,6 +134,16 @@ impl PcSaftPure {
             c: CTerm::new(m),   // CTerm
             i1: I1Term::new(m), // I1Term
             i2: I2Term::new(m), // I1Term
+            c_t0d0: (0.0, 0.0),
+            c_t0d1: (0.0, 0.0),
+            c_t0d2: (0.0, 0.0),
+            c_t0d3: (0.0, 0.0),
+            c_t0d4: (0.0, 0.0),
+            c_t1d0: (0.0, 0.0),
+            c_t1d1: (0.0, 0.0),
+            c_t1d2: (0.0, 0.0),
+            c_t1d3: (0.0, 0.0),
+            c_t2d0: (0.0, 0.0),
             c1_t0d0: (0.0, 0.0),
             c1_t0d1: (0.0, 0.0),
             c1_t0d2: (0.0, 0.0),
@@ -1072,7 +1092,7 @@ impl PcSaftPure {
                 self.eta,
                 -6.0 * self.c_t0d1().powi(3) / self.c_t0d0().powi(4)
                     + 6.0 * self.c_t0d1() * self.c_t0d2() / self.c_t0d0().powi(3)
-                    - self.c_t0d3(self.eta) / self.c_t0d0().powi(2),
+                    - self.c_t0d3() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t0d3.1
@@ -1083,16 +1103,16 @@ impl PcSaftPure {
                 self.eta,
                 24.0 * self.c_t0d1().powi(4) / self.c_t0d0().powi(5)
                     - 36.0 * self.c_t0d1().powi(2) * self.c_t0d2() / self.c_t0d0().powi(4)
-                    + 8.0 * self.c_t0d1() * self.c_t0d3(self.eta) / self.c_t0d0().powi(3)
+                    + 8.0 * self.c_t0d1() * self.c_t0d3() / self.c_t0d0().powi(3)
                     + 6.0 * self.c_t0d2().powi(2) / self.c_t0d0().powi(3)
-                    - self.c_t0d4(self.eta) / self.c_t0d0().powi(2),
+                    - self.c_t0d4() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t0d4.1
     }
     fn c1_t1d0(&mut self) -> f64 {
         if self.c1_t1d0.0 != self.eta {
-            self.c1_t1d0 = (self.eta, -self.c_t1d0(self.eta) / self.c_t0d0().powi(2))
+            self.c1_t1d0 = (self.eta, -self.c_t1d0() / self.c_t0d0().powi(2))
         }
         self.c1_t1d0.1
     }
@@ -1100,8 +1120,8 @@ impl PcSaftPure {
         if self.c1_t1d1.0 != self.eta {
             self.c1_t1d1 = (
                 self.eta,
-                2.0 * self.c_t1d0(self.eta) * self.c_t0d1() / self.c_t0d0().powi(3)
-                    - self.c_t1d1(self.eta) / self.c_t0d0().powi(2),
+                2.0 * self.c_t1d0() * self.c_t0d1() / self.c_t0d0().powi(3)
+                    - self.c_t1d1() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t1d1.1
@@ -1110,10 +1130,10 @@ impl PcSaftPure {
         if self.c1_t1d2.0 != self.eta {
             self.c1_t1d2 = (
                 self.eta,
-                -6.0 * self.c_t1d0(self.eta) * self.c_t0d1().powi(2) / self.c_t0d0().powi(4)
-                    + 4.0 * self.c_t1d1(self.eta) * self.c_t0d1() / self.c_t0d0().powi(3)
-                    + 2.0 * self.c_t1d0(self.eta) * self.c_t0d2() / self.c_t0d0().powi(3)
-                    - self.c_t1d2(self.eta) / self.c_t0d0().powi(2),
+                -6.0 * self.c_t1d0() * self.c_t0d1().powi(2) / self.c_t0d0().powi(4)
+                    + 4.0 * self.c_t1d1() * self.c_t0d1() / self.c_t0d0().powi(3)
+                    + 2.0 * self.c_t1d0() * self.c_t0d2() / self.c_t0d0().powi(3)
+                    - self.c_t1d2() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t1d2.1
@@ -1122,14 +1142,13 @@ impl PcSaftPure {
         if self.c1_t1d3.0 != self.eta {
             self.c1_t1d3 = (
                 self.eta,
-                24.0 * self.c_t1d0(self.eta) * self.c_t0d1().powi(3) / self.c_t0d0().powi(5)
-                    - 18.0 * self.c_t1d1(self.eta) * self.c_t0d1().powi(2) / self.c_t0d0().powi(4)
-                    - 18.0 * self.c_t1d0(self.eta) * self.c_t0d1() * self.c_t0d2()
-                        / self.c_t0d0().powi(4)
-                    + 6.0 * self.c_t1d1(self.eta) * self.c_t0d2() / self.c_t0d0().powi(3)
-                    + 6.0 * self.c_t1d2(self.eta) * self.c_t0d1() / self.c_t0d0().powi(3)
-                    + 2.0 * self.c_t1d0(self.eta) * self.c_t0d3(self.eta) / self.c_t0d0().powi(3)
-                    - self.c_t1d3(self.eta) / self.c_t0d0().powi(2),
+                24.0 * self.c_t1d0() * self.c_t0d1().powi(3) / self.c_t0d0().powi(5)
+                    - 18.0 * self.c_t1d1() * self.c_t0d1().powi(2) / self.c_t0d0().powi(4)
+                    - 18.0 * self.c_t1d0() * self.c_t0d1() * self.c_t0d2() / self.c_t0d0().powi(4)
+                    + 6.0 * self.c_t1d1() * self.c_t0d2() / self.c_t0d0().powi(3)
+                    + 6.0 * self.c_t1d2() * self.c_t0d1() / self.c_t0d0().powi(3)
+                    + 2.0 * self.c_t1d0() * self.c_t0d3() / self.c_t0d0().powi(3)
+                    - self.c_t1d3() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t1d3.1
@@ -1138,8 +1157,8 @@ impl PcSaftPure {
         if self.c1_t2d0.0 != self.eta {
             self.c1_t2d0 = (
                 self.eta,
-                2.0 * self.c_t1d0(self.eta).powi(2) / self.c_t0d0().powi(3)
-                    - self.c_t2d0(self.eta) / self.c_t0d0().powi(2),
+                2.0 * self.c_t1d0().powi(2) / self.c_t0d0().powi(3)
+                    - self.c_t2d0() / self.c_t0d0().powi(2),
             )
         }
         self.c1_t2d0.1
@@ -1147,34 +1166,78 @@ impl PcSaftPure {
 }
 impl PcSaftPure {
     fn c_t0d0(&mut self) -> f64 {
-        self.c.eta0(self.eta)
+        if self.c_t0d0.0 != self.eta {
+            self.c_t0d0 = (self.eta, self.c.eta0(self.eta))
+        }
+        self.c_t0d0.1
     }
     fn c_t0d1(&mut self) -> f64 {
-        self.eta * self.c.eta1(self.eta)
+        if self.c_t0d1.0 != self.eta {
+            self.c_t0d1 = (self.eta, self.eta * self.c.eta1(self.eta))
+        }
+        self.c_t0d1.1
     }
     fn c_t0d2(&mut self) -> f64 {
-        self.eta.powi(2) * self.c.eta2(self.eta)
+        if self.c_t0d2.0 != self.eta {
+            self.c_t0d2 = (self.eta, self.eta.powi(2) * self.c.eta2(self.eta))
+        }
+        self.c_t0d2.1
     }
-    fn c_t0d3(&mut self, eta: f64) -> f64 {
-        eta.powi(3) * self.c.eta3(eta)
+    fn c_t0d3(&mut self) -> f64 {
+        if self.c_t0d3.0 != self.eta {
+            self.c_t0d3 = (self.eta, self.eta.powi(3) * self.c.eta3(self.eta))
+        }
+        self.c_t0d3.1
     }
-    fn c_t0d4(&mut self, eta: f64) -> f64 {
-        eta.powi(4) * self.c.eta4(eta)
+    fn c_t0d4(&mut self) -> f64 {
+        if self.c_t0d4.0 != self.eta {
+            self.c_t0d4 = (self.eta, self.eta.powi(4) * self.c.eta4(self.eta))
+        }
+        self.c_t0d4.1
     }
-    fn c_t1d0(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.c.eta1(eta)
+    fn c_t1d0(&mut self) -> f64 {
+        if self.c_t1d0.0 != self.eta {
+            self.c_t1d0 = (self.eta, self.eta_dt1 * self.c.eta1(self.eta))
+        }
+        self.c_t1d0.1
     }
-    fn c_t1d1(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * (self.c.eta1(eta) + self.eta * self.c.eta2(eta))
+    fn c_t1d1(&mut self) -> f64 {
+        if self.c_t1d1.0 != self.eta {
+            self.c_t1d1 = (
+                self.eta,
+                self.eta_dt1 * (self.c.eta1(self.eta) + self.eta * self.c.eta2(self.eta)),
+            )
+        }
+        self.c_t1d1.1
     }
-    fn c_t1d2(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.eta * (2.0 * self.c.eta2(eta) + self.eta * self.c.eta3(eta))
+    fn c_t1d2(&mut self) -> f64 {
+        if self.c_t1d2.0 != self.eta {
+            self.c_t1d2 = (
+                self.eta,
+                (self.eta_dt1 * self.eta)
+                    * (2.0 * self.c.eta2(self.eta) + self.eta * self.c.eta3(self.eta)),
+            )
+        }
+        self.c_t1d2.1
     }
-    fn c_t1d3(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.eta.powi(2) * (3.0 * self.c.eta3(eta) + self.eta * self.c.eta4(eta))
+    fn c_t1d3(&mut self) -> f64 {
+        if self.c_t1d3.0 != self.eta {
+            self.c_t1d3 = (
+                self.eta,
+                (self.eta_dt1 * self.eta.powi(2))
+                    * (3.0 * self.c.eta3(self.eta) + self.eta * self.c.eta4(self.eta)),
+            )
+        }
+        self.c_t1d3.1
     }
-    fn c_t2d0(&mut self, eta: f64) -> f64 {
-        self.eta_dt2 * self.c.eta1(eta) + self.eta_dt1.powi(2) * self.c.eta2(eta)
+    fn c_t2d0(&mut self) -> f64 {
+        if self.c_t2d0.0 != self.eta {
+            self.c_t2d0 = (
+                self.eta,
+                self.eta_dt2 * self.c.eta1(self.eta) + self.eta_dt1.powi(2) * self.c.eta2(self.eta),
+            )
+        }
+        self.c_t2d0.1
     }
 }
 impl PcSaftPure {
