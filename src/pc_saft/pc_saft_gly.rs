@@ -1907,7 +1907,7 @@ impl PcSaftGlyPure {
 mod tests {
     use super::*;
     #[test]
-    fn test_pc_saft_pure() {
+    fn test_pc_saft_gly_pure() {
         let (m, sigma, epsilon) = (2.8611, 2.6826, 205.35); // SO2
         let mut fluid = PcSaftGlyPure::new_fluid(m, sigma, epsilon);
         fluid.c_flash().unwrap();
