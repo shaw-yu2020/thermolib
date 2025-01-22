@@ -4,6 +4,7 @@ use crate::f64consts::{FRAC_NA_1E30, FRAC_PI_2, FRAC_PI_6, PI, R};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
+use std::iter::zip;
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftPure;
@@ -92,17 +93,12 @@ impl PcSaftPure {
         }
     }
 }
-
-/*
-以下是旧代码
-*/
-
 #[cfg_attr(feature = "with_pyo3", pymethods)]
-#[allow(non_snake_case)]
+#[allow(non_snake_case)] // For pymethods hhh
 impl PcSaftPure {
     #[cfg(feature = "with_pyo3")]
     #[new]
-    pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
+    pub fn py_new(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self::new_fluid(m, sigma, epsilon)
     }
     pub fn set_1_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64) {
@@ -130,33 +126,29 @@ impl PcSaftPure {
     pub fn print_derivatives(&mut self) {
         self.check_derivatives(true);
     }
-    pub fn td_unchecked(&mut self, temp: f64, rho_mol: f64) {
-        self.set_temperature_and_number_density(temp, rho_mol * FRAC_NA_1E30);
+    pub fn td_unchecked(&mut self, temp: f64, dens_mol: f64) {
+        self.set_temperature_and_number_density(temp, dens_mol * FRAC_NA_1E30);
         self.is_single_phase = true;
     }
     pub fn c_flash(&mut self) -> anyhow::Result<()> {
-        // Iteration from temp_c = 1000 eta_c = 1E-10
-        let mut temp_c = 1000.0;
-        let mut dens_c = (1E-10)
+        // Iteration from temp_c = 1000 dens_c = 1E-10
+        let mut temp_c = 1E3;
+        let mut dens_c = 1E-10
             / ((FRAC_PI_6 * self.m * self.sigma3)
                 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp_c).exp()).powi(3));
         // Define variables
-        let mut Dp_Drho_T = self.calc_Dp_Drho_T(temp_c, dens_c);
-        let mut D2p_DTrho;
-        let mut D2p_Drho2_T = self.calc_D2p_Drho2_T(temp_c, dens_c);
-        let mut D3p_DTrho2;
-        let mut D3p_Drho3_T;
+        let mut p_t0d1 = self.calc_Dp_Drho_T(temp_c, dens_c);
+        let mut p_t0d2 = self.calc_D2p_Drho2_T(temp_c, dens_c);
+        let (mut p_t1d1, mut p_t1d2, mut p_t0d3);
         for _i in 1..100000 {
-            D2p_DTrho = self.calc_D2p_DTrho(temp_c, dens_c);
-            D3p_DTrho2 = self.calc_D3p_DTrho2(temp_c, dens_c);
-            D3p_Drho3_T = self.calc_D3p_Drho3_T(temp_c, dens_c);
-            temp_c -= (Dp_Drho_T * D3p_Drho3_T - D2p_Drho2_T * D2p_Drho2_T)
-                / (D2p_DTrho * D3p_Drho3_T - D3p_DTrho2 * D2p_Drho2_T);
-            dens_c -= (Dp_Drho_T * D3p_DTrho2 - D2p_Drho2_T * D2p_DTrho)
-                / (D2p_Drho2_T * D3p_DTrho2 - D3p_Drho3_T * D2p_DTrho);
-            Dp_Drho_T = self.calc_Dp_Drho_T(temp_c, dens_c);
-            D2p_Drho2_T = self.calc_D2p_Drho2_T(temp_c, dens_c);
-            if Dp_Drho_T.abs() < 1E3 && D2p_Drho2_T.abs() < 1E6 {
+            p_t1d1 = self.calc_D2p_DTrho(temp_c, dens_c);
+            p_t1d2 = self.calc_D3p_DTrho2(temp_c, dens_c);
+            p_t0d3 = self.calc_D3p_Drho3_T(temp_c, dens_c);
+            temp_c -= (p_t0d1 * p_t0d3 - p_t0d2 * p_t0d2) / (p_t1d1 * p_t0d3 - p_t1d2 * p_t0d2);
+            dens_c -= (p_t0d1 * p_t1d2 - p_t0d2 * p_t1d1) / (p_t0d2 * p_t1d2 - p_t0d3 * p_t1d1);
+            p_t0d1 = self.calc_Dp_Drho_T(temp_c, dens_c);
+            p_t0d2 = self.calc_D2p_Drho2_T(temp_c, dens_c);
+            if p_t0d1.abs() < 1E3 && p_t0d2.abs() < 1E6 {
                 self.set_temperature_and_number_density(temp_c, dens_c);
                 self.is_single_phase = true;
                 return Ok(());
@@ -169,13 +161,13 @@ impl PcSaftPure {
         // Vapor phase: eta = 1E-10
         let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
         let mut rhov_num = rhov_num_guess;
-        let mut Dp_Drhov_T = self.calc_Dp_Drho_T(temp, rhov_num);
+        let mut p_t0d1_v = self.calc_Dp_Drho_T(temp, rhov_num);
         for _i in 1..100000 {
-            if Dp_Drhov_T.abs() < 1.0 {
+            if p_t0d1_v.abs() < 10.0 {
                 break;
             } else {
-                rhov_num -= Dp_Drhov_T / self.calc_D2p_Drho2_T(temp, rhov_num);
-                Dp_Drhov_T = self.calc_Dp_Drho_T(temp, rhov_num);
+                rhov_num -= p_t0d1_v / self.calc_D2p_Drho2_T(temp, rhov_num);
+                p_t0d1_v = self.calc_Dp_Drho_T(temp, rhov_num);
             }
         }
         let pv_limit = self.calc_p(temp, rhov_num);
@@ -185,23 +177,23 @@ impl PcSaftPure {
         // Liquid phase: eta = 0.5
         let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
         let mut rhol_num = rhol_num_guess;
-        let mut Dp_Drhol_T = self.calc_Dp_Drho_T(temp, rhol_num);
+        let mut p_t0d1_l = self.calc_Dp_Drho_T(temp, rhol_num);
         for _i in 1..100000 {
-            if Dp_Drhol_T.abs() < 1.0 {
+            if p_t0d1_l.abs() < 10.0 {
                 break;
             } else {
-                rhol_num -= Dp_Drhol_T / self.calc_D2p_Drho2_T(temp, rhol_num);
-                Dp_Drhol_T = self.calc_Dp_Drho_T(temp, rhol_num);
+                rhol_num -= p_t0d1_l / self.calc_D2p_Drho2_T(temp, rhol_num);
+                p_t0d1_l = self.calc_Dp_Drho_T(temp, rhol_num);
             }
-        }
-        if rhol_num < rhov_num {
-            return Err(anyhow!(PcSaftErr::NotConvForT));
         }
         let pl_limit = self.calc_p(temp, rhol_num);
         if pl_limit > pv_limit {
             return Err(anyhow!(PcSaftErr::NotConvForT));
         }
         // Iteration for saturation state
+        if rhol_num < rhov_num {
+            return Err(anyhow!(PcSaftErr::NotConvForT));
+        }
         let rhov_max = rhov_num;
         let lnphi_diff = |p: f64| {
             rhov_num = self.calc_density(temp, p, rhov_num_guess);
@@ -222,17 +214,17 @@ impl PcSaftPure {
             Ok(())
         }
     }
-    pub fn tp_flash(&mut self, temp: f64, p: f64) -> anyhow::Result<()> {
+    pub fn tp_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<()> {
         let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
         // Iteration from gas phase: eta = 1E-10
-        let rhov_num = self.calc_density(temp, p, 1E-10 / (FRAC_PI_6 * self.m * d3));
+        let rhov_num = self.calc_density(temp, pres, 1E-10 / (FRAC_PI_6 * self.m * d3));
         let lnphi_v = if rhov_num.is_nan() {
             f64::INFINITY
         } else {
             self.calc_lnphi(temp, rhov_num)
         };
         // Iteration from liquid phase: eta = 0.5
-        let rhol_num = self.calc_density(temp, p, 0.5 / (FRAC_PI_6 * self.m * d3));
+        let rhol_num = self.calc_density(temp, pres, 0.5 / (FRAC_PI_6 * self.m * d3));
         let lnphi_l = if rhol_num.is_nan() {
             f64::INFINITY
         } else {
@@ -280,9 +272,9 @@ impl PcSaftPure {
             Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
     }
-    pub fn w(&mut self, M: f64) -> anyhow::Result<f64> {
+    pub fn w(&mut self, molar_mass: f64) -> anyhow::Result<f64> {
         if self.is_single_phase {
-            Ok((self.calc_w2(self.temp, self.rho_num) / M).sqrt())
+            Ok((self.calc_w2(self.temp, self.rho_num) / molar_mass).sqrt())
         } else {
             Err(anyhow!(PcSaftErr::OnlyInSinglePhase))
         }
@@ -420,14 +412,12 @@ impl PcSaftPure {
             .collect()
     }
     pub fn vec_p(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
+        zip(temp, dens_num)
             .map(|(t, d)| self.calc_p(t, d))
             .collect()
     }
     pub fn vec_tp_flash(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
+        zip(temp, pres)
             .map(|(t, p)| {
                 if self.tp_flash(t, p).is_err() {
                     println!("tp_flash diverge in {} K {} Pa", t, p);
@@ -439,8 +429,7 @@ impl PcSaftPure {
             .collect()
     }
     pub fn vec_tp_flash_g(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
+        zip(temp, pres)
             .map(|(t, p)| {
                 let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
                 // Iteration from gas phase: eta = 1E-10
@@ -449,8 +438,7 @@ impl PcSaftPure {
             .collect()
     }
     pub fn vec_tp_flash_l(&mut self, temp: Vec<f64>, pres: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(pres)
+        zip(temp, pres)
             .map(|(t, p)| {
                 let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
                 // Iteration from gas phase: eta = 0.5
@@ -459,18 +447,21 @@ impl PcSaftPure {
             .collect()
     }
     pub fn vec_cp(&mut self, temp: Vec<f64>, dens_num: Vec<f64>) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
+        zip(temp, dens_num)
             .map(|(t, d)| self.calc_cp(t, d))
             .collect()
     }
-    pub fn vec_w(&mut self, temp: Vec<f64>, dens_num: Vec<f64>, M: f64) -> Vec<f64> {
-        temp.into_iter()
-            .zip(dens_num)
-            .map(|(t, d)| (self.calc_w2(t, d) / M).sqrt()) // m/s
+    pub fn vec_w(&mut self, temp: Vec<f64>, dens_num: Vec<f64>, molar_mass: f64) -> Vec<f64> {
+        zip(temp, dens_num)
+            .map(|(t, d)| (self.calc_w2(t, d) / molar_mass).sqrt()) // m/s
             .collect()
     }
 }
+
+/*
+以下是旧代码
+*/
+
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn calc_p(&mut self, temp: f64, rho_num: f64) -> f64 {
