@@ -59,6 +59,16 @@ pub struct PcSaftPure {
     c: CTerm,   // Cterm
     i1: I1Term, // I1Term
     i2: I2Term, // I2Term
+    i2_t0d0: (f64, f64),
+    i2_t0d1: (f64, f64),
+    i2_t0d2: (f64, f64),
+    i2_t0d3: (f64, f64),
+    i2_t0d4: (f64, f64),
+    i2_t1d0: (f64, f64),
+    i2_t1d1: (f64, f64),
+    i2_t1d2: (f64, f64),
+    i2_t1d3: (f64, f64),
+    i2_t2d0: (f64, f64),
     gii_t0d0: (f64, f64),
     gii_t0d1: (f64, f64),
     gii_t0d2: (f64, f64),
@@ -104,6 +114,16 @@ impl PcSaftPure {
             c: CTerm::new(m),   // CTerm
             i1: I1Term::new(m), // I1Term
             i2: I2Term::new(m), // I1Term
+            i2_t0d0: (0.0, 0.0),
+            i2_t0d1: (0.0, 0.0),
+            i2_t0d2: (0.0, 0.0),
+            i2_t0d3: (0.0, 0.0),
+            i2_t0d4: (0.0, 0.0),
+            i2_t1d0: (0.0, 0.0),
+            i2_t1d1: (0.0, 0.0),
+            i2_t1d2: (0.0, 0.0),
+            i2_t1d3: (0.0, 0.0),
+            i2_t2d0: (0.0, 0.0),
             gii_t0d0: (0.0, 0.0),
             gii_t0d1: (0.0, 0.0),
             gii_t0d2: (0.0, 0.0),
@@ -1137,34 +1157,77 @@ impl PcSaftPure {
 }
 impl PcSaftPure {
     fn i2_t0d0(&mut self) -> f64 {
-        self.i2.eta0(self.eta)
+        if self.i2_t0d0.0 != self.eta {
+            self.i2_t0d0 = (self.eta, self.i2.eta0(self.eta))
+        }
+        self.i2_t0d0.1
     }
     fn i2_t0d1(&mut self) -> f64 {
-        self.eta * self.i2.eta1(self.eta)
+        if self.i2_t0d1.0 != self.eta {
+            self.i2_t0d1 = (self.eta, self.eta * self.i2.eta1(self.eta))
+        }
+        self.i2_t0d1.1
     }
     fn i2_t0d2(&mut self) -> f64 {
-        self.eta.powi(2) * self.i2.eta2(self.eta)
+        if self.i2_t0d2.0 != self.eta {
+            self.i2_t0d2 = (self.eta, self.eta.powi(2) * self.i2.eta2(self.eta))
+        }
+        self.i2_t0d2.1
     }
     fn i2_t0d3(&mut self, eta: f64) -> f64 {
-        eta.powi(3) * self.i2.eta3(eta)
+        if self.i2_t0d3.0 != self.eta {
+            self.i2_t0d3 = (self.eta, eta.powi(3) * self.i2.eta3(eta))
+        }
+        self.i2_t0d3.1
     }
     fn i2_t0d4(&mut self, eta: f64) -> f64 {
-        eta.powi(4) * self.i2.eta4(eta)
+        if self.i2_t0d4.0 != self.eta {
+            self.i2_t0d4 = (self.eta, eta.powi(4) * self.i2.eta4(eta))
+        }
+        self.i2_t0d4.1
     }
     fn i2_t1d0(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.i2.eta1(eta)
+        if self.i2_t1d0.0 != self.eta {
+            self.i2_t1d0 = (self.eta, self.eta_dt1 * self.i2.eta1(eta))
+        }
+        self.i2_t1d0.1
     }
     fn i2_t1d1(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * (self.i2.eta1(eta) + self.eta * self.i2.eta2(eta))
+        if self.i2_t1d1.0 != self.eta {
+            self.i2_t1d1 = (
+                self.eta,
+                self.eta_dt1 * (self.i2.eta1(eta) + self.eta * self.i2.eta2(eta)),
+            )
+        }
+        self.i2_t1d1.1
     }
     fn i2_t1d2(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.eta * (2.0 * self.i2.eta2(eta) + self.eta * self.i2.eta3(eta))
+        if self.i2_t1d2.0 != self.eta {
+            self.i2_t1d2 = (
+                self.eta,
+                self.eta_dt1 * self.eta * (2.0 * self.i2.eta2(eta) + self.eta * self.i2.eta3(eta)),
+            )
+        }
+        self.i2_t1d2.1
     }
     fn i2_t1d3(&mut self, eta: f64) -> f64 {
-        self.eta_dt1 * self.eta.powi(2) * (3.0 * self.i2.eta3(eta) + self.eta * self.i2.eta4(eta))
+        if self.i2_t1d3.0 != self.eta {
+            self.i2_t1d3 = (
+                self.eta,
+                (self.eta_dt1 * self.eta.powi(2))
+                    * (3.0 * self.i2.eta3(eta) + self.eta * self.i2.eta4(eta)),
+            )
+        }
+        self.i2_t1d3.1
     }
     fn i2_t2d0(&mut self, eta: f64) -> f64 {
-        self.eta_dt2 * self.i2.eta1(eta) + self.eta_dt1.powi(2) * self.i2.eta2(eta)
+        if self.i2_t2d0.0 != self.eta {
+            self.i2_t2d0 = (
+                self.eta,
+                self.eta_dt2 * self.i2.eta1(eta) + self.eta_dt1.powi(2) * self.i2.eta2(eta),
+            )
+        }
+        self.i2_t2d0.1
     }
 }
 enum AssocType {
