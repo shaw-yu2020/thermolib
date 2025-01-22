@@ -59,6 +59,16 @@ pub struct PcSaftPure {
     c: CTerm,   // Cterm
     i1: I1Term, // I1Term
     i2: I2Term, // I2Term
+    gii_t0d0: (f64, f64),
+    gii_t0d1: (f64, f64),
+    gii_t0d2: (f64, f64),
+    gii_t0d3: (f64, f64),
+    gii_t0d4: (f64, f64),
+    gii_t1d0: (f64, f64),
+    gii_t1d1: (f64, f64),
+    gii_t1d2: (f64, f64),
+    gii_t1d3: (f64, f64),
+    gii_t2d0: (f64, f64),
 }
 impl PcSaftPure {
     pub fn new_fluid(m: f64, sigma: f64, epsilon: f64) -> Self {
@@ -94,6 +104,16 @@ impl PcSaftPure {
             c: CTerm::new(m),   // CTerm
             i1: I1Term::new(m), // I1Term
             i2: I2Term::new(m), // I1Term
+            gii_t0d0: (0.0, 0.0),
+            gii_t0d1: (0.0, 0.0),
+            gii_t0d2: (0.0, 0.0),
+            gii_t0d3: (0.0, 0.0),
+            gii_t0d4: (0.0, 0.0),
+            gii_t1d0: (0.0, 0.0),
+            gii_t1d1: (0.0, 0.0),
+            gii_t1d2: (0.0, 0.0),
+            gii_t1d3: (0.0, 0.0),
+            gii_t2d0: (0.0, 0.0),
         }
     }
 }
@@ -672,25 +692,25 @@ impl PcSaftPure {
                     + self.gii_t1d1() / self.gii_t0d0())
     }
     fn hc_t1d2(&mut self) -> f64 {
-        let gii_t1d0: f64 = self.gii_t1d0();
         self.m * self.hs_t1d2()
             + (1.0 - self.m)
-                * (2.0 / self.gii_t0d0().powi(3) * gii_t1d0 * self.gii_t0d1().powi(2)
+                * (2.0 / self.gii_t0d0().powi(3) * self.gii_t1d0() * self.gii_t0d1().powi(2)
                     - 2.0 / self.gii_t0d0().powi(2) * self.gii_t1d1() * self.gii_t0d1()
-                    - gii_t1d0 * self.gii_t0d2() / self.gii_t0d0().powi(2)
+                    - self.gii_t1d0() * self.gii_t0d2() / self.gii_t0d0().powi(2)
                     + self.gii_t1d2() / self.gii_t0d0())
     }
     fn hc_t1d3(&mut self) -> f64 {
-        let gii_t1d0: f64 = self.gii_t1d0();
-        let gii_t1d1: f64 = self.gii_t1d1();
         self.m * self.hs_t1d3()
             + (1.0 - self.m)
-                * (-6.0 / self.gii_t0d0().powi(4) * gii_t1d0 * self.gii_t0d1().powi(3)
-                    + 6.0 / self.gii_t0d0().powi(3) * gii_t1d1 * self.gii_t0d1().powi(2)
-                    + 6.0 / self.gii_t0d0().powi(3) * gii_t1d0 * self.gii_t0d1() * self.gii_t0d2()
-                    - 3.0 / self.gii_t0d0().powi(2) * gii_t1d1 * self.gii_t0d2()
+                * (-6.0 / self.gii_t0d0().powi(4) * self.gii_t1d0() * self.gii_t0d1().powi(3)
+                    + 6.0 / self.gii_t0d0().powi(3) * self.gii_t1d1() * self.gii_t0d1().powi(2)
+                    + 6.0 / self.gii_t0d0().powi(3)
+                        * self.gii_t1d0()
+                        * self.gii_t0d1()
+                        * self.gii_t0d2()
+                    - 3.0 / self.gii_t0d0().powi(2) * self.gii_t1d1() * self.gii_t0d2()
                     - 3.0 / self.gii_t0d0().powi(2) * self.gii_t1d2() * self.gii_t0d1()
-                    - gii_t1d0 * self.gii_t0d3() / self.gii_t0d0().powi(2)
+                    - self.gii_t1d0() * self.gii_t0d3() / self.gii_t0d0().powi(2)
                     + self.gii_t1d3() / self.gii_t0d0())
     }
     fn hc_t2d0(&mut self) -> f64 {
@@ -738,38 +758,98 @@ impl PcSaftPure {
 }
 impl PcSaftPure {
     fn gii_t0d0(&mut self) -> f64 {
-        (1.0 - 0.5 * self.eta) / (1.0 - self.eta).powi(3)
+        if self.gii_t0d0.0 != self.eta {
+            self.gii_t0d0 = (self.eta, (1.0 - 0.5 * self.eta) / (1.0 - self.eta).powi(3))
+        }
+        self.gii_t0d0.1
     }
     fn gii_t0d1(&mut self) -> f64 {
-        self.eta * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
+        if self.gii_t0d1.0 != self.eta {
+            self.gii_t0d1 = (
+                self.eta,
+                self.eta * (2.5 - self.eta) / (1.0 - self.eta).powi(4),
+            )
+        }
+        self.gii_t0d1.1
     }
     fn gii_t0d2(&mut self) -> f64 {
-        self.eta.powi(2) * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5)
+        if self.gii_t0d2.0 != self.eta {
+            self.gii_t0d2 = (
+                self.eta,
+                self.eta.powi(2) * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5),
+            )
+        }
+        self.gii_t0d2.1
     }
-    fn gii_t0d3(&self) -> f64 {
-        self.eta.powi(3) * (42.0 - 12.0 * self.eta) / (1.0 - self.eta).powi(6)
+    fn gii_t0d3(&mut self) -> f64 {
+        if self.gii_t0d3.0 != self.eta {
+            self.gii_t0d3 = (
+                self.eta,
+                self.eta.powi(3) * (42.0 - 12.0 * self.eta) / (1.0 - self.eta).powi(6),
+            )
+        }
+        self.gii_t0d3.1
     }
-    fn gii_t0d4(&self) -> f64 {
-        self.eta.powi(4) * (240.0 - 60.0 * self.eta) / (1.0 - self.eta).powi(7)
+    fn gii_t0d4(&mut self) -> f64 {
+        if self.gii_t0d4.0 != self.eta {
+            self.gii_t0d4 = (
+                self.eta,
+                self.eta.powi(4) * (240.0 - 60.0 * self.eta) / (1.0 - self.eta).powi(7),
+            )
+        }
+        self.gii_t0d4.1
     }
-    fn gii_t1d0(&self) -> f64 {
-        self.eta_dt1 * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
+    fn gii_t1d0(&mut self) -> f64 {
+        if self.gii_t1d0.0 != self.eta {
+            self.gii_t1d0 = (
+                self.eta,
+                self.eta_dt1 * (2.5 - self.eta) / (1.0 - self.eta).powi(4),
+            )
+        }
+        self.gii_t1d0.1
     }
-    fn gii_t1d1(&self) -> f64 {
-        self.eta_dt1 * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
-            + self.eta_dt1 * self.eta * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5)
+    fn gii_t1d1(&mut self) -> f64 {
+        if self.gii_t1d1.0 != self.eta {
+            self.gii_t1d1 = (
+                self.eta,
+                self.eta_dt1 * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
+                    + self.eta_dt1 * self.eta * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5),
+            )
+        }
+        self.gii_t1d1.1
     }
-    fn gii_t1d2(&self) -> f64 {
-        2.0 * self.eta_dt1 * self.eta * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5)
-            + self.eta_dt1 * self.eta.powi(2) * (42.0 - 12.0 * self.eta) / (1.0 - self.eta).powi(6)
+    fn gii_t1d2(&mut self) -> f64 {
+        if self.gii_t1d2.0 != self.eta {
+            self.gii_t1d2 = (
+                self.eta,
+                2.0 * self.eta_dt1 * self.eta * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5)
+                    + self.eta_dt1 * self.eta.powi(2) * (42.0 - 12.0 * self.eta)
+                        / (1.0 - self.eta).powi(6),
+            )
+        }
+        self.gii_t1d2.1
     }
-    fn gii_t1d3(&self) -> f64 {
-        3.0 * self.eta_dt1 * self.eta.powi(2) * (42.0 - 12.0 * self.eta) / (1.0 - self.eta).powi(6)
-            + self.eta_dt1 * self.eta.powi(3) * (240.0 - 60.0 * self.eta) / (1.0 - self.eta).powi(7)
+    fn gii_t1d3(&mut self) -> f64 {
+        if self.gii_t1d3.0 != self.eta {
+            self.gii_t1d3 = (
+                self.eta,
+                3.0 * self.eta_dt1 * self.eta.powi(2) * (42.0 - 12.0 * self.eta)
+                    / (1.0 - self.eta).powi(6)
+                    + self.eta_dt1 * self.eta.powi(3) * (240.0 - 60.0 * self.eta)
+                        / (1.0 - self.eta).powi(7),
+            )
+        }
+        self.gii_t1d3.1
     }
-    fn gii_t2d0(&self) -> f64 {
-        self.eta_dt2 * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
-            + self.eta_dt1.powi(2) * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5)
+    fn gii_t2d0(&mut self) -> f64 {
+        if self.gii_t2d0.0 != self.eta {
+            self.gii_t2d0 = (
+                self.eta,
+                self.eta_dt2 * (2.5 - self.eta) / (1.0 - self.eta).powi(4)
+                    + self.eta_dt1.powi(2) * (9.0 - 3.0 * self.eta) / (1.0 - self.eta).powi(5),
+            )
+        }
+        self.gii_t2d0.1
     }
 }
 impl PcSaftPure {
@@ -1373,7 +1453,7 @@ impl PcSaftPure {
     fn t_t0d3(&mut self) -> f64 {
         (self.epsilon_AB_temp.exp() - 1.0) * (self.gii_t0d3() + 3.0 * self.gii_t0d2())
     }
-    fn t_t0d4(&self) -> f64 {
+    fn t_t0d4(&mut self) -> f64 {
         (self.epsilon_AB_temp.exp() - 1.0) * (self.gii_t0d4() + 4.0 * self.gii_t0d3())
     }
     fn t_t1d0(&mut self) -> f64 {
