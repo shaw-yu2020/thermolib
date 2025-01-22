@@ -30,6 +30,7 @@ use std::iter::zip;
 pub struct PcSaftPure {
     m: f64,
     sigma3: f64,
+    epsilon_temp: f64,
     epsilon: f64,
     temp: f64,
     rho_num: f64,
@@ -45,6 +46,7 @@ pub struct PcSaftPure {
     // association term
     assoc_type: AssocType,
     kappa_AB_sigma3: f64,
+    epsilon_AB_temp: f64,
     epsilon_AB: f64,
     XA: f64,
     // modified aly_lee_cv0
@@ -63,6 +65,7 @@ impl PcSaftPure {
         Self {
             m,
             epsilon,
+            epsilon_temp: 0.0,
             sigma3: sigma.powi(3),
             temp: 1.0,
             rho_num: 1E-10,
@@ -78,6 +81,7 @@ impl PcSaftPure {
             // association term
             assoc_type: AssocType::Type0,
             kappa_AB_sigma3: 0.0,
+            epsilon_AB_temp: 0.0,
             epsilon_AB: 0.0,
             XA: 1.0,
             // modified aly_lee_cv0
@@ -338,14 +342,14 @@ impl PcSaftPure {
     }
     pub fn B(&mut self, temp: f64) -> f64 {
         let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D1(temp, rho_num) / rho_num;
+        let mut val_old: f64 = self.calc_r_t0d1(temp, rho_num) / rho_num;
         let mut val_new: f64 = 0.0;
         loop {
             rho_num /= 10.0;
             if rho_num < 1E-30 {
                 break;
             }
-            val_new = self.calc_rT0D1(temp, rho_num) / rho_num;
+            val_new = self.calc_r_t0d1(temp, rho_num) / rho_num;
             if (val_new / val_old - 1.0).abs() < 1E-9 {
                 break;
             }
@@ -355,14 +359,14 @@ impl PcSaftPure {
     }
     pub fn C(&mut self, temp: f64) -> f64 {
         let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
+        let mut val_old: f64 = self.calc_r_t0d2(temp, rho_num) / rho_num.powi(2);
         let mut val_new: f64 = 0.0;
         loop {
             rho_num /= 10.0;
             if rho_num < 1E-30 {
                 break;
             }
-            val_new = self.calc_rT0D2(temp, rho_num) / rho_num.powi(2);
+            val_new = self.calc_r_t0d2(temp, rho_num) / rho_num.powi(2);
             if (val_new / val_old - 1.0).abs() < 1E-9 {
                 break;
             }
@@ -372,14 +376,14 @@ impl PcSaftPure {
     }
     pub fn D(&mut self, temp: f64) -> f64 {
         let mut rho_num: f64 = 1E-9;
-        let mut val_old: f64 = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
+        let mut val_old: f64 = self.calc_r_t0d3(temp, rho_num) / rho_num.powi(3);
         let mut val_new: f64 = 0.0;
         loop {
             rho_num /= 10.0;
             if rho_num < 1E-30 {
                 break;
             }
-            val_new = self.calc_rT0D3(temp, rho_num) / rho_num.powi(3);
+            val_new = self.calc_r_t0d3(temp, rho_num) / rho_num.powi(3);
             if (val_new / val_old - 1.0).abs() < 1E-9 {
                 break;
             }
@@ -459,72 +463,72 @@ impl PcSaftPure {
 }
 impl PcSaftPure {
     fn calc_p(&mut self, temp: f64, rho_num: f64) -> f64 {
-        FRAC_RE30_NA * temp * rho_num * (1.0 + self.calc_rT0D1(temp, rho_num))
+        FRAC_RE30_NA * temp * rho_num * (1.0 + self.calc_r_t0d1(temp, rho_num))
     }
     fn calc_p_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         (FRAC_RE30_NA * temp)
-            * (1.0 + 2.0 * self.calc_rT0D1(temp, rho_num) + self.calc_rT0D2(temp, rho_num))
+            * (1.0 + 2.0 * self.calc_r_t0d1(temp, rho_num) + self.calc_r_t0d2(temp, rho_num))
     }
     fn calc_p_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num
-            * (2.0 * self.calc_rT0D1(temp, rho_num)
-                + 4.0 * self.calc_rT0D2(temp, rho_num)
-                + self.calc_rT0D3(temp, rho_num))
+            * (2.0 * self.calc_r_t0d1(temp, rho_num)
+                + 4.0 * self.calc_r_t0d2(temp, rho_num)
+                + self.calc_r_t0d3(temp, rho_num))
     }
     fn calc_p_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num.powi(2)
-            * (6.0 * self.calc_rT0D2(temp, rho_num)
-                + 6.0 * self.calc_rT0D3(temp, rho_num)
-                + self.calc_rT0D4(temp, rho_num))
+            * (6.0 * self.calc_r_t0d2(temp, rho_num)
+                + 6.0 * self.calc_r_t0d3(temp, rho_num)
+                + self.calc_r_t0d4(temp, rho_num))
     }
     fn calc_p_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         (FRAC_RE30_NA * temp)
             * (1.0
-                + 2.0 * self.calc_rT0D1(temp, rho_num)
-                + self.calc_rT0D2(temp, rho_num)
-                + 2.0 * self.calc_rT1D1(temp, rho_num)
-                + self.calc_rT1D2(temp, rho_num))
+                + 2.0 * self.calc_r_t0d1(temp, rho_num)
+                + self.calc_r_t0d2(temp, rho_num)
+                + 2.0 * self.calc_r_t1d1(temp, rho_num)
+                + self.calc_r_t1d2(temp, rho_num))
     }
     fn calc_p_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num
-            * (2.0 * self.calc_rT0D1(temp, rho_num)
-                + 4.0 * self.calc_rT0D2(temp, rho_num)
-                + self.calc_rT0D3(temp, rho_num)
-                + 2.0 * self.calc_rT1D1(temp, rho_num)
-                + 4.0 * self.calc_rT1D2(temp, rho_num)
-                + self.calc_rT1D3(temp, rho_num))
+            * (2.0 * self.calc_r_t0d1(temp, rho_num)
+                + 4.0 * self.calc_r_t0d2(temp, rho_num)
+                + self.calc_r_t0d3(temp, rho_num)
+                + 2.0 * self.calc_r_t1d1(temp, rho_num)
+                + 4.0 * self.calc_r_t1d2(temp, rho_num)
+                + self.calc_r_t1d3(temp, rho_num))
     }
     fn calc_w2(&mut self, temp: f64, rho_num: f64) -> f64 {
         R * temp
-            * ((1.0 + 2.0 * self.calc_rT0D1(temp, rho_num) + self.calc_rT0D2(temp, rho_num))
-                + (1.0 + self.calc_rT0D1(temp, rho_num) + self.calc_rT1D1(temp, rho_num)).powi(2)
+            * ((1.0 + 2.0 * self.calc_r_t0d1(temp, rho_num) + self.calc_r_t0d2(temp, rho_num))
+                + (1.0 + self.calc_r_t0d1(temp, rho_num) + self.calc_r_t1d1(temp, rho_num)).powi(2)
                     / (self.calc_ideal_cv(temp)
-                        - 2.0 * self.calc_rT1D0(temp, rho_num)
-                        - self.calc_rT2D0(temp, rho_num)))
+                        - 2.0 * self.calc_r_t1d0(temp, rho_num)
+                        - self.calc_r_t2d0(temp, rho_num)))
     }
     fn calc_cv(&mut self, temp: f64, rho_num: f64) -> f64 {
         R * (self.calc_ideal_cv(temp)
-            - 2.0 * self.calc_rT1D0(temp, rho_num)
-            - self.calc_rT2D0(temp, rho_num))
+            - 2.0 * self.calc_r_t1d0(temp, rho_num)
+            - self.calc_r_t2d0(temp, rho_num))
     }
     fn calc_cp(&mut self, temp: f64, rho_num: f64) -> f64 {
         R * (self.calc_ideal_cv(temp)
-            - 2.0 * self.calc_rT1D0(temp, rho_num)
-            - self.calc_rT2D0(temp, rho_num)
-            + (1.0 + self.calc_rT0D1(temp, rho_num) + self.calc_rT1D1(temp, rho_num)).powi(2)
-                / (1.0 + 2.0 * self.calc_rT0D1(temp, rho_num) + self.calc_rT0D2(temp, rho_num)))
+            - 2.0 * self.calc_r_t1d0(temp, rho_num)
+            - self.calc_r_t2d0(temp, rho_num)
+            + (1.0 + self.calc_r_t0d1(temp, rho_num) + self.calc_r_t1d1(temp, rho_num)).powi(2)
+                / (1.0 + 2.0 * self.calc_r_t0d1(temp, rho_num) + self.calc_r_t0d2(temp, rho_num)))
     }
     fn calc_cp_res(&mut self, temp: f64, rho_num: f64) -> f64 {
-        R * ((-1.0 - 2.0 * self.calc_rT1D0(temp, rho_num) - self.calc_rT2D0(temp, rho_num))
-            + (1.0 + self.calc_rT0D1(temp, rho_num) + self.calc_rT1D1(temp, rho_num)).powi(2)
-                / (1.0 + 2.0 * self.calc_rT0D1(temp, rho_num) + self.calc_rT0D2(temp, rho_num)))
+        R * ((-1.0 - 2.0 * self.calc_r_t1d0(temp, rho_num) - self.calc_r_t2d0(temp, rho_num))
+            + (1.0 + self.calc_r_t0d1(temp, rho_num) + self.calc_r_t1d1(temp, rho_num)).powi(2)
+                / (1.0 + 2.0 * self.calc_r_t0d1(temp, rho_num) + self.calc_r_t0d2(temp, rho_num)))
     }
     fn calc_h_res(&mut self, temp: f64, rho_num: f64) -> f64 {
-        R * temp * (-self.calc_rT1D0(temp, rho_num) + self.calc_rT0D1(temp, rho_num))
+        R * temp * (-self.calc_r_t1d0(temp, rho_num) + self.calc_r_t0d1(temp, rho_num))
     }
     fn calc_lnphi(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.calc_rT0D0(temp, rho_num) + self.calc_rT0D1(temp, rho_num)
-            - (1.0 + self.calc_rT0D1(temp, rho_num)).ln()
+        self.calc_r_t0d0(temp, rho_num) + self.calc_r_t0d1(temp, rho_num)
+            - (1.0 + self.calc_r_t0d1(temp, rho_num)).ln()
     }
     fn calc_density(&mut self, temp: f64, p: f64, rho_num_guess: f64) -> f64 {
         let mut rho_num = rho_num_guess;
@@ -559,21 +563,23 @@ impl PcSaftPure {
     fn set_temperature_and_number_density(&mut self, temp: f64, rho_num: f64) {
         if temp != self.temp {
             self.temp = temp;
-            self.m2e1s3 = self.m.powi(2) * (self.epsilon / temp) * self.sigma3;
-            self.m2e2s3 = self.m.powi(2) * (self.epsilon / temp).powi(2) * self.sigma3;
+            self.epsilon_temp = self.epsilon / temp;
+            self.epsilon_AB_temp = self.epsilon_AB / temp;
+            self.m2e1s3 = self.m.powi(2) * self.epsilon_temp * self.sigma3;
+            self.m2e2s3 = self.m.powi(2) * self.epsilon_temp.powi(2) * self.sigma3;
         } else if rho_num != self.rho_num {
         } else {
             return;
         }
         self.rho_num = rho_num;
-        let d = 1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp();
-        let d1 = -0.36 * (-3.0 * self.epsilon / temp).exp() * self.epsilon / temp;
-        let d2 = d1 * (3.0 * self.epsilon / temp - 2.0);
+        let d = 1.0 - 0.12 * (-3.0 * self.epsilon_temp).exp();
+        let d1 = -0.36 * (-3.0 * self.epsilon_temp).exp() * self.epsilon / temp;
+        let d2 = d1 * (3.0 * self.epsilon_temp - 2.0);
         self.eta = FRAC_PI_6 * rho_num * self.m * self.sigma3 * d.powi(3);
         self.eta_dt1 = FRAC_PI_2 * rho_num * self.m * self.sigma3 * d.powi(2) * d1;
         self.eta_dt2 = PI * rho_num * self.m * self.sigma3 * d * d1.powi(2)
             + FRAC_PI_2 * rho_num * self.m * self.sigma3 * d.powi(2) * d2;
-        match &mut self.assoc_type {
+        match self.assoc_type {
             AssocType::Type0 => (),
             AssocType::Type1 | AssocType::Type2B => {
                 let t = self.tT0D0();
@@ -590,43 +596,43 @@ impl PcSaftPure {
             + self.cv_C * (self.cv_D / temp / (self.cv_D / temp).sinh()).powi(2)
             + self.cv_E * (self.cv_F / temp / (self.cv_F / temp).cosh()).powi(2)
     }
-    fn calc_rT0D0(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t0d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT0D0() + self.dispT0D0() + self.assocT0D0()
     }
-    fn calc_rT0D1(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT0D1() + self.dispT0D1() + self.assocT0D1()
     }
-    fn calc_rT0D2(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT0D2() + self.dispT0D2() + self.assocT0D2()
     }
-    fn calc_rT0D3(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT0D3() + self.dispT0D3() + self.assocT0D3()
     }
-    fn calc_rT0D4(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT0D4() + self.dispT0D4() + self.assocT0D4()
     }
-    fn calc_rT1D0(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT1D0() + self.dispT1D0() + self.assocT1D0()
     }
-    fn calc_rT1D1(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT1D1() + self.dispT1D1() + self.assocT1D1()
     }
-    fn calc_rT1D2(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT1D2() + self.dispT1D2() + self.assocT1D2()
     }
-    fn calc_rT1D3(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t1d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT1D3() + self.dispT1D3() + self.assocT1D3()
     }
-    fn calc_rT2D0(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_r_t2d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.set_temperature_and_number_density(temp, rho_num);
         self.hcT2D0() + self.dispT2D0() + self.assocT2D0()
     }
@@ -1400,19 +1406,19 @@ impl PcSaftPure {
 #[allow(non_snake_case)]
 impl PcSaftPure {
     fn DeltaT0D0(&mut self) -> f64 {
-        self.giiT0D0() * ((self.epsilon_AB / self.temp).exp() - 1.0)
+        self.giiT0D0() * (self.epsilon_AB_temp.exp() - 1.0)
     }
     fn DeltaT0D1(&mut self) -> f64 {
-        self.giiT0D1() * ((self.epsilon_AB / self.temp).exp() - 1.0)
+        self.giiT0D1() * (self.epsilon_AB_temp.exp() - 1.0)
     }
     fn DeltaT0D2(&mut self) -> f64 {
-        self.giiT0D2() * ((self.epsilon_AB / self.temp).exp() - 1.0)
+        self.giiT0D2() * (self.epsilon_AB_temp.exp() - 1.0)
     }
     fn DeltaT0D3(&self) -> f64 {
-        self.giiT0D3() * ((self.epsilon_AB / self.temp).exp() - 1.0)
+        self.giiT0D3() * (self.epsilon_AB_temp.exp() - 1.0)
     }
     fn DeltaT0D4(&self) -> f64 {
-        self.giiT0D4() * ((self.epsilon_AB / self.temp).exp() - 1.0)
+        self.giiT0D4() * (self.epsilon_AB_temp.exp() - 1.0)
     }
     fn DeltaT1D0(&mut self) -> f64 {
         let epsilon_AB_T = self.epsilon_AB / self.temp;
@@ -1446,7 +1452,7 @@ impl PcSaftPure {
     pub fn check_derivatives(&mut self, print_val: bool) {
         let (t, d) = (self.temp, self.rho_num);
         if print_val {
-            println!("[rT0D0 == rT0D0] calc_rT0D0() ={}", self.calc_rT0D0(t, d));
+            println!("[rT0D0 == rT0D0] calc_r_t0d0 ={}", self.calc_r_t0d0(t, d));
         }
         let compare_val = |val_calc: f64, val_diff: f64| {
             assert_eq!(
@@ -1455,104 +1461,104 @@ impl PcSaftPure {
             )
         };
         // derivative for density
-        let val_calc = self.calc_rT0D1(t, d) / d;
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT0D0(t, dx), d);
+        let val_calc = self.calc_r_t0d1(t, d) / d;
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t0d0(t, dx), d);
         if print_val {
-            println!("[rT0D1 == rT0D1] calc_rT0D1() ={}", val_calc);
-            println!("[rT0D0 -> rT0D1] romberg_diff ={}", val_diff);
+            println!("[rT0D1 == rT0D1] calc_r_t0d1 ={}", val_calc);
+            println!("[rT0D0 -> rT0D1] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for density+density
-        let val_calc = self.calc_rT0D2(t, d) / d.powi(2);
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT0D1(t, dx) / dx, d);
+        let val_calc = self.calc_r_t0d2(t, d) / d.powi(2);
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t0d1(t, dx) / dx, d);
         if print_val {
-            println!("[rT0D2 == rT0D2] calc_rT0D2() ={}", val_calc);
-            println!("[rT0D1 -> rT0D2] romberg_diff ={}", val_diff);
+            println!("[rT0D2 == rT0D2] calc_r_t0d2 ={}", val_calc);
+            println!("[rT0D1 -> rT0D2] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for density+density+density
-        let val_calc = self.calc_rT0D3(t, d) / d.powi(3);
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT0D2(t, dx) / dx.powi(2), d);
+        let val_calc = self.calc_r_t0d3(t, d) / d.powi(3);
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t0d2(t, dx) / dx.powi(2), d);
         if print_val {
-            println!("[rT0D3 == rT0D3] calc_rT0D3() ={}", val_calc);
-            println!("[rT0D2 -> rT0D3] romberg_diff ={}", val_diff);
+            println!("[rT0D3 == rT0D3] calc_r_t0d3 ={}", val_calc);
+            println!("[rT0D2 -> rT0D3] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for density+density+density+density
-        let val_calc = self.calc_rT0D4(t, d) / d.powi(4);
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT0D3(t, dx) / dx.powi(3), d);
+        let val_calc = self.calc_r_t0d4(t, d) / d.powi(4);
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t0d3(t, dx) / dx.powi(3), d);
         if print_val {
-            println!("[rT0D4 == rT0D4] calc_rT0D4() ={}", val_calc);
-            println!("[rT0D3 -> rT0D4] romberg_diff ={}", val_diff);
+            println!("[rT0D4 == rT0D4] calc_r_t0d4 ={}", val_calc);
+            println!("[rT0D3 -> rT0D4] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for temperature
-        let val_calc = self.calc_rT1D0(t, d) / t;
-        let val_diff = romberg_diff(|tx: f64| self.calc_rT0D0(tx, d), t);
+        let val_calc = self.calc_r_t1d0(t, d) / t;
+        let val_diff = romberg_diff(|tx: f64| self.calc_r_t0d0(tx, d), t);
         if print_val {
-            println!("[rT1D0 == rT1D0] calc_rT1D0() ={}", val_calc);
-            println!("[rT0D0 -> rT1D0] romberg_diff ={}", val_diff);
+            println!("[rT1D0 == rT1D0] calc_r_t1d0 ={}", val_calc);
+            println!("[rT0D0 -> rT1D0] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for temperature+density
-        let val_calc = self.calc_rT1D1(t, d) / t / d;
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT1D0(t, dx) / t, d);
+        let val_calc = self.calc_r_t1d1(t, d) / t / d;
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t1d0(t, dx) / t, d);
         if print_val {
-            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
-            println!("[rT1D0 -> rT1D1] romberg_diff ={}", val_diff);
+            println!("[rT1D1 == rT1D1] calc_r_t1d1 ={}", val_calc);
+            println!("[rT1D0 -> rT1D1] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
-        let val_diff = romberg_diff(|tx: f64| self.calc_rT0D1(tx, d) / d, t);
+        let val_diff = romberg_diff(|tx: f64| self.calc_r_t0d1(tx, d) / d, t);
         if print_val {
-            println!("[rT1D1 == rT1D1] calc_rT1D1() ={}", val_calc);
-            println!("[rT0D1 -> rT1D1] romberg_diff ={}", val_diff);
+            println!("[rT1D1 == rT1D1] calc_r_t1d1 ={}", val_calc);
+            println!("[rT0D1 -> rT1D1] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for temperature+density+density
-        let val_calc = self.calc_rT1D2(t, d) / t / d.powi(2);
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT1D1(t, dx) / t / dx, d);
+        let val_calc = self.calc_r_t1d2(t, d) / t / d.powi(2);
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t1d1(t, dx) / t / dx, d);
         if print_val {
-            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
-            println!("[rT1D1 -> rT1D2] romberg_diff ={}", val_diff);
+            println!("[rT1D2 == rT1D2] calc_r_t1d2 ={}", val_calc);
+            println!("[rT1D1 -> rT1D2] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
-        let val_diff = romberg_diff(|tx: f64| self.calc_rT0D2(tx, d) / d.powi(2), t);
+        let val_diff = romberg_diff(|tx: f64| self.calc_r_t0d2(tx, d) / d.powi(2), t);
         if print_val {
-            println!("[rT1D2 == rT1D2] calc_rT1D2() ={}", val_calc);
-            println!("[rT0D2 -> rT1D2] romberg_diff ={}", val_diff);
+            println!("[rT1D2 == rT1D2] calc_r_t1d2 ={}", val_calc);
+            println!("[rT0D2 -> rT1D2] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for temperature+density+density+density
-        let val_calc = self.calc_rT1D3(t, d) / t / d.powi(3);
-        let val_diff = romberg_diff(|dx: f64| self.calc_rT1D2(t, dx) / t / dx.powi(2), d);
+        let val_calc = self.calc_r_t1d3(t, d) / t / d.powi(3);
+        let val_diff = romberg_diff(|dx: f64| self.calc_r_t1d2(t, dx) / t / dx.powi(2), d);
         if print_val {
-            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
-            println!("[rT1D2 -> rT1D3] romberg_diff ={}", val_diff);
+            println!("[rT1D3 == rT1D3] calc_r_t1d3 ={}", val_calc);
+            println!("[rT1D2 -> rT1D3] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
-        let val_diff = romberg_diff(|tx: f64| self.calc_rT0D3(tx, d) / d.powi(3), t);
+        let val_diff = romberg_diff(|tx: f64| self.calc_r_t0d3(tx, d) / d.powi(3), t);
         if print_val {
-            println!("[rT1D3 == rT1D3] calc_rT1D3() ={}", val_calc);
-            println!("[rT0D3 -> rT1D3] romberg_diff ={}", val_diff);
+            println!("[rT1D3 == rT1D3] calc_r_t1d3 ={}", val_calc);
+            println!("[rT0D3 -> rT1D3] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
         // derivative for temperature+temperature
-        let val_calc = self.calc_rT2D0(t, d) / t.powi(2);
-        let val_diff = romberg_diff(|tx: f64| self.calc_rT1D0(tx, d) / tx, t);
+        let val_calc = self.calc_r_t2d0(t, d) / t.powi(2);
+        let val_diff = romberg_diff(|tx: f64| self.calc_r_t1d0(tx, d) / tx, t);
         if print_val {
-            println!("[rT2D0 == rT2D0] calc_rT2D0() ={}", val_calc);
-            println!("[rT1D0 -> rT2D0] romberg_diff ={}", val_diff);
+            println!("[rT2D0 == rT2D0] calc_r_t2d0 ={}", val_calc);
+            println!("[rT1D0 -> rT2D0] romberg_dif ={}", val_diff);
         } else {
             compare_val(val_calc, val_diff);
         }
