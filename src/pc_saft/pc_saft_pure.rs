@@ -137,17 +137,17 @@ impl PcSaftPure {
             / ((FRAC_PI_6 * self.m * self.sigma3)
                 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp_c).exp()).powi(3));
         // Define variables
-        let mut p_t0d1 = self.calc_Dp_Drho_T(temp_c, dens_c);
-        let mut p_t0d2 = self.calc_D2p_Drho2_T(temp_c, dens_c);
+        let mut p_t0d1 = self.calc_p_t0d1(temp_c, dens_c);
+        let mut p_t0d2 = self.calc_p_t0d2(temp_c, dens_c);
         let (mut p_t1d1, mut p_t1d2, mut p_t0d3);
         for _i in 1..100000 {
-            p_t1d1 = self.calc_D2p_DTrho(temp_c, dens_c);
-            p_t1d2 = self.calc_D3p_DTrho2(temp_c, dens_c);
-            p_t0d3 = self.calc_D3p_Drho3_T(temp_c, dens_c);
+            p_t1d1 = self.calc_p_t1d1(temp_c, dens_c);
+            p_t1d2 = self.calc_p_t1d2(temp_c, dens_c);
+            p_t0d3 = self.calc_p_t0d3(temp_c, dens_c);
             temp_c -= (p_t0d1 * p_t0d3 - p_t0d2 * p_t0d2) / (p_t1d1 * p_t0d3 - p_t1d2 * p_t0d2);
             dens_c -= (p_t0d1 * p_t1d2 - p_t0d2 * p_t1d1) / (p_t0d2 * p_t1d2 - p_t0d3 * p_t1d1);
-            p_t0d1 = self.calc_Dp_Drho_T(temp_c, dens_c);
-            p_t0d2 = self.calc_D2p_Drho2_T(temp_c, dens_c);
+            p_t0d1 = self.calc_p_t0d1(temp_c, dens_c);
+            p_t0d2 = self.calc_p_t0d2(temp_c, dens_c);
             if p_t0d1.abs() < 1E3 && p_t0d2.abs() < 1E6 {
                 self.set_temperature_and_number_density(temp_c, dens_c);
                 self.is_single_phase = true;
@@ -161,13 +161,13 @@ impl PcSaftPure {
         // Vapor phase: eta = 1E-10
         let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
         let mut rhov_num = rhov_num_guess;
-        let mut p_t0d1_v = self.calc_Dp_Drho_T(temp, rhov_num);
+        let mut p_t0d1_v = self.calc_p_t0d1(temp, rhov_num);
         for _i in 1..100000 {
             if p_t0d1_v.abs() < 10.0 {
                 break;
             } else {
-                rhov_num -= p_t0d1_v / self.calc_D2p_Drho2_T(temp, rhov_num);
-                p_t0d1_v = self.calc_Dp_Drho_T(temp, rhov_num);
+                rhov_num -= p_t0d1_v / self.calc_p_t0d2(temp, rhov_num);
+                p_t0d1_v = self.calc_p_t0d1(temp, rhov_num);
             }
         }
         let pv_limit = self.calc_p(temp, rhov_num);
@@ -177,13 +177,13 @@ impl PcSaftPure {
         // Liquid phase: eta = 0.5
         let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
         let mut rhol_num = rhol_num_guess;
-        let mut p_t0d1_l = self.calc_Dp_Drho_T(temp, rhol_num);
+        let mut p_t0d1_l = self.calc_p_t0d1(temp, rhol_num);
         for _i in 1..100000 {
             if p_t0d1_l.abs() < 10.0 {
                 break;
             } else {
-                rhol_num -= p_t0d1_l / self.calc_D2p_Drho2_T(temp, rhol_num);
-                p_t0d1_l = self.calc_Dp_Drho_T(temp, rhol_num);
+                rhol_num -= p_t0d1_l / self.calc_p_t0d2(temp, rhol_num);
+                p_t0d1_l = self.calc_p_t0d1(temp, rhol_num);
             }
         }
         let pl_limit = self.calc_p(temp, rhol_num);
@@ -457,33 +457,27 @@ impl PcSaftPure {
             .collect()
     }
 }
-
-/*
-以下是旧代码
-*/
-
-#[allow(non_snake_case)]
 impl PcSaftPure {
     fn calc_p(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp * rho_num * (1.0 + self.calc_rT0D1(temp, rho_num))
     }
-    fn calc_Dp_Drho_T(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_p_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         (FRAC_RE30_NA * temp)
             * (1.0 + 2.0 * self.calc_rT0D1(temp, rho_num) + self.calc_rT0D2(temp, rho_num))
     }
-    fn calc_D2p_Drho2_T(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_p_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num
             * (2.0 * self.calc_rT0D1(temp, rho_num)
                 + 4.0 * self.calc_rT0D2(temp, rho_num)
                 + self.calc_rT0D3(temp, rho_num))
     }
-    fn calc_D3p_Drho3_T(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_p_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num.powi(2)
             * (6.0 * self.calc_rT0D2(temp, rho_num)
                 + 6.0 * self.calc_rT0D3(temp, rho_num)
                 + self.calc_rT0D4(temp, rho_num))
     }
-    fn calc_D2p_DTrho(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_p_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         (FRAC_RE30_NA * temp)
             * (1.0
                 + 2.0 * self.calc_rT0D1(temp, rho_num)
@@ -491,7 +485,7 @@ impl PcSaftPure {
                 + 2.0 * self.calc_rT1D1(temp, rho_num)
                 + self.calc_rT1D2(temp, rho_num))
     }
-    fn calc_D3p_DTrho2(&mut self, temp: f64, rho_num: f64) -> f64 {
+    fn calc_p_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         FRAC_RE30_NA * temp / rho_num
             * (2.0 * self.calc_rT0D1(temp, rho_num)
                 + 4.0 * self.calc_rT0D2(temp, rho_num)
@@ -534,17 +528,17 @@ impl PcSaftPure {
     }
     fn calc_density(&mut self, temp: f64, p: f64, rho_num_guess: f64) -> f64 {
         let mut rho_num = rho_num_guess;
-        let (mut p_diff, mut val_Dp_Drho_T, mut rho_num_diff);
+        let (mut p_diff, mut val_p_t0d1, mut rho_num_diff);
         for _i in 1..10000 {
             p_diff = self.calc_p(temp, rho_num) - p;
             if p_diff.abs() < f64::EPSILON {
                 return rho_num;
             }
-            val_Dp_Drho_T = self.calc_Dp_Drho_T(temp, rho_num);
-            if val_Dp_Drho_T.is_sign_negative() {
+            val_p_t0d1 = self.calc_p_t0d1(temp, rho_num);
+            if val_p_t0d1.is_sign_negative() {
                 return f64::NAN;
             }
-            rho_num_diff = p_diff / val_Dp_Drho_T;
+            rho_num_diff = p_diff / val_p_t0d1;
             if rho_num_diff.abs() < f64::EPSILON {
                 return rho_num;
             }
@@ -556,7 +550,11 @@ impl PcSaftPure {
         f64::NAN
     }
 }
-#[allow(non_snake_case)]
+
+/*
+以下是旧代码
+*/
+
 impl PcSaftPure {
     fn set_temperature_and_number_density(&mut self, temp: f64, rho_num: f64) {
         if temp != self.temp {
