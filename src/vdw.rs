@@ -68,7 +68,7 @@ impl Vdw {
         self.A = self.a * self.p / (R * self.T).powi(2);
         self.B = self.b * self.p / (R * self.T);
         let (zv, zl) = shengjin_roots(-self.B - 1.0, self.A, -self.A * self.B);
-        if zl == 0.0 {
+        if zl.is_sign_negative() {
             self.Z = zv;
             self.is_single_phase = true;
         } else {

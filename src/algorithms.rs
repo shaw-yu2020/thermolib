@@ -97,32 +97,26 @@ where
     }
     fx[N_DIM - 1][N_DIM - 1]
 }
-/// shengjin
+/// shengjin roots
 #[allow(non_snake_case)]
 pub fn shengjin_roots(b: f64, c: f64, d: f64) -> (f64, f64) {
     let A = b.powi(2) - 3.0 * c;
     let B = b * c - 9.0 * d;
     let C = c.powi(2) - 3.0 * b * d;
     let Delta = B.powi(2) - 4.0 * A * C;
-    if Delta.is_sign_positive() {
-        let Y1 = A * b + 1.5 * (-B + Delta.sqrt());
-        let Y2 = A * b + 1.5 * (-B - Delta.sqrt());
-        ((-b - (Y1.cbrt() + Y2.cbrt())) / 3.0, 0.0)
-    } else {
+    if Delta.is_sign_negative() {
         let SQRT_A = A.sqrt();
         let SQRT_3 = 3_f64.sqrt();
         let theta3 = ((2.0 * A * b - 3.0 * B) / (2.0 * A * SQRT_A)).acos() / 3.0;
         let theta3cos = theta3.cos();
-        let x1 = (-b - 2.0 * SQRT_A * theta3cos) / 3.0;
-        let x2 = (-b + SQRT_A * (theta3cos + SQRT_3 * theta3.sin())) / 3.0;
-        let x3 = (-b + SQRT_A * (theta3cos - SQRT_3 * theta3.sin())) / 3.0;
-        let Zv = x1.max(x2).max(x3);
-        let Zl = x1.min(x2).min(x3);
-        if Zl.is_sign_positive() {
-            (Zv, Zl)
-        } else {
-            (Zv, 0.0)
-        }
+        let x1 = -b - 2.0 * SQRT_A * theta3cos;
+        let x2 = -b + SQRT_A * (theta3cos + SQRT_3 * theta3.sin());
+        let x3 = -b + SQRT_A * (theta3cos - SQRT_3 * theta3.sin());
+        (x1.max(x2).max(x3) / 3.0, x1.min(x2).min(x3) / 3.0)
+    } else {
+        let Y1 = A * b + 1.5 * (-B + Delta.sqrt());
+        let Y2 = A * b + 1.5 * (-B - Delta.sqrt());
+        ((-b - (Y1.cbrt() + Y2.cbrt())) / 3.0, -1.0)
     }
 }
 /// unit test

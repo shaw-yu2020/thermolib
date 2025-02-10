@@ -81,7 +81,7 @@ impl Srk {
             / (R * self.T).powi(2);
         self.B = self.bc * self.p / (R * self.T);
         let (zv, zl) = shengjin_roots(-1.0, self.A - self.B - self.B.powi(2), -self.A * self.B);
-        if zl == 0.0 {
+        if zl.is_sign_negative() {
             self.Z = zv;
             self.is_single_phase = true;
         } else {

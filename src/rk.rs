@@ -75,7 +75,7 @@ impl Rk {
         self.A = self.a * self.p / R.powi(2) / self.T.powf(2.5);
         self.B = self.b * self.p / R / self.T;
         let (zv, zl) = shengjin_roots(-1.0, self.A - self.B - self.B.powi(2), -self.A * self.B);
-        if zl == 0.0 {
+        if zl.is_sign_negative() {
             self.Z = zv;
             self.is_single_phase = true;
         } else {

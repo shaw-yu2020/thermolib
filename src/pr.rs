@@ -98,7 +98,7 @@ impl Pr {
             self.A - 3.0 * self.B.powi(2) - 2.0 * self.B,
             -self.A * self.B + self.B.powi(2) + self.B.powi(3),
         );
-        if zl == 0.0 {
+        if zl.is_sign_negative() {
             self.Z = zv;
             self.is_single_phase = true;
         } else {
