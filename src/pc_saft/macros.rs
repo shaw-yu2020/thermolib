@@ -232,18 +232,18 @@ macro_rules! fn_flash {
                 if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
                     Err(anyhow!(PcSaftErr::NotConvForTP))
                 } else if lnphi_v.is_infinite() {
-                    self.td_unchecked(temp, rhol_num);
+                    self.eta_flash(temp, rhol_num);
                     self.is_single_phase = true;
                     Ok(())
                 } else if lnphi_l.is_infinite() {
-                    self.td_unchecked(temp, rhov_num);
+                    self.eta_flash(temp, rhov_num);
                     self.is_single_phase = true;
                     Ok(())
                 } else {
                     if lnphi_v < lnphi_l {
-                        self.td_unchecked(temp, rhov_num);
+                        self.eta_flash(temp, rhov_num);
                     } else {
-                        self.td_unchecked(temp, rhol_num);
+                        self.eta_flash(temp, rhol_num);
                     }
                     self.is_single_phase = true;
                     Ok(())

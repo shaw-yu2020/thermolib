@@ -38,7 +38,7 @@ mod tests {
         // PcSaftGlyPure::CH3OH
         let (m, sigma, epsilon) = (1.5255, 3.23, 188.9);
         let mut fluid = PcSaftGlyPure::new_fluid(m, sigma, epsilon);
-        fluid.set_2B_assoc_type(0.035176, 2899.5);
+        fluid.set_2B_assoc_term(0.035176, 2899.5);
         _fn_test!(fluid);
     }
 }

@@ -22,7 +22,7 @@ use std::f64::consts::FRAC_PI_6;
 /// fluid.tp_flash(273.15, 0.1e6).unwrap();
 /// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// let mut methanol = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9);
-/// methanol.set_2B_assoc_type(0.035176, 2899.5); // kappa_AB epsilon_AB
+/// methanol.set_2B_assoc_term(0.035176, 2899.5); // kappa_AB epsilon_AB
 /// methanol.tp_flash(298.15, 0.1e6).unwrap();
 /// assert_eq!(methanol.rho().unwrap().round(), 24676.0);
 /// ```
@@ -181,12 +181,12 @@ impl PcSaftGlyPure {
     pub fn new_py(m: f64, sigma: f64, epsilon: f64) -> Self {
         Self::new_fluid(m, sigma, epsilon)
     }
-    pub fn set_2B_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_2B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc_type = AssocType::Type2B;
         self.kappa_AB_sigma3 = kappa_AB * self.sigma3;
         self.epsilon_AB = epsilon_AB;
     }
-    pub fn set_3B_assoc_type(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_3B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc_type = AssocType::Type3B;
         self.kappa_AB_sigma3 = kappa_AB * self.sigma3;
         self.epsilon_AB = epsilon_AB;
@@ -209,7 +209,7 @@ impl PcSaftGlyPure {
     fn_check_derivatives!();
 }
 impl PcSaftGlyPure {
-    fn td_unchecked(&mut self, temp: f64, rho_num: f64) {
+    fn eta_flash(&mut self, temp: f64, rho_num: f64) {
         if temp != self.temp || rho_num != self.rho_num {
             self.temp = temp;
             self.rho_num = rho_num;
@@ -237,7 +237,7 @@ impl PcSaftGlyPure {
         }
     }
     fn r_t0d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d0(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d0(self.eta0)
             + self.rho_num
@@ -247,7 +247,7 @@ impl PcSaftGlyPure {
             + self.assoc_t0d0()
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d1(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d1(self.eta0)
             + self.rho_num
@@ -257,7 +257,7 @@ impl PcSaftGlyPure {
             + self.assoc_t0d1()
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d2(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d2(self.eta0)
             + self.rho_num
@@ -267,7 +267,7 @@ impl PcSaftGlyPure {
             + self.assoc_t0d2()
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d3(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d3(self.eta0)
             + self.rho_num
@@ -277,7 +277,7 @@ impl PcSaftGlyPure {
             + self.assoc_t0d3()
     }
     fn r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d4(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d4(self.eta0)
             + self.rho_num
@@ -287,7 +287,7 @@ impl PcSaftGlyPure {
             + self.assoc_t0d4()
     }
     fn r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d0(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d0(self.eta0, self.eta1)
             + self.rho_num
@@ -300,7 +300,7 @@ impl PcSaftGlyPure {
             + self.assoc_t1d0()
     }
     fn r_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d1(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d1(self.eta0, self.eta1)
             + self.rho_num
@@ -313,7 +313,7 @@ impl PcSaftGlyPure {
             + self.assoc_t1d1()
     }
     fn r_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d2(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d2(self.eta0, self.eta1)
             + self.rho_num
@@ -326,7 +326,7 @@ impl PcSaftGlyPure {
             + self.assoc_t1d2()
     }
     fn r_t1d3(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d3(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d3(self.eta0, self.eta1)
             + self.rho_num
@@ -339,7 +339,7 @@ impl PcSaftGlyPure {
             + self.assoc_t1d3()
     }
     fn r_t2d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.td_unchecked(temp, rho_num);
+        self.eta_flash(temp, rho_num);
         self.m * self.hs.t2d0(self.eta0, self.eta1, self.eta2)
             + (1.0 - self.m) * self.gii.lngii_t2d0(self.eta0, self.eta1, self.eta2)
             + self.rho_num
