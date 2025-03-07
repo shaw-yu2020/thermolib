@@ -32,8 +32,6 @@ pub struct PcSaftGlyPure {
     m: f64,
     sigma3: f64,
     epsilon: f64,
-    m2s3e1: f64,
-    m2s3e2: f64,
     hs: HsPure,     // HsPure
     gii: GiiPure,   // GiiPure
     disp: DispTerm, // DispTerm
@@ -105,11 +103,9 @@ impl PcSaftGlyPure {
             m,
             sigma3,
             epsilon,
-            m2s3e1: m.powi(2) * sigma3 * epsilon,
-            m2s3e2: m.powi(2) * sigma3 * epsilon.powi(2),
             hs: HsPure::new(),
             gii: GiiPure::new(),
-            disp: DispTerm::new(m),
+            disp: DispTerm::new(m, sigma3, epsilon),
             eta0: 0.0,
             eta1: 0.0,
             eta2: 0.0,
@@ -240,116 +236,72 @@ impl PcSaftGlyPure {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d0(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d0(self.eta0)
-            + self.rho_num
-                * self
-                    .disp
-                    .t0d0(self.m2s3e1 / temp, self.m2s3e2 / temp.powi(2), self.eta0)
+            + self.disp.t0d0(temp, rho_num, self.eta0)
             + self.assoc_t0d0()
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d1(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d1(self.eta0)
-            + self.rho_num
-                * self
-                    .disp
-                    .t0d1(self.m2s3e1 / temp, self.m2s3e2 / temp.powi(2), self.eta0)
+            + self.disp.t0d1(temp, rho_num, self.eta0)
             + self.assoc_t0d1()
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d2(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d2(self.eta0)
-            + self.rho_num
-                * self
-                    .disp
-                    .t0d2(self.m2s3e1 / temp, self.m2s3e2 / temp.powi(2), self.eta0)
+            + self.disp.t0d2(temp, rho_num, self.eta0)
             + self.assoc_t0d2()
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d3(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d3(self.eta0)
-            + self.rho_num
-                * self
-                    .disp
-                    .t0d3(self.m2s3e1 / temp, self.m2s3e2 / temp.powi(2), self.eta0)
+            + self.disp.t0d3(temp, rho_num, self.eta0)
             + self.assoc_t0d3()
     }
     fn r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t0d4(self.eta0)
             + (1.0 - self.m) * self.gii.lngii_t0d4(self.eta0)
-            + self.rho_num
-                * self
-                    .disp
-                    .t0d4(self.m2s3e1 / temp, self.m2s3e2 / temp.powi(2), self.eta0)
+            + self.disp.t0d4(temp, rho_num, self.eta0)
             + self.assoc_t0d4()
     }
     fn r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d0(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d0(self.eta0, self.eta1)
-            + self.rho_num
-                * self.disp.t1d0(
-                    self.m2s3e1 / temp,
-                    self.m2s3e2 / temp.powi(2),
-                    self.eta0,
-                    self.eta1,
-                )
+            + self.disp.t1d0(temp, rho_num, self.eta0, self.eta1)
             + self.assoc_t1d0()
     }
     fn r_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d1(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d1(self.eta0, self.eta1)
-            + self.rho_num
-                * self.disp.t1d1(
-                    self.m2s3e1 / temp,
-                    self.m2s3e2 / temp.powi(2),
-                    self.eta0,
-                    self.eta1,
-                )
+            + self.disp.t1d1(temp, rho_num, self.eta0, self.eta1)
             + self.assoc_t1d1()
     }
     fn r_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d2(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d2(self.eta0, self.eta1)
-            + self.rho_num
-                * self.disp.t1d2(
-                    self.m2s3e1 / temp,
-                    self.m2s3e2 / temp.powi(2),
-                    self.eta0,
-                    self.eta1,
-                )
+            + self.disp.t1d2(temp, rho_num, self.eta0, self.eta1)
             + self.assoc_t1d2()
     }
     fn r_t1d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t1d3(self.eta0, self.eta1)
             + (1.0 - self.m) * self.gii.lngii_t1d3(self.eta0, self.eta1)
-            + self.rho_num
-                * self.disp.t1d3(
-                    self.m2s3e1 / temp,
-                    self.m2s3e2 / temp.powi(2),
-                    self.eta0,
-                    self.eta1,
-                )
+            + self.disp.t1d3(temp, rho_num, self.eta0, self.eta1)
             + self.assoc_t1d3()
     }
     fn r_t2d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         self.eta_flash(temp, rho_num);
         self.m * self.hs.t2d0(self.eta0, self.eta1, self.eta2)
             + (1.0 - self.m) * self.gii.lngii_t2d0(self.eta0, self.eta1, self.eta2)
-            + self.rho_num
-                * self.disp.t2d0(
-                    self.m2s3e1 / temp,
-                    self.m2s3e2 / temp.powi(2),
-                    self.eta0,
-                    self.eta1,
-                    self.eta2,
-                )
+            + self
+                .disp
+                .t2d0(temp, rho_num, self.eta0, self.eta1, self.eta2)
             + self.assoc_t2d0()
     }
 }

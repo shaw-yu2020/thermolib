@@ -1,6 +1,7 @@
 use std::f64::consts::{PI, TAU};
 pub struct DispTerm {
-    m: f64,
+    coef1: f64,
+    coef2: f64,
     c: CTerm,   // CTerm
     i1: I1Term, // I1Term
     i2: I2Term, // I2Term
@@ -15,9 +16,10 @@ pub struct DispTerm {
     c1t1d3: (f64, f64),
 }
 impl DispTerm {
-    pub fn new(m: f64) -> Self {
+    pub fn new(m: f64, sigma3: f64, epsilon: f64) -> Self {
         Self {
-            m,
+            coef1: -TAU * m.powi(2) * sigma3 * epsilon,
+            coef2: -PI * m.powi(3) * sigma3 * epsilon.powi(2),
             c: CTerm::new(m),   // CTerm
             i1: I1Term::new(m), // I1Term
             i2: I2Term::new(m), // I1Term
@@ -32,104 +34,94 @@ impl DispTerm {
             c1t1d3: (0.0, 0.0),
         }
     }
-    pub fn t0d0(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64) -> f64 {
-        -TAU * m2s3e1 * self.i1.t0d0(eta)
-            - PI * m2s3e2 * self.m * self.c1t0d0(eta) * self.i2.t0d0(eta)
+    pub fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t0d0(eta)
+                + self.coef2 / temp.powi(2) * self.c1t0d0(eta) * self.i2.t0d0(eta))
     }
-    pub fn t0d1(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64) -> f64 {
-        -TAU * m2s3e1 * self.i1.t0d1(eta)
-            - (PI * m2s3e2 * self.m)
-                * (self.c1t0d1(eta) * self.i2.t0d0(eta) + self.c1t0d0(eta) * self.i2.t0d1(eta))
+    pub fn t0d1(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t0d1(eta)
+                + self.coef2 / temp.powi(2)
+                    * (self.c1t0d1(eta) * self.i2.t0d0(eta) + self.c1t0d0(eta) * self.i2.t0d1(eta)))
     }
-    pub fn t0d2(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64) -> f64 {
-        -TAU * m2s3e1 * self.i1.t0d2(eta)
-            - (PI * m2s3e2 * self.m)
-                * (self.c1t0d2(eta) * self.i2.t0d0(eta)
-                    + 2.0 * self.c1t0d1(eta) * self.i2.t0d1(eta)
-                    + self.c1t0d0(eta) * self.i2.t0d2(eta))
+    pub fn t0d2(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t0d2(eta)
+                + self.coef2 / temp.powi(2)
+                    * (self.c1t0d2(eta) * self.i2.t0d0(eta)
+                        + 2.0 * self.c1t0d1(eta) * self.i2.t0d1(eta)
+                        + self.c1t0d0(eta) * self.i2.t0d2(eta)))
     }
-    pub fn t0d3(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64) -> f64 {
-        -TAU * m2s3e1 * self.i1.t0d3(eta)
-            - (PI * m2s3e2 * self.m)
-                * (self.c1t0d3(eta) * self.i2.t0d0(eta)
-                    + 3.0 * self.c1t0d2(eta) * self.i2.t0d1(eta)
-                    + 3.0 * self.c1t0d1(eta) * self.i2.t0d2(eta)
-                    + self.c1t0d0(eta) * self.i2.t0d3(eta))
+    pub fn t0d3(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t0d3(eta)
+                + self.coef2 / temp.powi(2)
+                    * (self.c1t0d3(eta) * self.i2.t0d0(eta)
+                        + 3.0 * self.c1t0d2(eta) * self.i2.t0d1(eta)
+                        + 3.0 * self.c1t0d1(eta) * self.i2.t0d2(eta)
+                        + self.c1t0d0(eta) * self.i2.t0d3(eta)))
     }
-    pub fn t0d4(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64) -> f64 {
-        -TAU * m2s3e1 * self.i1.t0d4(eta)
-            - (PI * m2s3e2 * self.m)
-                * (self.c1t0d4(eta) * self.i2.t0d0(eta)
-                    + 4.0 * self.c1t0d3(eta) * self.i2.t0d1(eta)
-                    + 6.0 * self.c1t0d2(eta) * self.i2.t0d2(eta)
-                    + 4.0 * self.c1t0d1(eta) * self.i2.t0d3(eta)
-                    + self.c1t0d0(eta) * self.i2.t0d4(eta))
+    pub fn t0d4(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t0d4(eta)
+                + self.coef2 / temp.powi(2)
+                    * (self.c1t0d4(eta) * self.i2.t0d0(eta)
+                        + 4.0 * self.c1t0d3(eta) * self.i2.t0d1(eta)
+                        + 6.0 * self.c1t0d2(eta) * self.i2.t0d2(eta)
+                        + 4.0 * self.c1t0d1(eta) * self.i2.t0d3(eta)
+                        + self.c1t0d0(eta) * self.i2.t0d4(eta)))
     }
-    pub fn t1d0(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64, eta1: f64) -> f64 {
-        -TAU * m2s3e1 * (eta1 * self.i1.t1d0(eta) - self.i1.t0d0(eta))
-            - (PI * m2s3e2 * self.m)
-                * (eta1
-                    * (self.c1t1d0(eta) * self.i2.t0d0(eta) + self.c1t0d0(eta) * self.i2.t1d0(eta))
-                    - 2.0 * self.c1t0d0(eta) * self.i2.t0d0(eta))
+    pub fn t1d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t1d0(eta, eta1)
+                + self.coef2 / temp.powi(2)
+                    * (eta1 * self.c1t1d0(eta) * self.i2.t0d0(eta)
+                        + self.c1t0d0(eta) * self.i2.t1d0(eta, eta1)))
     }
-    pub fn t1d1(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64, eta1: f64) -> f64 {
-        -TAU * m2s3e1 * (eta1 * self.i1.t1d1(eta) - self.i1.t0d1(eta))
-            - PI * m2s3e2
-                * self.m
-                * (eta1
-                    * (self.c1t1d1(eta) * self.i2.t0d0(eta)
-                        + self.c1t1d0(eta) * self.i2.t0d1(eta)
-                        + self.c1t0d1(eta) * self.i2.t1d0(eta)
-                        + self.c1t0d0(eta) * self.i2.t1d1(eta))
-                    - 2.0
-                        * (self.c1t0d1(eta) * self.i2.t0d0(eta)
-                            + self.c1t0d0(eta) * self.i2.t0d1(eta)))
+    pub fn t1d1(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t1d1(eta, eta1)
+                + self.coef2 / temp.powi(2)
+                    * (eta1
+                        * (self.c1t1d1(eta) * self.i2.t0d0(eta)
+                            + self.c1t1d0(eta) * self.i2.t0d1(eta))
+                        + self.c1t0d1(eta) * self.i2.t1d0(eta, eta1)
+                        + self.c1t0d0(eta) * self.i2.t1d1(eta, eta1)))
     }
-    pub fn t1d2(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64, eta1: f64) -> f64 {
-        -TAU * m2s3e1 * (eta1 * self.i1.t1d2(eta) - self.i1.t0d2(eta))
-            - (PI * m2s3e2 * self.m)
-                * (eta1
-                    * (self.c1t1d2(eta) * self.i2.t0d0(eta)
-                        + 2.0 * self.c1t1d1(eta) * self.i2.t0d1(eta)
-                        + self.c1t1d0(eta) * self.i2.t0d2(eta)
-                        + self.c1t0d2(eta) * self.i2.t1d0(eta)
-                        + 2.0 * self.c1t0d1(eta) * self.i2.t1d1(eta)
-                        + self.c1t0d0(eta) * self.i2.t1d2(eta))
-                    - 2.0
-                        * (self.c1t0d2(eta) * self.i2.t0d0(eta)
-                            + 2.0 * self.c1t0d1(eta) * self.i2.t0d1(eta)
-                            + self.c1t0d0(eta) * self.i2.t0d2(eta)))
+    pub fn t1d2(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t1d2(eta, eta1)
+                + self.coef2 / temp.powi(2)
+                    * (eta1
+                        * (self.c1t1d2(eta) * self.i2.t0d0(eta)
+                            + 2.0 * self.c1t1d1(eta) * self.i2.t0d1(eta)
+                            + self.c1t1d0(eta) * self.i2.t0d2(eta))
+                        + self.c1t0d2(eta) * self.i2.t1d0(eta, eta1)
+                        + 2.0 * self.c1t0d1(eta) * self.i2.t1d1(eta, eta1)
+                        + self.c1t0d0(eta) * self.i2.t1d2(eta, eta1)))
     }
-    pub fn t1d3(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64, eta1: f64) -> f64 {
-        -TAU * m2s3e1 * (eta1 * self.i1.t1d3(eta) - self.i1.t0d3(eta))
-            - (PI * m2s3e2 * self.m)
-                * (eta1
-                    * (self.c1t1d3(eta) * self.i2.t0d0(eta)
-                        + 3.0 * self.c1t1d2(eta) * self.i2.t0d1(eta)
-                        + 3.0 * self.c1t1d1(eta) * self.i2.t0d2(eta)
-                        + self.c1t1d0(eta) * self.i2.t0d3(eta)
-                        + self.c1t0d3(eta) * self.i2.t1d0(eta)
-                        + 3.0 * self.c1t0d2(eta) * self.i2.t1d1(eta)
-                        + 3.0 * self.c1t0d1(eta) * self.i2.t1d2(eta)
-                        + self.c1t0d0(eta) * self.i2.t1d3(eta))
-                    - 2.0
-                        * (self.c1t0d3(eta) * self.i2.t0d0(eta)
-                            + 3.0 * self.c1t0d2(eta) * self.i2.t0d1(eta)
-                            + 3.0 * self.c1t0d1(eta) * self.i2.t0d2(eta)
-                            + self.c1t0d0(eta) * self.i2.t0d3(eta)))
+    pub fn t1d3(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t1d3(eta, eta1)
+                + self.coef2 / temp.powi(2)
+                    * (eta1
+                        * (self.c1t1d3(eta) * self.i2.t0d0(eta)
+                            + 3.0 * self.c1t1d2(eta) * self.i2.t0d1(eta)
+                            + 3.0 * self.c1t1d1(eta) * self.i2.t0d2(eta)
+                            + self.c1t1d0(eta) * self.i2.t0d3(eta))
+                        + self.c1t0d3(eta) * self.i2.t1d0(eta, eta1)
+                        + 3.0 * self.c1t0d2(eta) * self.i2.t1d1(eta, eta1)
+                        + 3.0 * self.c1t0d1(eta) * self.i2.t1d2(eta, eta1)
+                        + self.c1t0d0(eta) * self.i2.t1d3(eta, eta1)))
     }
-    pub fn t2d0(&mut self, m2s3e1: f64, m2s3e2: f64, eta: f64, eta1: f64, eta2: f64) -> f64 {
-        -TAU * m2s3e1
-            * (self.i1.t2d0(eta, eta1, eta2) - 2.0 * eta1 * self.i1.t1d0(eta)
-                + 2.0 * self.i1.t0d0(eta))
-            - (PI * m2s3e2 * self.m)
-                * (self.c1t2d0(eta, eta1, eta2) * self.i2.t0d0(eta)
-                    + 2.0 * eta1.powi(2) * self.c1t1d0(eta) * self.i2.t1d0(eta)
-                    + self.c1t0d0(eta) * self.i2.t2d0(eta, eta1, eta2)
-                    - (4.0 * eta1)
-                        * (self.c1t1d0(eta) * self.i2.t0d0(eta)
-                            + self.c1t0d0(eta) * self.i2.t1d0(eta))
-                    + 6.0 * self.c1t0d0(eta) * self.i2.t0d0(eta))
+    pub fn t2d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64, eta2: f64) -> f64 {
+        rho_num
+            * (self.coef1 / temp * self.i1.t2d0(eta, eta1, eta2)
+                + self.coef2 / temp.powi(2)
+                    * (self.c1t2d0(eta, eta1, eta2) * self.i2.t0d0(eta)
+                        + 2.0 * eta1 * self.c1t1d0(eta) * self.i2.t1d0(eta, eta1)
+                        + self.c1t0d0(eta) * self.i2.t2d0(eta, eta1, eta2)))
     }
 }
 impl DispTerm {
@@ -335,18 +327,11 @@ struct I1Term {
     a4: f64,
     a5: f64,
     a6: f64,
-    // cached variables 0
-    eta0: (f64, f64),
-    eta1: (f64, f64),
-    eta2: (f64, f64),
-    // cached variables 1
+    // cached variables
+    t0d0: (f64, f64),
     t0d1: (f64, f64),
     t0d2: (f64, f64),
     t0d3: (f64, f64),
-    t0d4: (f64, f64),
-    t1d1: (f64, f64),
-    t1d2: (f64, f64),
-    t1d3: (f64, f64),
 }
 // Universal Model Constants
 const A00: f64 = 0.9105631445;
@@ -382,23 +367,18 @@ impl I1Term {
             a4: A04 + m1 * A14 + m12 * A24,
             a5: A05 + m1 * A15 + m12 * A25,
             a6: A06 + m1 * A16 + m12 * A26,
-            // cached variables 0
-            eta0: (0.0, 0.0),
-            eta1: (0.0, 0.0),
-            eta2: (0.0, 0.0),
-            // cached variables 1
+            // cached variables
+            t0d0: (0.0, 0.0),
             t0d1: (0.0, 0.0),
             t0d2: (0.0, 0.0),
             t0d3: (0.0, 0.0),
-            t0d4: (0.0, 0.0),
-            t1d1: (0.0, 0.0),
-            t1d2: (0.0, 0.0),
-            t1d3: (0.0, 0.0),
         }
     }
-    fn eta0(&mut self, eta: f64) -> f64 {
-        if eta != self.eta0.0 {
-            self.eta0 = (
+    /// equal to = [rho/T *i1]_t0d0 / {rho/T}
+    /// equal to = i1t0d0
+    fn t0d0(&mut self, eta: f64) -> f64 {
+        if eta != self.t0d0.0 {
+            self.t0d0 = (
                 eta,
                 self.a0
                     + self.a1 * eta
@@ -409,56 +389,11 @@ impl I1Term {
                     + self.a6 * eta.powi(6),
             )
         }
-        self.eta0.1
+        self.t0d0.1
     }
-    fn eta1(&mut self, eta: f64) -> f64 {
-        if eta != self.eta1.0 {
-            self.eta1 = (
-                eta,
-                self.a1
-                    + self.a2 * 2.0 * eta
-                    + self.a3 * 3.0 * eta.powi(2)
-                    + self.a4 * 4.0 * eta.powi(3)
-                    + self.a5 * 5.0 * eta.powi(4)
-                    + self.a6 * 6.0 * eta.powi(5),
-            )
-        }
-        self.eta1.1
-    }
-    fn eta2(&mut self, eta: f64) -> f64 {
-        if eta != self.eta2.0 {
-            self.eta2 = (
-                eta,
-                self.a2 * 2.0
-                    + self.a3 * 6.0 * eta
-                    + self.a4 * 12.0 * eta.powi(2)
-                    + self.a5 * 20.0 * eta.powi(3)
-                    + self.a6 * 30.0 * eta.powi(4),
-            )
-        }
-        self.eta2.1
-    }
-    /// equal to = [rho*i1]_t0d0 / rho
-    /// equal to = i1t0d0
-    /// equal to = eta0
-    #[inline]
-    fn t0d0(&mut self, eta: f64) -> f64 {
-        self.eta0(eta)
-    }
-    /// equal to = { [rho*i1]_t1d0 / rho } / eta1
-    /// equal to = { i1t1d0 } / eta1
-    /// equal to = eta1
-    #[inline]
-    fn t1d0(&mut self, eta: f64) -> f64 {
-        self.eta1(eta)
-    }
-    /// equal to = [rho*i1]_t2d0 / rho
-    /// equal to = i1t2d0
-    fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
-        eta2 * self.eta1(eta) + eta1.powi(2) * self.eta2(eta)
-    }
-    /// equal to = rho * [rho*i1]_t0d1 / rho
+    /// equal to = [rho/T *i1]_t0d1 / {rho/T}
     /// equal to = i1t0d0 + rho * i1t0d1
+    /// equal to = i + 1
     fn t0d1(&mut self, eta: f64) -> f64 {
         if eta != self.t0d1.0 {
             self.t0d1 = (
@@ -474,8 +409,10 @@ impl I1Term {
         }
         self.t0d1.1
     }
-    /// equal to = rho^2 * [rho*i1]_t0d2 / rho
-    /// equal to = 2.0 * rho * i1t0d1 + rho^2 * i1t0d2
+    /// equal to = [rho/T *i1]_t0d2 / {rho/T}
+    /// equal to = 2 * rho * i1t0d1 + rho^2 * i1t0d2
+    /// equal to = 2 * i + ( i - 1 ) * i
+    /// equal to = i * ( i + 1 )
     fn t0d2(&mut self, eta: f64) -> f64 {
         if eta != self.t0d2.0 {
             self.t0d2 = (
@@ -490,8 +427,10 @@ impl I1Term {
         }
         self.t0d2.1
     }
-    /// equal to = rho^3 * [rho*i1]_t0d3 / rho
-    /// equal to = 3.0 * rho^2 * i1t0d2 + rho^3 * i1t0d3
+    /// equal to = [rho/T *i1]_t0d3 / {rho/T}
+    /// equal to = 3 * rho^2 * i1t0d2 + rho^3 * i1t0d3
+    /// equal to = 3 * ( i - 1 ) * i + ( i - 2 ) * ( i - 1 ) * i
+    /// equal to = ( i - 1 ) * i * ( i + 1 )
     fn t0d3(&mut self, eta: f64) -> f64 {
         if eta != self.t0d3.0 {
             self.t0d3 = (
@@ -505,66 +444,83 @@ impl I1Term {
         }
         self.t0d3.1
     }
-    /// equal to = rho^4 * [rho*i1]_t0d4 / rho
-    /// equal to = 4.0 * rho^3 * i1t0d3 + rho^4 * i1t0d4
+    /// equal to = [rho/T *i1]_t0d4 / {rho/T}
+    /// equal to = 4 * rho^3 * i1t0d3 + rho^4 * i1t0d4
+    /// equal to = 4 * ( i - 2 ) * ( i - 1 ) * i + ( i - 3 ) * ( i - 2 ) * ( i - 1 ) * i
+    /// equal to = ( i - 2 ) * ( i - 1 ) * i * ( i + 1 )
     fn t0d4(&mut self, eta: f64) -> f64 {
-        if eta != self.t0d4.0 {
-            self.t0d4 = (
-                eta,
-                self.a3 * 24.0 * eta.powi(3)
-                    + self.a4 * 120.0 * eta.powi(4)
-                    + self.a5 * 360.0 * eta.powi(5)
-                    + self.a6 * 840.0 * eta.powi(6),
-            )
-        }
-        self.t0d4.1
+        self.a3 * 24.0 * eta.powi(3)
+            + self.a4 * 120.0 * eta.powi(4)
+            + self.a5 * 360.0 * eta.powi(5)
+            + self.a6 * 840.0 * eta.powi(6)
     }
-    /// equal to = { rho * [rho*i1]_t1d1 / rho } / eta1
-    /// equal to = { i1t1d0 + rho * i1t1d1 } / eta1
-    fn t1d1(&mut self, eta: f64) -> f64 {
-        if eta != self.t1d1.0 {
-            self.t1d1 = (
-                eta,
-                self.a1 * 2.0
+    /// equal to = [rho/T *i1]_t1d0 / {rho/T}
+    /// equal to = -1 * i1t0d0 + T * i1t1d0
+    fn t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+        -self.t0d0(eta)
+            + eta1
+                * (self.a1
+                    + self.a2 * 2.0 * eta
+                    + self.a3 * 3.0 * eta.powi(2)
+                    + self.a4 * 4.0 * eta.powi(3)
+                    + self.a5 * 5.0 * eta.powi(4)
+                    + self.a6 * 6.0 * eta.powi(5))
+    }
+    /// equal to = [rho/T *i1]_t1d1 / {rho/T}
+    /// equal to = -1 * ( i1t0d0 + rho * i1t0d1 )
+    ///            +T * ( i1t1d0 + rho * i1t1d1 )
+    fn t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+        -self.t0d1(eta)
+            + eta1
+                * (self.a1 * 2.0
                     + self.a2 * 6.0 * eta
                     + self.a3 * 12.0 * eta.powi(2)
                     + self.a4 * 20.0 * eta.powi(3)
                     + self.a5 * 30.0 * eta.powi(4)
-                    + self.a6 * 42.0 * eta.powi(5),
-            )
-        }
-        self.t1d1.1
+                    + self.a6 * 42.0 * eta.powi(5))
     }
-    /// equal to = { rho^2 * [rho*i1]_t1d2 / rho } / eta1
-    /// equal to = { 2.0 * rho * i1t1d1 + rho^2 * i1t1d2 } / eta1
-    fn t1d2(&mut self, eta: f64) -> f64 {
-        if eta != self.t1d2.0 {
-            self.t1d2 = (
-                eta,
-                self.a1 * 2.0
+    /// equal to = [rho/T *i1]_t1d2 / {rho/T}
+    /// equal to = -1 * ( 2 * rho * i1t0d1 + rho^2 * i1t0d2 )
+    ///            +T * ( 2 * rho * i1t1d1 + rho^2 * i1t1d2 )
+    fn t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+        -self.t0d2(eta)
+            + eta1
+                * (self.a1 * 2.0
                     + self.a2 * 12.0 * eta
                     + self.a3 * 36.0 * eta.powi(2)
                     + self.a4 * 80.0 * eta.powi(3)
                     + self.a5 * 150.0 * eta.powi(4)
-                    + self.a6 * 252.0 * eta.powi(5),
-            )
-        }
-        self.t1d2.1
+                    + self.a6 * 252.0 * eta.powi(5))
     }
-    /// equal to = { rho^3 * [rho*i1]_t1d3 / rho } / eta1
-    /// equal to = { 3.0 * rho^2 * i1t1d2 + rho^3 * i1t1d3 } / eta1
-    fn t1d3(&mut self, eta: f64) -> f64 {
-        if eta != self.t1d3.0 {
-            self.t1d3 = (
-                eta,
-                self.a2 * 12.0 * eta
+    /// equal to = [rho/T *i1]_t1d2 / {rho/T}
+    /// equal to = -1 * ( 3 * rho^2 * i1t0d2 + rho^3 * i1t0d3 )
+    ///            +T * ( 3 * rho^2 * i1t1d2 + rho^3 * i1t1d3 )
+    fn t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+        -self.t0d3(eta)
+            + eta1
+                * (self.a2 * 12.0 * eta
                     + self.a3 * 72.0 * eta.powi(2)
                     + self.a4 * 240.0 * eta.powi(3)
                     + self.a5 * 600.0 * eta.powi(4)
-                    + self.a6 * 1260.0 * eta.powi(5),
-            )
-        }
-        self.t1d3.1
+                    + self.a6 * 1260.0 * eta.powi(5))
+    }
+    /// equal to = [rho/T *i1]_t2d0 / {rho/T}
+    /// equal to = 2 * i2t0d0 - 2 * T * i2t1d0 + T^2 * i2t2d0
+    fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+        2.0 * self.t0d0(eta)
+            + (eta2 - 2.0 * eta1)
+                * (self.a1
+                    + self.a2 * 2.0 * eta
+                    + self.a3 * 3.0 * eta.powi(2)
+                    + self.a4 * 4.0 * eta.powi(3)
+                    + self.a5 * 5.0 * eta.powi(4)
+                    + self.a6 * 6.0 * eta.powi(5))
+            + eta1.powi(2)
+                * (self.a2 * 2.0
+                    + self.a3 * 6.0 * eta
+                    + self.a4 * 12.0 * eta.powi(2)
+                    + self.a5 * 20.0 * eta.powi(3)
+                    + self.a6 * 30.0 * eta.powi(4))
     }
 }
 /// I2Term
@@ -576,18 +532,17 @@ struct I2Term {
     b4: f64,
     b5: f64,
     b6: f64,
-    // cached variables 0
-    eta0: (f64, f64),
-    eta1: (f64, f64),
-    eta2: (f64, f64),
-    // cached variables 1
+    // cached variables
+    t0d0: (f64, f64),
     t0d1: (f64, f64),
     t0d2: (f64, f64),
     t0d3: (f64, f64),
     t0d4: (f64, f64),
+    t1d0: (f64, f64),
     t1d1: (f64, f64),
     t1d2: (f64, f64),
     t1d3: (f64, f64),
+    t2d0: (f64, f64),
 }
 // Universal Model Constants
 const B00: f64 = 0.7240946941;
@@ -623,23 +578,24 @@ impl I2Term {
             b4: B04 + m1 * B14 + m12 * B24,
             b5: B05 + m1 * B15 + m12 * B25,
             b6: B06 + m1 * B16 + m12 * B26,
-            // cached variables 0
-            eta0: (0.0, 0.0),
-            eta1: (0.0, 0.0),
-            eta2: (0.0, 0.0),
-            // cached variables 1
+            // cached variables
+            t0d0: (0.0, 0.0),
             t0d1: (0.0, 0.0),
             t0d2: (0.0, 0.0),
             t0d3: (0.0, 0.0),
             t0d4: (0.0, 0.0),
+            t1d0: (0.0, 0.0),
             t1d1: (0.0, 0.0),
             t1d2: (0.0, 0.0),
             t1d3: (0.0, 0.0),
+            t2d0: (0.0, 0.0),
         }
     }
-    fn eta0(&mut self, eta: f64) -> f64 {
-        if eta != self.eta0.0 {
-            self.eta0 = (
+    /// equal to = [rho/T^2 *i2]_t0d0 / {rho/T^2}
+    /// equal to = i2t0d0
+    fn t0d0(&mut self, eta: f64) -> f64 {
+        if eta != self.t0d0.0 {
+            self.t0d0 = (
                 eta,
                 self.b0
                     + self.b1 * eta
@@ -650,56 +606,11 @@ impl I2Term {
                     + self.b6 * eta.powi(6),
             )
         }
-        self.eta0.1
+        self.t0d0.1
     }
-    fn eta1(&mut self, eta: f64) -> f64 {
-        if eta != self.eta1.0 {
-            self.eta1 = (
-                eta,
-                self.b1
-                    + self.b2 * 2.0 * eta
-                    + self.b3 * 3.0 * eta.powi(2)
-                    + self.b4 * 4.0 * eta.powi(3)
-                    + self.b5 * 5.0 * eta.powi(4)
-                    + self.b6 * 6.0 * eta.powi(5),
-            )
-        }
-        self.eta1.1
-    }
-    fn eta2(&mut self, eta: f64) -> f64 {
-        if eta != self.eta2.0 {
-            self.eta2 = (
-                eta,
-                self.b2 * 2.0
-                    + self.b3 * 6.0 * eta
-                    + self.b4 * 12.0 * eta.powi(2)
-                    + self.b5 * 20.0 * eta.powi(3)
-                    + self.b6 * 30.0 * eta.powi(4),
-            )
-        }
-        self.eta2.1
-    }
-    /// equal to = [rho*i2]_t0d0 / rho
-    /// equal to = i2t0d0
-    /// equal to = eta0
-    #[inline]
-    fn t0d0(&mut self, eta: f64) -> f64 {
-        self.eta0(eta)
-    }
-    /// equal to = { [rho*i2]_t1d0 / rho } / eta1
-    /// equal to = { i2t1d0 } / eta1
-    /// equal to = eta1
-    #[inline]
-    fn t1d0(&mut self, eta: f64) -> f64 {
-        self.eta1(eta)
-    }
-    /// equal to = [rho*i2]_t2d0 / rho
-    /// equal to = i2t2d0
-    fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
-        eta2 * self.eta1(eta) + eta1.powi(2) * self.eta2(eta)
-    }
-    /// equal to = rho * [rho*i2]_t0d1 / rho
+    /// equal to = [rho/T^2 *i2]_t0d1 / {rho/T^2}
     /// equal to = i2t0d0 + rho * i2t0d1
+    /// equal to = i + 1
     fn t0d1(&mut self, eta: f64) -> f64 {
         if eta != self.t0d1.0 {
             self.t0d1 = (
@@ -715,8 +626,10 @@ impl I2Term {
         }
         self.t0d1.1
     }
-    /// equal to = rho^2 * [rho*i2]_t0d2 / rho
-    /// equal to = 2.0 * rho * i2t0d1 + rho^2 * i2t0d2
+    /// equal to = [rho/T^2 *i2]_t0d2 / {rho/T^2}
+    /// equal to = 2 * rho * i2t0d1 + rho^2 * i2t0d2
+    /// equal to = 2 * i + ( i - 1 ) * i
+    /// equal to = i * ( i + 1 )
     fn t0d2(&mut self, eta: f64) -> f64 {
         if eta != self.t0d2.0 {
             self.t0d2 = (
@@ -731,8 +644,10 @@ impl I2Term {
         }
         self.t0d2.1
     }
-    /// equal to = rho^3 * [rho*i2]_t0d3 / rho
-    /// equal to = 3.0 * rho^2 * i2t0d2 + rho^3 * i2t0d3
+    /// equal to = [rho/T^2 *i2]_t0d3 / {rho/T^2}
+    /// equal to = 3 * rho^2 * i2t0d2 + rho^3 * i2t0d3
+    /// equal to = 3 * ( i - 1 ) * i + ( i - 2 ) * ( i - 1 ) * i
+    /// equal to = ( i - 1 ) * i * ( i + 1 )
     fn t0d3(&mut self, eta: f64) -> f64 {
         if eta != self.t0d3.0 {
             self.t0d3 = (
@@ -746,8 +661,10 @@ impl I2Term {
         }
         self.t0d3.1
     }
-    /// equal to = rho^4 * [rho*i2]_t0d4 / rho
-    /// equal to = 4.0 * rho^3 * i2t0d3 + rho^4 * i2t0d4
+    /// equal to = [rho/T^2 *i2]_t0d4 / {rho/T^2}
+    /// equal to = 4 * rho^3 * i2t0d3 + rho^4 * i2t0d4
+    /// equal to = 4 * ( i - 2 ) * ( i - 1 ) * i + ( i - 3 ) * ( i - 2 ) * ( i - 1 ) * i
+    /// equal to = ( i - 2 ) * ( i - 1 ) * i * ( i + 1 )
     fn t0d4(&mut self, eta: f64) -> f64 {
         if eta != self.t0d4.0 {
             self.t0d4 = (
@@ -760,51 +677,102 @@ impl I2Term {
         }
         self.t0d4.1
     }
-    /// equal to = { rho * [rho*i2]_t1d1 / rho } / eta1
-    /// equal to = { i2t1d0 + rho * i2t1d1 } / eta1
-    fn t1d1(&mut self, eta: f64) -> f64 {
+    /// equal to = [rho/T^2 *i2]_t1d0 / {rho/T^2}
+    /// equal to = -2 * i2t0d0 + T * i2t1d0
+    fn t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+        if eta != self.t1d0.0 {
+            self.t1d0 = (
+                eta,
+                -2.0 * self.t0d0(eta)
+                    + eta1
+                        * (self.b1
+                            + self.b2 * 2.0 * eta
+                            + self.b3 * 3.0 * eta.powi(2)
+                            + self.b4 * 4.0 * eta.powi(3)
+                            + self.b5 * 5.0 * eta.powi(4)
+                            + self.b6 * 6.0 * eta.powi(5)),
+            )
+        }
+        self.t1d0.1
+    }
+    /// equal to = [rho/T^2 *i2]_t1d1 / {rho/T^2}
+    /// equal to = -2 * ( i2t0d0 + rho * i2t0d1 )
+    ///            +T * ( i2t1d0 + rho * i2t1d1 )
+    fn t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
         if eta != self.t1d1.0 {
             self.t1d1 = (
                 eta,
-                self.b1 * 2.0
-                    + self.b2 * 6.0 * eta
-                    + self.b3 * 12.0 * eta.powi(2)
-                    + self.b4 * 20.0 * eta.powi(3)
-                    + self.b5 * 30.0 * eta.powi(4)
-                    + self.b6 * 42.0 * eta.powi(5),
+                -2.0 * self.t0d1(eta)
+                    + eta1
+                        * (self.b1 * 2.0
+                            + self.b2 * 6.0 * eta
+                            + self.b3 * 12.0 * eta.powi(2)
+                            + self.b4 * 20.0 * eta.powi(3)
+                            + self.b5 * 30.0 * eta.powi(4)
+                            + self.b6 * 42.0 * eta.powi(5)),
             )
         }
         self.t1d1.1
     }
-    /// equal to = { rho^2 * [rho*i2]_t1d2 / rho } / eta1
-    /// equal to = { 2.0 * rho * i2t1d1 + rho^2 * i2t1d2 } / eta1
-    fn t1d2(&mut self, eta: f64) -> f64 {
+    /// equal to = [rho/T^2 *i2]_t1d2 / {rho/T^2}
+    /// equal to = -2 * ( 2 * rho * i2t0d1 + rho^2 * i2t0d2 )
+    ///            +T * ( 2 * rho * i2t1d1 + rho^2 * i2t1d2 )
+    fn t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
         if eta != self.t1d2.0 {
             self.t1d2 = (
                 eta,
-                self.b1 * 2.0
-                    + self.b2 * 12.0 * eta
-                    + self.b3 * 36.0 * eta.powi(2)
-                    + self.b4 * 80.0 * eta.powi(3)
-                    + self.b5 * 150.0 * eta.powi(4)
-                    + self.b6 * 252.0 * eta.powi(5),
+                -2.0 * self.t0d2(eta)
+                    + eta1
+                        * (self.b1 * 2.0
+                            + self.b2 * 12.0 * eta
+                            + self.b3 * 36.0 * eta.powi(2)
+                            + self.b4 * 80.0 * eta.powi(3)
+                            + self.b5 * 150.0 * eta.powi(4)
+                            + self.b6 * 252.0 * eta.powi(5)),
             )
         }
         self.t1d2.1
     }
-    /// equal to = { rho^3 * [rho*i2]_t1d3 / rho } / eta1
-    /// equal to = { 3.0 * rho^2 * i2t1d2 + rho^3 * i2t1d3 } / eta1
-    fn t1d3(&mut self, eta: f64) -> f64 {
+    /// equal to = [rho/T^2 *i2]_t1d3 / {rho/T^2}
+    /// equal to = -2 * ( 3 * rho^2 * i2t0d2 + rho^3 * i2t0d3 )
+    ///            +T * ( 3 * rho^2 * i2t1d2 + rho^3 * i2t1d3 )
+    fn t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
         if eta != self.t1d3.0 {
             self.t1d3 = (
                 eta,
-                self.b2 * 12.0 * eta
-                    + self.b3 * 72.0 * eta.powi(2)
-                    + self.b4 * 240.0 * eta.powi(3)
-                    + self.b5 * 600.0 * eta.powi(4)
-                    + self.b6 * 1260.0 * eta.powi(5),
+                -2.0 * self.t0d3(eta)
+                    + eta1
+                        * (self.b2 * 12.0 * eta
+                            + self.b3 * 72.0 * eta.powi(2)
+                            + self.b4 * 240.0 * eta.powi(3)
+                            + self.b5 * 600.0 * eta.powi(4)
+                            + self.b6 * 1260.0 * eta.powi(5)),
             )
         }
         self.t1d3.1
+    }
+    /// equal to = [rho/T^2 *i2]_t2d0 / {rho/T^2}
+    /// equal to = 6 * i2t0d0 - 4 * T * i2t1d0 + T^2 * i2t2d0
+    fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+        if eta != self.t2d0.0 {
+            self.t2d0 = (
+                eta,
+                6.0 * self.t0d0(eta)
+                    + (eta2 - 4.0 * eta1)
+                        * (self.b1
+                            + self.b2 * 2.0 * eta
+                            + self.b3 * 3.0 * eta.powi(2)
+                            + self.b4 * 4.0 * eta.powi(3)
+                            + self.b5 * 5.0 * eta.powi(4)
+                            + self.b6 * 6.0 * eta.powi(5))
+                    + eta1.powi(2)
+                        * (self.b2 * 2.0
+                            + self.b3 * 6.0 * eta
+                            + self.b4 * 12.0 * eta.powi(2)
+                            + self.b5 * 20.0 * eta.powi(3)
+                            + self.b6 * 30.0 * eta.powi(4)),
+            )
+        }
+        self.t2d0.1
     }
 }
