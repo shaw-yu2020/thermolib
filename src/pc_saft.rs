@@ -3,14 +3,23 @@ const FRAC_NA_1E30: f64 = NA / 1E30;
 const FRAC_RE30_NA: f64 = R / FRAC_NA_1E30;
 #[macro_use]
 mod macros;
+mod assoc_term;
 mod disp_term;
 mod gii_term;
 mod hs_term;
 mod pc_saft_gly;
+mod pc_saft_pure;
+mod pdd_term;
+mod pqq_term;
+use assoc_term::AssocTerm;
 use disp_term::DispTerm;
-use gii_term::GiiPure;
-use hs_term::HsPure;
+use gii_term::GiiTerm;
+use hs_term::HsTerm;
+use pdd_term::PddTerm;
+use pqq_term::PqqTerm;
+// public
 pub use pc_saft_gly::PcSaftGlyPure;
+pub use pc_saft_pure::PcSaftPure;
 /// PcSaftError
 use thiserror::Error;
 #[derive(Debug, Error)]

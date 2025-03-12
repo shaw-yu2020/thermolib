@@ -1,12 +1,12 @@
-/// HsPure
-pub struct HsPure {
+/// HsTerm
+pub struct HsTerm {
     eta0: (f64, f64),
     eta1: (f64, f64),
     eta2: (f64, f64),
     eta3: (f64, f64),
     eta4: (f64, f64),
 }
-impl HsPure {
+impl HsTerm {
     pub fn t0d0(&mut self, eta: f64) -> f64 {
         self.eta0(eta)
     }
@@ -38,7 +38,7 @@ impl HsPure {
         eta2 * self.eta1(eta) + eta1.powi(2) * self.eta2(eta)
     }
 }
-impl HsPure {
+impl HsTerm {
     pub fn new() -> Self {
         Self {
             eta0: (0.0, 0.0),

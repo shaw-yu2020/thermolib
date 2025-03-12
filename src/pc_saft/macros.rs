@@ -659,6 +659,1042 @@ macro_rules! fn_check_derivatives {
         }
     };
 }
+/// macro_rules! fn_polar
+macro_rules! fn_polar {
+    ($name:ty) => {
+        impl $name {
+            pub fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                self.a2t0d0(eta).powi(2) / (self.a2t0d0(eta) - self.a3t0d0(eta))
+            }
+            pub fn t0d1(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t0d1(eta) * self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+                    + self.a3t0d1(eta) * self.a2t0d0(eta).powi(2))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2)
+            }
+            pub fn t0d2(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t0d2(eta)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(2) - 3.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                        + 2.0 * self.a3t0d0(eta).powi(2))
+                    + self.a3t0d2(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 2.0 * self.a2t0d1(eta).powi(2) * self.a3t0d0(eta).powi(2)
+                    + 2.0 * self.a3t0d1(eta).powi(2) * self.a2t0d0(eta).powi(2)
+                    - 4.0
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(3)
+            }
+            pub fn t0d3(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t0d3(eta)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(3)
+                        - 4.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta)
+                        + 5.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(2)
+                        - 2.0 * self.a3t0d0(eta).powi(3))
+                    + self.a3t0d3(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a2t0d2(eta)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 6.0
+                        * self.a2t0d2(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 6.0
+                        * self.a3t0d2(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 6.0
+                        * self.a3t0d2(eta)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 6.0 * self.a2t0d1(eta).powi(3) * self.a3t0d0(eta).powi(2)
+                    + 6.0
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta) + self.a3t0d0(eta))
+                    + 6.0 * self.a3t0d1(eta).powi(3) * self.a2t0d0(eta).powi(2)
+                    - 6.0
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta) + self.a2t0d0(eta)))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(4)
+            }
+            pub fn t0d4(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t0d4(eta)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(4)
+                        - 5.0 * self.a2t0d0(eta).powi(3) * self.a3t0d0(eta)
+                        + 9.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta).powi(2)
+                        - 7.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(3)
+                        + 2.0 * self.a3t0d0(eta).powi(4))
+                    + self.a3t0d4(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(3)
+                            - 3.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta)
+                            + 3.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(2)
+                            - self.a3t0d0(eta).powi(3))
+                    + 8.0
+                        * self.a2t0d3(eta)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 8.0
+                        * self.a2t0d3(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 8.0
+                        * self.a3t0d3(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 8.0
+                        * self.a3t0d3(eta)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a2t0d2(eta).powi(2)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t0d2(eta).powi(2)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 12.0
+                        * self.a2t0d2(eta)
+                        * self.a3t0d2(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 36.0
+                        * self.a2t0d2(eta)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 12.0
+                        * self.a2t0d2(eta)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) + self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - 2.0 * self.a3t0d0(eta).powi(2))
+                    + 24.0
+                        * self.a2t0d2(eta)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a3t0d0(eta).powi(2))
+                    + 36.0
+                        * self.a3t0d2(eta)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 12.0
+                        * self.a3t0d2(eta)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta)
+                        * (self.a3t0d0(eta).powi(2) + self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - 2.0 * self.a2t0d0(eta).powi(2))
+                    + 24.0
+                        * self.a3t0d2(eta)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a2t0d0(eta).powi(2))
+                    + 24.0 * self.a2t0d1(eta).powi(4) * self.a3t0d0(eta).powi(2)
+                    + 24.0 * self.a3t0d1(eta).powi(4) * self.a2t0d0(eta).powi(2)
+                    + 24.0
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d1(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2)
+                            + 4.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 48.0
+                        * self.a2t0d1(eta).powi(3)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta))
+                    - 48.0
+                        * self.a3t0d1(eta).powi(3)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta)))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(5)
+            }
+            pub fn t1d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t1d0(eta, eta1)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+                    + self.a3t1d0(eta, eta1) * self.a2t0d0(eta).powi(2))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2)
+            }
+            pub fn t1d1(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t1d1(eta, eta1)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(2) - 3.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                        + 2.0 * self.a3t0d0(eta).powi(2))
+                    + self.a3t1d1(eta, eta1)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 2.0 * self.a2t1d0(eta, eta1) * self.a2t0d1(eta) * self.a3t0d0(eta).powi(2)
+                    - 2.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                    + 2.0 * self.a3t1d0(eta, eta1) * self.a3t0d1(eta) * self.a2t0d0(eta).powi(2)
+                    - 2.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(3)
+            }
+            pub fn t1d2(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t1d2(eta, eta1)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(3)
+                        - 4.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta)
+                        + 5.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(2)
+                        - 2.0 * self.a3t0d0(eta).powi(3))
+                    + self.a3t1d2(eta, eta1)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 4.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 4.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 4.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 4.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 2.0
+                        * self.a2t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 2.0
+                        * self.a2t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 2.0
+                        * self.a3t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 2.0
+                        * self.a3t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 6.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta).powi(2)
+                    - 2.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta) + 2.0 * self.a3t0d0(eta))
+                    + 4.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta) + self.a3t0d0(eta))
+                    + 6.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta).powi(2)
+                    + 2.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta) + self.a3t0d0(eta))
+                    - 4.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta) + self.a2t0d0(eta)))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(4)
+            }
+            pub fn t1d3(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t1d3(eta, eta1)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(4)
+                        - 5.0 * self.a2t0d0(eta).powi(3) * self.a3t0d0(eta)
+                        + 9.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta).powi(2)
+                        - 7.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(3)
+                        + 2.0 * self.a3t0d0(eta).powi(4))
+                    + self.a3t1d3(eta, eta1)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(3)
+                            - 3.0 * self.a2t0d0(eta).powi(2) * self.a3t0d0(eta)
+                            + 3.0 * self.a2t0d0(eta) * self.a3t0d0(eta).powi(2)
+                            - self.a3t0d0(eta).powi(3))
+                    + 6.0
+                        * self.a2t1d2(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t1d2(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 6.0
+                        * self.a2t1d2(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 6.0
+                        * self.a3t1d2(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 2.0
+                        * self.a2t0d3(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 2.0
+                        * self.a3t0d3(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 2.0
+                        * self.a2t0d3(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 2.0
+                        * self.a3t0d3(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a2t0d2(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 6.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a3t0d2(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a3t0d2(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 6.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a2t0d2(eta)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) - 2.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 18.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 18.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    - 6.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta).powi(2) + self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - 2.0 * self.a3t0d0(eta).powi(2))
+                    - 6.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d0(eta)
+                        * (self.a3t0d0(eta).powi(2) + self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - 2.0 * self.a2t0d0(eta).powi(2))
+                    + 12.0
+                        * self.a2t1d1(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a3t0d0(eta).powi(2))
+                    + 12.0
+                        * self.a3t1d1(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a2t0d0(eta).powi(2))
+                    - 18.0
+                        * self.a2t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 18.0
+                        * self.a3t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 6.0
+                        * self.a2t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a2t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a3t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a2t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a2t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t0d2(eta)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a2t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (2.0 * self.a3t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a2t0d0(eta).powi(2))
+                    + 6.0
+                        * self.a3t0d2(eta)
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (2.0 * self.a2t0d0(eta).powi(2)
+                            - self.a2t0d0(eta) * self.a3t0d0(eta)
+                            - self.a3t0d0(eta).powi(2))
+                    + 24.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(3)
+                        * self.a3t0d0(eta).powi(2)
+                    + 24.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(3)
+                        * self.a2t0d0(eta).powi(2)
+                    - 36.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d1(eta)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta))
+                    - 36.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d1(eta)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta))
+                    + 12.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(2)
+                        * self.a2t0d1(eta)
+                        * (self.a2t0d0(eta).powi(2)
+                            + 4.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    + 12.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(2)
+                        * self.a3t0d1(eta)
+                        * (self.a2t0d0(eta).powi(2)
+                            + 4.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                            + self.a3t0d0(eta).powi(2))
+                    - 12.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t0d1(eta).powi(3)
+                        * self.a2t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta))
+                    - 12.0
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d1(eta).powi(3)
+                        * self.a3t0d0(eta)
+                        * (self.a2t0d0(eta) + self.a3t0d0(eta)))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(5)
+            }
+            pub fn t2d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                (self.temp, self.rho_num) = (temp, rho_num);
+                (self.a2t2d0(eta, eta1, eta2)
+                    * self.a2t0d0(eta)
+                    * (self.a2t0d0(eta).powi(2) - 3.0 * self.a2t0d0(eta) * self.a3t0d0(eta)
+                        + 2.0 * self.a3t0d0(eta).powi(2))
+                    + self.a3t2d0(eta, eta1, eta2)
+                        * self.a2t0d0(eta).powi(2)
+                        * (self.a2t0d0(eta) - self.a3t0d0(eta))
+                    + 2.0 * self.a2t1d0(eta, eta1).powi(2) * self.a3t0d0(eta).powi(2)
+                    + 2.0 * self.a3t1d0(eta, eta1).powi(2) * self.a2t0d0(eta).powi(2)
+                    - 4.0
+                        * self.a2t1d0(eta, eta1)
+                        * self.a3t1d0(eta, eta1)
+                        * self.a2t0d0(eta)
+                        * self.a3t0d0(eta))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(3)
+            }
+        }
+        impl $name {
+            fn a2t0d0(&mut self, eta: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t0d0(eta) + self.epsilon / self.temp * self.j2b.t0d0(eta))
+            }
+            fn a2t0d1(&mut self, eta: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t0d1(eta) + self.epsilon / self.temp * self.j2b.t0d1(eta))
+            }
+            fn a2t0d2(&mut self, eta: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t0d2(eta) + self.epsilon / self.temp * self.j2b.t0d2(eta))
+            }
+            fn a2t0d3(&mut self, eta: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t0d3(eta) + self.epsilon / self.temp * self.j2b.t0d3(eta))
+            }
+            fn a2t0d4(&mut self, eta: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t0d4(eta) + self.epsilon / self.temp * self.j2b.t0d4(eta))
+            }
+            fn a2t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t1d0(eta, eta1)
+                        + self.epsilon / self.temp * self.j2b.t1d0(eta, eta1))
+            }
+            fn a2t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t1d1(eta, eta1)
+                        + self.epsilon / self.temp * self.j2b.t1d1(eta, eta1))
+            }
+            fn a2t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t1d2(eta, eta1)
+                        + self.epsilon / self.temp * self.j2b.t1d2(eta, eta1))
+            }
+            fn a2t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t1d3(eta, eta1)
+                        + self.epsilon / self.temp * self.j2b.t1d3(eta, eta1))
+            }
+            fn a2t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                self.a2_coef * self.rho_num / self.temp.powi(2)
+                    * (self.j2a.t2d0(eta, eta1, eta2)
+                        + self.epsilon / self.temp * self.j2b.t2d0(eta, eta1, eta2))
+            }
+        }
+        impl $name {
+            fn a3t0d0(&mut self, eta: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t0d0(eta)
+            }
+            fn a3t0d1(&mut self, eta: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t0d1(eta)
+            }
+            fn a3t0d2(&mut self, eta: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t0d2(eta)
+            }
+            fn a3t0d3(&mut self, eta: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t0d3(eta)
+            }
+            fn a3t0d4(&mut self, eta: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t0d4(eta)
+            }
+            fn a3t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t1d0(eta, eta1)
+            }
+            fn a3t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t1d1(eta, eta1)
+            }
+            fn a3t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t1d2(eta, eta1)
+            }
+            fn a3t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3) * self.j3c.t1d3(eta, eta1)
+            }
+            fn a3t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                self.a3_coef * self.rho_num.powi(2) / self.temp.powi(3)
+                    * self.j3c.t2d0(eta, eta1, eta2)
+            }
+        }
+        /// J2aTerm
+        struct J2aTerm {
+            a0: f64,
+            a1: f64,
+            a2: f64,
+            a3: f64,
+            a4: f64,
+            // cached variables
+            t0d0: (f64, f64),
+            t0d1: (f64, f64),
+            t0d2: (f64, f64),
+            t0d3: (f64, f64),
+        }
+        impl J2aTerm {
+            fn new(m: f64) -> Self {
+                let m1 = (m - 1.0) / m; // (m-1)/m
+                let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
+                Self {
+                    a0: A00 + m1 * A10 + m12 * A20,
+                    a1: A01 + m1 * A11 + m12 * A21,
+                    a2: A02 + m1 * A12 + m12 * A22,
+                    a3: A03 + m1 * A13 + m12 * A23,
+                    a4: A04 + m1 * A14 + m12 * A24,
+                    // cached variables
+                    t0d0: (0.0, 0.0),
+                    t0d1: (0.0, 0.0),
+                    t0d2: (0.0, 0.0),
+                    t0d3: (0.0, 0.0),
+                }
+            }
+            /// equal to = [rho/T^2 *J2]_t0d0 / {rho/T^2}
+            /// equal to = J2t0d0
+            fn t0d0(&mut self, eta: f64) -> f64 {
+                if eta != self.t0d0.0 {
+                    self.t0d0 = (
+                        eta,
+                        self.a0
+                            + self.a1 * eta
+                            + self.a2 * eta.powi(2)
+                            + self.a3 * eta.powi(3)
+                            + self.a4 * eta.powi(4),
+                    )
+                }
+                self.t0d0.1
+            }
+            /// equal to = [rho/T^2 *J2]_t0d1 / {rho/T^2}
+            /// equal to = J2t0d0 + rho * J2t0d1
+            fn t0d1(&mut self, eta: f64) -> f64 {
+                // 1 + n
+                if eta != self.t0d1.0 {
+                    self.t0d1 = (
+                        eta,
+                        self.a0
+                            + self.a1 * 2.0 * eta
+                            + self.a2 * 3.0 * eta.powi(2)
+                            + self.a3 * 4.0 * eta.powi(3)
+                            + self.a4 * 5.0 * eta.powi(4),
+                    )
+                }
+                self.t0d1.1
+            }
+            /// equal to = [rho/T^2 *J2]_t0d2 / {rho/T^2}
+            /// equal to = 2 * rho * J2t0d1 + rho^2 * J2t0d2
+            fn t0d2(&mut self, eta: f64) -> f64 {
+                // 2 * n + n * ( n - 1 ) = n * ( n + 1 )
+                if eta != self.t0d2.0 {
+                    self.t0d2 = (
+                        eta,
+                        self.a1 * 2.0 * eta
+                            + self.a2 * 6.0 * eta.powi(2)
+                            + self.a3 * 12.0 * eta.powi(3)
+                            + self.a4 * 20.0 * eta.powi(4),
+                    )
+                }
+                self.t0d2.1
+            }
+            /// equal to = [rho/T^2 *J2]_t0d3 / {rho/T^2}
+            /// equal to = 3 * rho^2 * J2t0d2 + rho^3 * J2t0d3
+            fn t0d3(&mut self, eta: f64) -> f64 {
+                // 3 * n * ( n - 1 ) + n * ( n - 1 ) * ( n - 2 ) = n * ( n - 1 ) * ( n + 1 )
+                if eta != self.t0d3.0 {
+                    self.t0d3 = (
+                        eta,
+                        self.a2 * 6.0 * eta.powi(2)
+                            + self.a3 * 24.0 * eta.powi(3)
+                            + self.a4 * 60.0 * eta.powi(4),
+                    )
+                }
+                self.t0d3.1
+            }
+            /// equal to = [rho/T^2 *J2]_t0d4 / {rho/T^2}
+            /// equal to = 4 * rho^3 * J3t0d3 + rho^4 * J2t0d4
+            fn t0d4(&mut self, eta: f64) -> f64 {
+                // 4 * n * ( n - 1 ) * ( n - 2 ) + n * ( n - 1 ) * ( n - 2 ) * ( n - 3 )
+                // = n * ( n - 1 ) * ( n - 2 ) * ( n + 1 )
+                self.a3 * 24.0 * eta.powi(3) + self.a4 * 120.0 * eta.powi(4)
+            }
+            /// equal to = [rho/T^2 *J2]_t1d0 / {rho/T^2}
+            /// equal to = -2 * J2t0d0 + T * J2t1d0
+            fn t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                -2.0 * self.t0d0(eta)
+                    + eta1
+                        * (self.a1
+                            + self.a2 * 2.0 * eta
+                            + self.a3 * 3.0 * eta.powi(2)
+                            + self.a4 * 4.0 * eta.powi(3))
+            }
+            /// equal to = [rho/T^2 *J2]_t1d1 / {rho/T^2}
+            /// equal to = -2 * ( J2t0d0 + rho * J2t0d1 )
+            ///            +T * ( J2t1d0 + rho * J2t1d1 )
+            fn t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                -2.0 * self.t0d1(eta)
+                    + eta1
+                        * (self.a1 * 2.0
+                            + self.a2 * 6.0 * eta
+                            + self.a3 * 12.0 * eta.powi(2)
+                            + self.a4 * 20.0 * eta.powi(3))
+            }
+            /// equal to = [rho/T^2 *J2]_t1d2 / {rho/T^2}
+            /// equal to = -2 * ( 2 * rho * J2t0d1 + rho^2 * J2t0d2 )
+            ///            +T * ( 2 * rho * J2t1d1 + rho^2 * J2t1d2 )
+            fn t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                -2.0 * self.t0d2(eta)
+                    + eta1
+                        * (self.a1 * 2.0
+                            + self.a2 * 12.0 * eta
+                            + self.a3 * 36.0 * eta.powi(2)
+                            + self.a4 * 80.0 * eta.powi(3))
+            }
+            /// equal to = [rho/T^2 *J2]_t1d3 / {rho/T^2}
+            /// equal to = -2 * ( 6 * rho * J2t0d1 + 6 * rho^2 * J2t0d1 + rho^3 * J2t0d3 )
+            ///            +T * ( 6 * rho * J2t1d1 + 6 * rho^2 * J2t1d2 + rho^3 * J2t1d3 )
+            fn t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                -2.0 * self.t0d3(eta)
+                    + eta1
+                        * (self.a2 * 12.0 * eta
+                            + self.a3 * 72.0 * eta.powi(2)
+                            + self.a4 * 240.0 * eta.powi(3))
+            }
+            /// equal to = [rho/T^2 *J2]_t2d0 / {rho/T^2}
+            /// equal to = 6 * J2t0d0 - 4 * T * J2t1d0 + T^2 * J2t2d0
+            fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                6.0 * self.t0d0(eta)
+                    + (eta2 - 4.0 * eta1)
+                        * (self.a1
+                            + self.a2 * 2.0 * eta
+                            + self.a3 * 3.0 * eta.powi(2)
+                            + self.a4 * 4.0 * eta.powi(3))
+                    + eta1.powi(2)
+                        * (self.a2 * 2.0 + self.a3 * 6.0 * eta + self.a4 * 12.0 * eta.powi(2))
+            }
+        }
+        /// J2bTerm
+        struct J2bTerm {
+            b0: f64,
+            b1: f64,
+            b2: f64,
+            // cached variables
+            t0d0: (f64, f64),
+            t0d1: (f64, f64),
+            t0d2: (f64, f64),
+            t0d3: (f64, f64),
+        }
+        impl J2bTerm {
+            fn new(m: f64) -> Self {
+                let m1 = (m - 1.0) / m; // (m-1)/m
+                let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
+                Self {
+                    b0: B00 + m1 * B10 + m12 * B20,
+                    b1: B01 + m1 * B11 + m12 * B21,
+                    b2: B02 + m1 * B12 + m12 * B22,
+                    // cached variables
+                    t0d0: (0.0, 0.0),
+                    t0d1: (0.0, 0.0),
+                    t0d2: (0.0, 0.0),
+                    t0d3: (0.0, 0.0),
+                }
+            }
+            /// equal to = [rho/T^3 *J2]_t0d0 / {rho/T^3}
+            /// equal to = J2t0d0
+            fn t0d0(&mut self, eta: f64) -> f64 {
+                if eta != self.t0d0.0 {
+                    self.t0d0 = (eta, self.b0 + self.b1 * eta + self.b2 * eta.powi(2))
+                }
+                self.t0d0.1
+            }
+            /// equal to = [rho/T^3 *J2]_t0d1 / {rho/T^3}
+            /// equal to = J2t0d0 + rho * J2t0d1
+            fn t0d1(&mut self, eta: f64) -> f64 {
+                // 1 + n
+                if eta != self.t0d1.0 {
+                    self.t0d1 = (
+                        eta,
+                        self.b0 + self.b1 * 2.0 * eta + self.b2 * 3.0 * eta.powi(2),
+                    )
+                }
+                self.t0d1.1
+            }
+            /// equal to = [rho/T^3 *J2]_t0d2 / {rho/T^3}
+            /// equal to = 2 * rho * J2t0d1 + rho^2 * J2t0d2
+            fn t0d2(&mut self, eta: f64) -> f64 {
+                // 2 * n + n * ( n - 1 ) = n * ( n + 1 )
+                if eta != self.t0d2.0 {
+                    self.t0d2 = (eta, self.b1 * 2.0 * eta + self.b2 * 6.0 * eta.powi(2))
+                }
+                self.t0d2.1
+            }
+            /// equal to = [rho/T^3 *J2]_t0d3 / {rho/T^3}
+            /// equal to = 3 * rho^2 * J2t0d2 + rho^3 * J2t0d3
+            fn t0d3(&mut self, eta: f64) -> f64 {
+                // 3 * n * ( n - 1 ) + n * ( n - 1 ) * ( n - 2 ) = n * ( n - 1 ) * ( n + 1 )
+                if eta != self.t0d3.0 {
+                    self.t0d3 = (eta, self.b2 * 6.0 * eta.powi(2))
+                }
+                self.t0d3.1
+            }
+            /// equal to = [rho/T^3 *J2]_t0d4 / {rho/T^3}
+            /// equal to = 4 * rho^3 * J3t0d3 + rho^4 * J2t0d4
+            #[inline]
+            fn t0d4(&mut self, _eta: f64) -> f64 {
+                // 4 * n * ( n - 1 ) * ( n - 2 ) + n * ( n - 1 ) * ( n - 2 ) * ( n - 3 )
+                0.0
+            }
+            /// equal to = [rho/T^3 *J2]_t1d0 / {rho/T^3}
+            /// equal to = -3 * J2t0d0 + T * J2t1d0
+            fn t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d0(eta) + eta1 * (self.b1 + self.b2 * 2.0 * eta)
+            }
+            /// equal to = [rho/T^3 *J2]_t1d1 / {rho/T^3}
+            /// equal to = -3 * ( J2t0d0 + rho * J2t0d1 )
+            ///            +T * ( J2t1d0 + rho * J2t1d1 )
+            fn t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d1(eta) + eta1 * (self.b1 * 2.0 + self.b2 * 6.0 * eta)
+            }
+            /// equal to = [rho/T^3 *J2]_t1d2 / {rho/T^3}
+            /// equal to = -3 * ( 2 * rho * J2t0d1 + rho^2 * J2t0d2 )
+            ///            +T * ( 2 * rho * J2t1d1 + rho^2 * J2t1d2 )
+            fn t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d2(eta) + eta1 * (self.b1 * 2.0 + self.b2 * 12.0 * eta)
+            }
+            /// equal to = [rho/T^3 *J2]_t1d3 / {rho/T^3}
+            /// equal to = -3 * ( 6 * rho * J2t0d1 + 6 * rho^2 * J2t0d1 + rho^3 * J2t0d3 )
+            ///            +T * ( 6 * rho * J2t1d1 + 6 * rho^2 * J2t1d2 + rho^3 * J2t1d3 )
+            fn t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d3(eta) + eta1 * self.b2 * 12.0 * eta
+            }
+            /// equal to = [rho/T^3 *J2]_t2d0 / {rho/T^3}
+            /// equal to = 12 * J2t0d0 - 6 * T * J2t1d0 + T^2 * J2t2d0
+            fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                12.0 * self.t0d0(eta)
+                    + (eta2 - 6.0 * eta1) * (self.b1 + self.b2 * 2.0 * eta)
+                    + eta1.powi(2) * self.b2 * 2.0
+            }
+        }
+        /// J3cTerm
+        struct J3cTerm {
+            c0: f64,
+            c1: f64,
+            c2: f64,
+            c3: f64,
+            // cached variables
+            t0d0: (f64, f64),
+            t0d1: (f64, f64),
+            t0d2: (f64, f64),
+            t0d3: (f64, f64),
+        }
+        impl J3cTerm {
+            fn new(m: f64) -> Self {
+                let m1 = (m - 1.0) / m; // (m-1)/m
+                let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
+                Self {
+                    c0: C00 + m1 * C10 + m12 * C20,
+                    c1: C01 + m1 * C11 + m12 * C21,
+                    c2: C02 + m1 * C12 + m12 * C22,
+                    c3: C03 + m1 * C13 + m12 * C23,
+                    // cached variables
+                    t0d0: (0.0, 0.0),
+                    t0d1: (0.0, 0.0),
+                    t0d2: (0.0, 0.0),
+                    t0d3: (0.0, 0.0),
+                }
+            }
+            /// equal to = [rho^2/T^3 *J3]_t0d0 / {rho^2/T^3}
+            /// equal to = J3t0d0
+            fn t0d0(&mut self, eta: f64) -> f64 {
+                if eta != self.t0d0.0 {
+                    self.t0d0 = (
+                        eta,
+                        self.c0 + self.c1 * eta + self.c2 * eta.powi(2) + self.c3 * eta.powi(3),
+                    )
+                }
+                self.t0d0.1
+            }
+            /// equal to = [rho^2/T^3 *J3]_t0d1 / {rho^2/T^3}
+            /// equal to = 2 * J3t0d0 + rho * J3t0d1
+            fn t0d1(&mut self, eta: f64) -> f64 {
+                // 2 + n
+                if eta != self.t0d1.0 {
+                    self.t0d1 = (
+                        eta,
+                        2.0 * self.c0
+                            + self.c1 * 3.0 * eta
+                            + self.c2 * 4.0 * eta.powi(2)
+                            + self.c3 * 5.0 * eta.powi(3),
+                    )
+                }
+                self.t0d1.1
+            }
+            /// equal to = [rho^2/T^3 *J3]_t0d2 / {rho^2/T^3}
+            /// equal to = 2 * J3t0d0 + 4 * rho * J3t0d1 + rho^2 * J3t0d2
+            fn t0d2(&mut self, eta: f64) -> f64 {
+                // 2 + 4 * n + n * ( n - 1 )
+                // = 2 + 3 * n + n^2
+                if eta != self.t0d2.0 {
+                    self.t0d2 = (
+                        eta,
+                        2.0 * self.c0
+                            + self.c1 * 6.0 * eta
+                            + self.c2 * 12.0 * eta.powi(2)
+                            + self.c3 * 20.0 * eta.powi(3),
+                    )
+                }
+                self.t0d2.1
+            }
+            /// equal to = [rho^2/T^3 *J3]_t0d3 / {rho^2/T^3}
+            /// equal to = rho * ( 6 * J3t0d1 + 6 * rho * J3t0d2 + rho^2 * J3t0d3)
+            fn t0d3(&mut self, eta: f64) -> f64 {
+                // 6 * n + 6 * n * ( n - 1 ) + n * ( n - 1 ) * ( n - 2 )
+                // = n * ( n^2 + 3 * n + 2 )
+                if eta != self.t0d3.0 {
+                    self.t0d3 = (
+                        eta,
+                        self.c1 * 6.0 * eta
+                            + self.c2 * 24.0 * eta.powi(2)
+                            + self.c3 * 60.0 * eta.powi(3),
+                    )
+                }
+                self.t0d3.1
+            }
+            /// equal to = [rho^2/T^3 *J3]_t0d4 / {rho^2/T^3}
+            /// equal to = rho^2 * ( 12 * J3t0d2 + 8 * rho * J3t0d3 + rho^2 * J3t0d4)
+            fn t0d4(&mut self, eta: f64) -> f64 {
+                // 12 * n * ( n - 1 ) + 8 * n * ( n - 1 ) * ( n - 2 )
+                // + n * ( n - 1 ) * ( n - 2 ) * ( n - 3 )
+                // = n * ( n - 1 ) * ( n^2 + 3 * n + 2 )
+                self.c2 * 24.0 * eta.powi(2) + self.c3 * 120.0 * eta.powi(3)
+            }
+            /// equal to = [rho^2/T^3 *J3]_t1d0 / {rho^2/T^3}
+            /// equal to = -3 * J3t0d0 + T * J3t1d0
+            fn t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d0(eta)
+                    + eta1 * (self.c1 + self.c2 * 2.0 * eta + self.c3 * 3.0 * eta.powi(2))
+            }
+            /// equal to = [rho^2/T^3 *J3]_t1d1 / {rho^2/T^3}
+            /// equal to = -3 * ( 2 * J3t0d0 + rho * J3t0d1 )
+            ///            +T * ( 2 * J3t1d0 + rho * J3t1d1 )
+            fn t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d1(eta)
+                    + eta1 * (self.c1 * 3.0 + self.c2 * 8.0 * eta + self.c3 * 15.0 * eta.powi(2))
+            }
+            /// equal to = [rho^2/T^3 *J3]_t1d2 / {rho^2/T^3}
+            /// equal to = -3 * ( 2 * J3t0d0 + 4 * rho * J3t0d1 + rho^2 * J3t0d2 )
+            ///            +T * ( 2 * J3t1d0 + 4 * rho * J3t1d1 + rho^2 * J3t1d2 )
+            fn t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d2(eta)
+                    + eta1 * (self.c1 * 6.0 + self.c2 * 24.0 * eta + self.c3 * 60.0 * eta.powi(2))
+            }
+            /// equal to = [rho^2/T^3 *J3]_t1d3 / {rho^2/T^3}
+            /// equal to = -3 * ( 6 * rho * J3t0d1 + 6 * rho^2 * J3t0d2 + rho^3 * J3t0d3 )
+            ///            +T * ( 6 * rho * J3t1d1 + 6 * rho^2 * J3t1d2 + rho^3 * J3t1d3 )
+            fn t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                -3.0 * self.t0d3(eta)
+                    + eta1 * (self.c1 * 6.0 + self.c2 * 48.0 * eta + self.c3 * 180.0 * eta.powi(2))
+            }
+            /// equal to = [rho^2/T^3 *J3]_t2d0 / {rho^2/T^3}
+            /// equal to = 12 * J3t0d0 - 6 * T * J3t1d0 + T^2 * J3t2d0
+            fn t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                12.0 * self.t0d0(eta)
+                    + (eta2 - 6.0 * eta1)
+                        * (self.c1 + self.c2 * 2.0 * eta + self.c3 * 3.0 * eta.powi(2))
+                    + eta1.powi(2) * (self.c2 * 2.0 + self.c3 * 6.0 * eta)
+            }
+        }
+    };
+}
 /// macro_rules! _fn_test
 macro_rules! _fn_test {
     ($fluid:expr) => {

@@ -1,5 +1,5 @@
 use super::PcSaftErr;
-use super::{DispTerm, GiiPure, HsPure};
+use super::{DispTerm, GiiTerm, HsTerm};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
@@ -9,18 +9,6 @@ use std::f64::consts::FRAC_PI_6;
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftGlyPure;
-/// let (m, sigma, epsilon) = (2.8611, 2.6826, 205.35); // SO2
-/// let mut fluid = PcSaftGlyPure::new_fluid(m, sigma, epsilon);
-/// fluid.c_flash().unwrap();
-/// assert_eq!(fluid.T().unwrap().round(), 438.0);
-/// assert_eq!(fluid.p().unwrap().round(), 9099261.0);
-/// assert_eq!(fluid.rho().unwrap().round(), 8079.0);
-/// fluid.t_flash(273.15).unwrap();
-/// assert_eq!(fluid.p_s().unwrap().round(), 156782.0);
-/// assert_eq!(fluid.rho_v().unwrap().round(), 71.0);
-/// assert_eq!(fluid.rho_l().unwrap().round(), 22100.0);
-/// fluid.tp_flash(273.15, 0.1e6).unwrap();
-/// assert_eq!(fluid.rho().unwrap().round(), 45.0);
 /// let mut methanol = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9);
 /// methanol.set_2B_assoc_term(0.035176, 2899.5); // kappa_AB epsilon_AB
 /// methanol.tp_flash(298.15, 0.1e6).unwrap();
@@ -32,8 +20,8 @@ pub struct PcSaftGlyPure {
     m: f64,
     sigma3: f64,
     epsilon: f64,
-    hs: HsPure,     // HsPure
-    gii: GiiPure,   // GiiPure
+    hs: HsTerm,     // HsTerm
+    gii: GiiTerm,   // GiiTerm
     disp: DispTerm, // DispTerm
     eta0: f64,
     eta1: f64,
@@ -103,8 +91,8 @@ impl PcSaftGlyPure {
             m,
             sigma3,
             epsilon,
-            hs: HsPure::new(),
-            gii: GiiPure::new(),
+            hs: HsTerm::new(),
+            gii: GiiTerm::new(),
             disp: DispTerm::new(m, sigma3, epsilon),
             eta0: 0.0,
             eta1: 0.0,
@@ -207,8 +195,7 @@ impl PcSaftGlyPure {
 impl PcSaftGlyPure {
     fn eta_flash(&mut self, temp: f64, rho_num: f64) {
         if temp != self.temp || rho_num != self.rho_num {
-            self.temp = temp;
-            self.rho_num = rho_num;
+            (self.temp, self.rho_num) = (temp, rho_num);
             let epsilon_temp = self.epsilon / temp;
             let d = 1.0 - 0.12 * (-3.0 * epsilon_temp).exp();
             let d1 = -0.36 * (-3.0 * epsilon_temp).exp() * epsilon_temp;
