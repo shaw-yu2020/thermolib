@@ -117,7 +117,7 @@ macro_rules! fn_c_flash {
                     p_t0d1 = self.calc_p_t0d1(temp_c, dens_c);
                     p_t0d2 = self.calc_p_t0d2(temp_c, dens_c);
                     if p_t0d1.abs() < 1E3 && p_t0d2.abs() < 1E6 {
-                        self.is_single_phase = true;
+                        (self.temp, self.rho_num, self.is_single_phase) = (temp_c, dens_c, true);
                         return Ok(());
                     }
                 }
@@ -155,9 +155,8 @@ macro_rules! fn_flash {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
         impl $name {
             pub fn t_flash(&mut self, temp: f64) -> anyhow::Result<()> {
-                let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
                 // Vapor phase: eta = 1E-10
-                let rhov_num_guess = 1E-10 / (FRAC_PI_6 * self.m * d3);
+                let rhov_num_guess = 1E-10 / self.eta0_coef(temp);
                 let mut rhov_num = rhov_num_guess;
                 let mut p_t0d1_v = self.calc_p_t0d1(temp, rhov_num);
                 for _i in 1..100000 {
@@ -173,7 +172,7 @@ macro_rules! fn_flash {
                     return Err(anyhow!(PcSaftErr::NotConvForT));
                 }
                 // Liquid phase: eta = 0.5
-                let rhol_num_guess = 0.5 / (FRAC_PI_6 * self.m * d3);
+                let rhol_num_guess = 0.5 / self.eta0_coef(temp);
                 let mut rhol_num = rhol_num_guess;
                 let mut p_t0d1_l = self.calc_p_t0d1(temp, rhol_num);
                 for _i in 1..100000 {
@@ -213,16 +212,16 @@ macro_rules! fn_flash {
                 }
             }
             pub fn tp_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<()> {
-                let d3 = self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3);
+                let eta0_coef = self.eta0_coef(temp);
                 // Iteration from vapor phase: eta = 1E-10
-                let rhov_num = self.calc_density(temp, pres, 1E-10 / (FRAC_PI_6 * self.m * d3));
+                let rhov_num = self.calc_density(temp, pres, 1E-10 / eta0_coef);
                 let lnphi_v = if rhov_num.is_nan() {
                     f64::INFINITY
                 } else {
                     self.calc_lnphi(temp, rhov_num)
                 };
                 // Iteration from liquid phase: eta = 0.5
-                let rhol_num = self.calc_density(temp, pres, 0.5 / (FRAC_PI_6 * self.m * d3));
+                let rhol_num = self.calc_density(temp, pres, 0.5 / eta0_coef);
                 let lnphi_l = if rhol_num.is_nan() {
                     f64::INFINITY
                 } else {
@@ -232,20 +231,17 @@ macro_rules! fn_flash {
                 if lnphi_v.is_infinite() && lnphi_l.is_infinite() {
                     Err(anyhow!(PcSaftErr::NotConvForTP))
                 } else if lnphi_v.is_infinite() {
-                    self.eta_flash(temp, rhol_num);
-                    self.is_single_phase = true;
+                    (self.temp, self.rho_num, self.is_single_phase) = (temp, rhol_num, true);
                     Ok(())
                 } else if lnphi_l.is_infinite() {
-                    self.eta_flash(temp, rhov_num);
-                    self.is_single_phase = true;
+                    (self.temp, self.rho_num, self.is_single_phase) = (temp, rhov_num, true);
                     Ok(())
                 } else {
                     if lnphi_v < lnphi_l {
-                        self.eta_flash(temp, rhov_num);
+                        (self.temp, self.rho_num, self.is_single_phase) = (temp, rhov_num, true);
                     } else {
-                        self.eta_flash(temp, rhol_num);
+                        (self.temp, self.rho_num, self.is_single_phase) = (temp, rhol_num, true);
                     }
-                    self.is_single_phase = true;
                     Ok(())
                 }
             }
@@ -655,6 +651,393 @@ macro_rules! fn_check_derivatives {
                 println!("[t1d0 -> t2d0] diff ={:e}", val_diff);
             } else {
                 compare_val(val_calc, val_diff);
+            }
+        }
+    };
+}
+/// macro_rules! fn_assoc
+macro_rules! fn_assoc {
+    ($name:ty) => {
+        impl $name {
+            pub fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t0d0::<1>(self.XA),
+                    AssocType::Type2B => 2.0 * self.site_t0d0::<1>(self.XA),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t0d0::<1>(self.XA)
+                            + self.site_t0d0::<2>(2.0 * self.XA - 1.0)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t0d0::<1>(self.XA),
+                }
+            }
+            pub fn t0d1(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t0d1::<1>(self.XA, eta),
+                    AssocType::Type2B => 2.0 * self.site_t0d1::<1>(self.XA, eta),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t0d1::<1>(self.XA, eta)
+                            + self.site_t0d1::<2>(2.0 * self.XA - 1.0, eta)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t0d1::<1>(self.XA, eta),
+                }
+            }
+            pub fn t0d2(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t0d2::<1>(self.XA, eta),
+                    AssocType::Type2B => 2.0 * self.site_t0d2::<1>(self.XA, eta),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t0d2::<1>(self.XA, eta)
+                            + self.site_t0d2::<2>(2.0 * self.XA - 1.0, eta)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t0d2::<1>(self.XA, eta),
+                }
+            }
+            pub fn t0d3(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t0d3::<1>(self.XA, eta),
+                    AssocType::Type2B => 2.0 * self.site_t0d3::<1>(self.XA, eta),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t0d3::<1>(self.XA, eta)
+                            + self.site_t0d3::<2>(2.0 * self.XA - 1.0, eta)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t0d3::<1>(self.XA, eta),
+                }
+            }
+            pub fn t0d4(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t0d4::<1>(self.XA, eta),
+                    AssocType::Type2B => 2.0 * self.site_t0d4::<1>(self.XA, eta),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t0d4::<1>(self.XA, eta)
+                            + self.site_t0d4::<2>(2.0 * self.XA - 1.0, eta)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t0d4::<1>(self.XA, eta),
+                }
+            }
+            pub fn t1d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t1d0::<1>(self.XA, eta, eta1),
+                    AssocType::Type2B => 2.0 * self.site_t1d0::<1>(self.XA, eta, eta1),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t1d0::<1>(self.XA, eta, eta1)
+                            + self.site_t1d0::<2>(2.0 * self.XA - 1.0, eta, eta1)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t1d0::<1>(self.XA, eta, eta1),
+                }
+            }
+            pub fn t1d1(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t1d1::<1>(self.XA, eta, eta1),
+                    AssocType::Type2B => 2.0 * self.site_t1d1::<1>(self.XA, eta, eta1),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t1d1::<1>(self.XA, eta, eta1)
+                            + self.site_t1d1::<2>(2.0 * self.XA - 1.0, eta, eta1)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t1d1::<1>(self.XA, eta, eta1),
+                }
+            }
+            pub fn t1d2(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t1d2::<1>(self.XA, eta, eta1),
+                    AssocType::Type2B => 2.0 * self.site_t1d2::<1>(self.XA, eta, eta1),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t1d2::<1>(self.XA, eta, eta1)
+                            + self.site_t1d2::<2>(2.0 * self.XA - 1.0, eta, eta1)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t1d2::<1>(self.XA, eta, eta1),
+                }
+            }
+            pub fn t1d3(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t1d3::<1>(self.XA, eta, eta1),
+                    AssocType::Type2B => 2.0 * self.site_t1d3::<1>(self.XA, eta, eta1),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t1d3::<1>(self.XA, eta, eta1)
+                            + self.site_t1d3::<2>(2.0 * self.XA - 1.0, eta, eta1)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t1d3::<1>(self.XA, eta, eta1),
+                }
+            }
+            pub fn t2d0(&mut self, temp: f64, rho_num: f64, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                self.XA_flash(temp, rho_num, eta);
+                match self.assoc_type {
+                    AssocType::Type1 => self.site_t2d0::<1>(self.XA, eta, eta1, eta2),
+                    AssocType::Type2B => 2.0 * self.site_t2d0::<1>(self.XA, eta, eta1, eta2),
+                    AssocType::Type3B => {
+                        2.0 * self.site_t2d0::<1>(self.XA, eta, eta1, eta2)
+                            + self.site_t2d0::<2>(2.0 * self.XA - 1.0, eta, eta1, eta2)
+                    }
+                    AssocType::Type4C => 4.0 * self.site_t2d0::<1>(self.XA, eta, eta1, eta2),
+                }
+            }
+        }
+        impl $name {
+            fn site_t0d0<const C: i32>(&mut self, x: f64) -> f64 {
+                x.ln() - x / 2.0 + 0.5
+            }
+            fn site_t0d1<const C: i32>(&mut self, x: f64, eta: f64) -> f64 {
+                self.site_x1::<C>(x) * self.x_t0d1(eta)
+            }
+            fn site_t0d2<const C: i32>(&mut self, x: f64, eta: f64) -> f64 {
+                self.site_x2::<C>(x) * self.x_t0d1(eta).powi(2)
+                    + self.site_x1::<C>(x) * self.x_t0d2(eta)
+            }
+            fn site_t0d3<const C: i32>(&mut self, x: f64, eta: f64) -> f64 {
+                self.site_x3::<C>(x) * self.x_t0d1(eta).powi(3)
+                    + 3.0 * self.site_x2::<C>(x) * self.x_t0d1(eta) * self.x_t0d2(eta)
+                    + self.site_x1::<C>(x) * self.x_t0d3(eta)
+            }
+            fn site_t0d4<const C: i32>(&mut self, x: f64, eta: f64) -> f64 {
+                self.site_x4::<C>(x) * self.x_t0d1(eta).powi(4)
+                    + 6.0 * self.site_x3::<C>(x) * self.x_t0d1(eta).powi(2) * self.x_t0d2(eta)
+                    + 3.0 * self.site_x2::<C>(x) * self.x_t0d2(eta).powi(2)
+                    + 4.0 * self.site_x2::<C>(x) * self.x_t0d1(eta) * self.x_t0d3(eta)
+                    + self.site_x1::<C>(x) * self.x_t0d4(eta)
+            }
+            fn site_t1d0<const C: i32>(&mut self, x: f64, eta: f64, eta1: f64) -> f64 {
+                self.site_x1::<C>(x) * self.x_t1d0(eta, eta1)
+            }
+            fn site_t1d1<const C: i32>(&mut self, x: f64, eta: f64, eta1: f64) -> f64 {
+                self.site_x2::<C>(x) * self.x_t1d0(eta, eta1) * self.x_t0d1(eta)
+                    + self.site_x1::<C>(x) * self.x_t1d1(eta, eta1)
+            }
+            fn site_t1d2<const C: i32>(&mut self, x: f64, eta: f64, eta1: f64) -> f64 {
+                self.site_x3::<C>(x) * self.x_t1d0(eta, eta1) * self.x_t0d1(eta).powi(2)
+                    + 2.0 * self.site_x2::<C>(x) * self.x_t1d1(eta, eta1) * self.x_t0d1(eta)
+                    + self.site_x2::<C>(x) * self.x_t1d0(eta, eta1) * self.x_t0d2(eta)
+                    + self.site_x1::<C>(x) * self.x_t1d2(eta, eta1)
+            }
+            fn site_t1d3<const C: i32>(&mut self, x: f64, eta: f64, eta1: f64) -> f64 {
+                self.site_x4::<C>(x) * self.x_t1d0(eta, eta1) * self.x_t0d1(eta).powi(3)
+                    + 3.0 * self.site_x3::<C>(x) * self.x_t1d1(eta, eta1) * self.x_t0d1(eta).powi(2)
+                    + (3.0 * self.site_x3::<C>(x))
+                        * (self.x_t1d0(eta, eta1) * self.x_t0d1(eta) * self.x_t0d2(eta))
+                    + 3.0 * self.site_x2::<C>(x) * self.x_t1d2(eta, eta1) * self.x_t0d1(eta)
+                    + 3.0 * self.site_x2::<C>(x) * self.x_t1d1(eta, eta1) * self.x_t0d2(eta)
+                    + self.site_x2::<C>(x) * self.x_t1d0(eta, eta1) * self.x_t0d3(eta)
+                    + self.site_x1::<C>(x) * self.x_t1d3(eta, eta1)
+            }
+            fn site_t2d0<const C: i32>(&mut self, x: f64, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                self.site_x2::<C>(x) * self.x_t1d0(eta, eta1).powi(2)
+                    + self.site_x1::<C>(x) * self.x_t2d0(eta, eta1, eta2)
+            }
+        }
+        impl $name {
+            fn site_x1<const C: i32>(&self, x: f64) -> f64 {
+                (1.0 / x - 0.5) * C as f64
+            }
+            fn site_x2<const C: i32>(&self, x: f64) -> f64 {
+                -1.0 / x.powi(2) * C.pow(2) as f64
+            }
+            fn site_x3<const C: i32>(&self, x: f64) -> f64 {
+                2.0 / x.powi(3) * C.pow(3) as f64
+            }
+            fn site_x4<const C: i32>(&self, x: f64) -> f64 {
+                -6.0 / x.powi(4) * C.pow(4) as f64
+            }
+        }
+        impl $name {
+            fn x_t0d1(&mut self, eta: f64) -> f64 {
+                if self.x_t0d1.0 != self.XA {
+                    self.x_t0d1 = (self.XA, self.xt1() * self.t_t0d1(eta))
+                }
+                self.x_t0d1.1
+            }
+            fn x_t0d2(&mut self, eta: f64) -> f64 {
+                if self.x_t0d2.0 != self.XA {
+                    self.x_t0d2 = (
+                        self.XA,
+                        self.xt2() * self.t_t0d1(eta).powi(2) + self.xt1() * self.t_t0d2(eta),
+                    )
+                }
+                self.x_t0d2.1
+            }
+            fn x_t0d3(&mut self, eta: f64) -> f64 {
+                if self.x_t0d3.0 != self.XA {
+                    self.x_t0d3 = (
+                        self.XA,
+                        self.xt3() * self.t_t0d1(eta).powi(3)
+                            + 3.0 * self.xt2() * self.t_t0d1(eta) * self.t_t0d2(eta)
+                            + self.xt1() * self.t_t0d3(eta),
+                    )
+                }
+                self.x_t0d3.1
+            }
+            fn x_t0d4(&mut self, eta: f64) -> f64 {
+                if self.x_t0d4.0 != self.XA {
+                    self.x_t0d4 = (
+                        self.XA,
+                        self.xt4() * self.t_t0d1(eta).powi(4)
+                            + 6.0 * self.xt3() * self.t_t0d1(eta).powi(2) * self.t_t0d2(eta)
+                            + 3.0 * self.xt2() * self.t_t0d2(eta).powi(2)
+                            + 4.0 * self.xt2() * self.t_t0d1(eta) * self.t_t0d3(eta)
+                            + self.xt1() * self.t_t0d4(eta),
+                    )
+                }
+                self.x_t0d4.1
+            }
+            fn x_t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
+                if self.x_t1d0.0 != self.XA {
+                    self.x_t1d0 = (self.XA, self.xt1() * self.t_t1d0(eta, eta1))
+                }
+                self.x_t1d0.1
+            }
+            fn x_t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
+                if self.x_t1d1.0 != self.XA {
+                    self.x_t1d1 = (
+                        self.XA,
+                        self.xt2() * self.t_t1d0(eta, eta1) * self.t_t0d1(eta)
+                            + self.xt1() * self.t_t1d1(eta, eta1),
+                    )
+                }
+                self.x_t1d1.1
+            }
+            fn x_t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
+                if self.x_t1d2.0 != self.XA {
+                    self.x_t1d2 = (
+                        self.XA,
+                        self.xt3() * self.t_t1d0(eta, eta1) * self.t_t0d1(eta).powi(2)
+                            + 2.0 * self.xt2() * self.t_t1d1(eta, eta1) * self.t_t0d1(eta)
+                            + self.xt2() * self.t_t1d0(eta, eta1) * self.t_t0d2(eta)
+                            + self.xt1() * self.t_t1d2(eta, eta1),
+                    )
+                }
+                self.x_t1d2.1
+            }
+            fn x_t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
+                if self.x_t1d3.0 != self.XA {
+                    self.x_t1d3 = (
+                        self.XA,
+                        self.xt4() * self.t_t1d0(eta, eta1) * self.t_t0d1(eta).powi(3)
+                            + 3.0 * self.xt3() * self.t_t1d1(eta, eta1) * self.t_t0d1(eta).powi(2)
+                            + 3.0
+                                * self.xt3()
+                                * self.t_t1d0(eta, eta1)
+                                * self.t_t0d1(eta)
+                                * self.t_t0d2(eta)
+                            + 3.0 * self.xt2() * self.t_t1d2(eta, eta1) * self.t_t0d1(eta)
+                            + 3.0 * self.xt2() * self.t_t1d1(eta, eta1) * self.t_t0d2(eta)
+                            + self.xt2() * self.t_t1d0(eta, eta1) * self.t_t0d3(eta)
+                            + self.xt1() * self.t_t1d3(eta, eta1),
+                    )
+                }
+                self.x_t1d3.1
+            }
+            fn x_t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
+                if self.x_t2d0.0 != self.XA {
+                    self.x_t2d0 = (
+                        self.XA,
+                        self.xt2() * self.t_t1d0(eta, eta1).powi(2)
+                            + self.xt1() * self.t_t2d0(eta, eta1, eta2),
+                    )
+                }
+                self.x_t2d0.1
+            }
+        }
+        impl $name {
+            fn xt1(&mut self) -> f64 {
+                if self.xt1.0 != self.XA {
+                    self.xt1 = (
+                        self.XA,
+                        match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(3) / (self.XA - 2.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(2)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0)
+                            }
+                            AssocType::Type4C => 2.0 * self.XA.powi(3) / (self.XA - 2.0),
+                        },
+                    )
+                }
+                self.xt1.1
+            }
+            fn xt2(&mut self) -> f64 {
+                if self.xt2.0 != self.XA {
+                    self.xt2 = (
+                        self.XA,
+                        2.0 * match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(5) / (self.XA - 2.0).powi(3) * (self.XA - 3.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(3)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(3)
+                                    * (4.0 * self.XA.powi(3) - 12.0 * self.XA.powi(2)
+                                        + 6.0 * self.XA
+                                        - 1.0)
+                            }
+                            AssocType::Type4C => {
+                                4.0 * self.XA.powi(5) / (self.XA - 2.0).powi(3) * (self.XA - 3.0)
+                            }
+                        },
+                    )
+                }
+                self.xt2.1
+            }
+            fn xt3(&mut self) -> f64 {
+                if self.xt3.0 != self.XA {
+                    self.xt3 = (
+                        self.XA,
+                        6.0 * match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(7) / (self.XA - 2.0).powi(5)
+                                    * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(4)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(5)
+                                    * (16.0 * self.XA.powi(6) - 96.0 * self.XA.powi(5)
+                                        + (200.0 * self.XA.powi(4) - 160.0 * self.XA.powi(3))
+                                        + (62.0 * self.XA.powi(2) - 12.0 * self.XA + 1.0))
+                            }
+                            AssocType::Type4C => {
+                                8.0 * self.XA.powi(7) / (self.XA - 2.0).powi(5)
+                                    * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
+                            }
+                        },
+                    )
+                }
+                self.xt3.1
+            }
+            fn xt4(&mut self) -> f64 {
+                if self.xt4.0 != self.XA {
+                    self.xt4 = (
+                        self.XA,
+                        24.0 * match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(9) / (self.XA - 2.0).powi(7)
+                                    * (self.XA.powi(3) - 9.0 * self.XA.powi(2) + 29.0 * self.XA
+                                        - 35.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(5)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(7)
+                                    * (64.0 * self.XA.powi(9) - 576.0 * self.XA.powi(8)
+                                        + (2080.0 * self.XA.powi(7) - 3808.0 * self.XA.powi(6))
+                                        + (3696.0 * self.XA.powi(5) - 2084.0 * self.XA.powi(4))
+                                        + (716.0 * self.XA.powi(3) - 150.0 * self.XA.powi(2))
+                                        + (18.0 * self.XA - 1.0))
+                            }
+                            AssocType::Type4C => {
+                                16.0 * self.XA.powi(9) / (self.XA - 2.0).powi(7)
+                                    * (self.XA.powi(3) - 9.0 * self.XA.powi(2) + 29.0 * self.XA
+                                        - 35.0)
+                            }
+                        },
+                    )
+                }
+                self.xt4.1
             }
         }
     };

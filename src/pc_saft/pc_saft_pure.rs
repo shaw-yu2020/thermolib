@@ -30,7 +30,7 @@ use std::f64::consts::FRAC_PI_6;
 /// fluid.tp_flash(298.15, 0.1e6).unwrap();
 /// assert_eq!(fluid.rho().unwrap().round(), 41.0);
 /// let mut fluid = PcSaftPure::new_fluid(2.7447, 3.2742, 232.99); // Acetone
-/// fluid.set_DD_polar_term(2.88); // |Q|(DA)
+/// fluid.set_DD_polar_term(2.88); // |u|(D)
 /// fluid.tp_flash(298.15, 0.1e6).unwrap();
 /// assert_eq!(fluid.rho().unwrap().round(), 13276.0);
 /// ```
@@ -47,13 +47,13 @@ pub struct PcSaftPure {
     qq: Option<PqqTerm>,      // PqqTerm
     dd: Option<PddTerm>,      // PddTerm
     // state
-    eta0: f64,
-    eta1: f64,
-    eta2: f64,
     temp: f64,
     rho_num: f64,
     rhov_num: f64,
     rhol_num: f64,
+    eta0_coef: (f64, f64),
+    eta1_coef: (f64, f64),
+    eta2_coef: (f64, f64),
     is_single_phase: bool,
     // modified aly_lee_cv0
     // for fn_aly_lee_cp0!
@@ -77,13 +77,13 @@ impl PcSaftPure {
             dd: None,                                // PqqTerm
             qq: None,                                // PddTerm
             // state
-            eta0: 0.0,
-            eta1: 0.0,
-            eta2: 0.0,
             temp: 1.0,
-            rho_num: 1E-10,
+            rho_num: 1.0,
             rhov_num: 0.0,
             rhol_num: 0.0,
+            eta0_coef: (0.0, 0.0),
+            eta1_coef: (0.0, 0.0),
+            eta2_coef: (0.0, 0.0),
             is_single_phase: true,
             // modified aly_lee_cv0
             // for fn_aly_lee_cp0!
@@ -134,191 +134,233 @@ impl PcSaftPure {
     fn_check_derivatives!();
 }
 impl PcSaftPure {
-    fn eta_flash(&mut self, temp: f64, rho_num: f64) {
-        if temp != self.temp || rho_num != self.rho_num {
-            (self.temp, self.rho_num) = (temp, rho_num);
-            let epsilon_temp = self.epsilon / temp;
-            let d = 1.0 - 0.12 * (-3.0 * epsilon_temp).exp();
-            let d1 = -0.36 * (-3.0 * epsilon_temp).exp() * epsilon_temp;
-            let d2 = d1 * (3.0 * epsilon_temp - 2.0);
-            let rho_plus = FRAC_PI_6 * rho_num * self.m * self.sigma3;
-            self.eta0 = rho_plus * d.powi(3);
-            self.eta1 = rho_plus * 3.0 * d.powi(2) * d1;
-            self.eta2 = rho_plus * (6.0 * d * d1.powi(2) + 3.0 * d.powi(2) * d2);
+    fn eta0_coef(&mut self, temp: f64) -> f64 {
+        if temp != self.eta0_coef.0 {
+            self.eta0_coef = (
+                temp,
+                (FRAC_PI_6 * self.m * self.sigma3)
+                    * (1.0 - 0.12 * (-3.0 * self.epsilon / temp).exp()).powi(3),
+            );
         }
+        self.eta0_coef.1
+    }
+    fn eta1_coef(&mut self, temp: f64) -> f64 {
+        if temp != self.eta1_coef.0 {
+            let epsilon_temp_plus = 3.0 * self.epsilon / temp;
+            self.eta1_coef = (
+                temp,
+                (FRAC_PI_6 * self.m * self.sigma3)
+                    * (3.0
+                        * (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
+                        * (-0.12 * (-epsilon_temp_plus).exp() * epsilon_temp_plus)),
+            );
+        }
+        self.eta1_coef.1
+    }
+    fn eta2_coef(&mut self, temp: f64) -> f64 {
+        if temp != self.eta2_coef.0 {
+            let epsilon_temp_plus = 3.0 * self.epsilon / temp;
+            self.eta2_coef = (
+                temp,
+                (FRAC_PI_6 * self.m * self.sigma3)
+                    * (6.0
+                        * (1.0 - 0.12 * (-epsilon_temp_plus).exp())
+                        * (-0.12 * (-epsilon_temp_plus).exp() * epsilon_temp_plus).powi(2)
+                        + 3.0
+                            * (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
+                            * (-0.12
+                                * (-epsilon_temp_plus).exp()
+                                * epsilon_temp_plus
+                                * (epsilon_temp_plus - 2.0))),
+            );
+        }
+        self.eta2_coef.1
     }
     fn r_t0d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t0d0(self.eta0) - (self.m - 1.0) * self.gii.lngii_t0d0(self.eta0)
-            + self.disp.t0d0(temp, rho_num, self.eta0)
+        let eta0 = self.eta0_coef(temp) * rho_num;
+        self.m * self.hs.t0d0(eta0) - (self.m - 1.0) * self.gii.lngii_t0d0(eta0)
+            + self.disp.t0d0(temp, rho_num, eta0)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t0d0(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t0d0(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t0d0(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t0d1(self.eta0) - (self.m - 1.0) * self.gii.lngii_t0d1(self.eta0)
-            + self.disp.t0d1(temp, rho_num, self.eta0)
+        let eta0 = self.eta0_coef(temp) * rho_num;
+        self.m * self.hs.t0d1(eta0) - (self.m - 1.0) * self.gii.lngii_t0d1(eta0)
+            + self.disp.t0d1(temp, rho_num, eta0)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t0d1(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t0d1(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t0d1(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t0d2(self.eta0) - (self.m - 1.0) * self.gii.lngii_t0d2(self.eta0)
-            + self.disp.t0d2(temp, rho_num, self.eta0)
+        let eta0 = self.eta0_coef(temp) * rho_num;
+        self.m * self.hs.t0d2(eta0) - (self.m - 1.0) * self.gii.lngii_t0d2(eta0)
+            + self.disp.t0d2(temp, rho_num, eta0)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t0d2(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t0d2(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t0d2(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t0d3(self.eta0) - (self.m - 1.0) * self.gii.lngii_t0d3(self.eta0)
-            + self.disp.t0d3(temp, rho_num, self.eta0)
+        let eta0 = self.eta0_coef(temp) * rho_num;
+        self.m * self.hs.t0d3(eta0) - (self.m - 1.0) * self.gii.lngii_t0d3(eta0)
+            + self.disp.t0d3(temp, rho_num, eta0)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t0d3(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t0d3(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t0d3(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
     }
     fn r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t0d4(self.eta0) - (self.m - 1.0) * self.gii.lngii_t0d4(self.eta0)
-            + self.disp.t0d4(temp, rho_num, self.eta0)
+        let eta0 = self.eta0_coef(temp) * rho_num;
+        self.m * self.hs.t0d4(eta0) - (self.m - 1.0) * self.gii.lngii_t0d4(eta0)
+            + self.disp.t0d4(temp, rho_num, eta0)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t0d4(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t0d4(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t0d4(temp, rho_num, self.eta0))
+                .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
     }
     fn r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t1d0(self.eta0, self.eta1)
-            - (self.m - 1.0) * self.gii.lngii_t1d0(self.eta0, self.eta1)
-            + self.disp.t1d0(temp, rho_num, self.eta0, self.eta1)
+        let (eta0, eta1) = (
+            self.eta0_coef(temp) * rho_num,
+            self.eta1_coef(temp) * rho_num,
+        );
+        self.m * self.hs.t1d0(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d0(eta0, eta1)
+            + self.disp.t1d0(temp, rho_num, eta0, eta1)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t1d0(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t1d0(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t1d0(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
     }
     fn r_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t1d1(self.eta0, self.eta1)
-            - (self.m - 1.0) * self.gii.lngii_t1d1(self.eta0, self.eta1)
-            + self.disp.t1d1(temp, rho_num, self.eta0, self.eta1)
+        let (eta0, eta1) = (
+            self.eta0_coef(temp) * rho_num,
+            self.eta1_coef(temp) * rho_num,
+        );
+        self.m * self.hs.t1d1(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d1(eta0, eta1)
+            + self.disp.t1d1(temp, rho_num, eta0, eta1)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t1d1(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t1d1(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t1d1(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
     }
     fn r_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t1d2(self.eta0, self.eta1)
-            - (self.m - 1.0) * self.gii.lngii_t1d2(self.eta0, self.eta1)
-            + self.disp.t1d2(temp, rho_num, self.eta0, self.eta1)
+        let (eta0, eta1) = (
+            self.eta0_coef(temp) * rho_num,
+            self.eta1_coef(temp) * rho_num,
+        );
+        self.m * self.hs.t1d2(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d2(eta0, eta1)
+            + self.disp.t1d2(temp, rho_num, eta0, eta1)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t1d2(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t1d2(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t1d2(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
     }
     fn r_t1d3(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t1d3(self.eta0, self.eta1)
-            - (self.m - 1.0) * self.gii.lngii_t1d3(self.eta0, self.eta1)
-            + self.disp.t1d3(temp, rho_num, self.eta0, self.eta1)
+        let (eta0, eta1) = (
+            self.eta0_coef(temp) * rho_num,
+            self.eta1_coef(temp) * rho_num,
+        );
+        self.m * self.hs.t1d3(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d3(eta0, eta1)
+            + self.disp.t1d3(temp, rho_num, eta0, eta1)
             + self
                 .assoc
                 .as_mut()
-                .map_or(0.0, |a| a.t1d3(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
             + self
                 .qq
                 .as_mut()
-                .map_or(0.0, |a| a.t1d3(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
             + self
                 .dd
                 .as_mut()
-                .map_or(0.0, |a| a.t1d3(temp, rho_num, self.eta0, self.eta1))
+                .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
     }
     fn r_t2d0(&mut self, temp: f64, rho_num: f64) -> f64 {
-        self.eta_flash(temp, rho_num);
-        self.m * self.hs.t2d0(self.eta0, self.eta1, self.eta2)
-            - (self.m - 1.0) * self.gii.lngii_t2d0(self.eta0, self.eta1, self.eta2)
+        let (eta0, eta1, eta2) = (
+            self.eta0_coef(temp) * rho_num,
+            self.eta1_coef(temp) * rho_num,
+            self.eta2_coef(temp) * rho_num,
+        );
+        self.m * self.hs.t2d0(eta0, eta1, eta2)
+            - (self.m - 1.0) * self.gii.lngii_t2d0(eta0, eta1, eta2)
+            + self.disp.t2d0(temp, rho_num, eta0, eta1, eta2)
             + self
-                .disp
-                .t2d0(temp, rho_num, self.eta0, self.eta1, self.eta2)
-            + self.assoc.as_mut().map_or(0.0, |a| {
-                a.t2d0(temp, rho_num, self.eta0, self.eta1, self.eta2)
-            })
-            + self.qq.as_mut().map_or(0.0, |a| {
-                a.t2d0(temp, rho_num, self.eta0, self.eta1, self.eta2)
-            })
-            + self.dd.as_mut().map_or(0.0, |a| {
-                a.t2d0(temp, rho_num, self.eta0, self.eta1, self.eta2)
-            })
+                .assoc
+                .as_mut()
+                .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
+            + self
+                .qq
+                .as_mut()
+                .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
+            + self
+                .dd
+                .as_mut()
+                .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
     }
 }
