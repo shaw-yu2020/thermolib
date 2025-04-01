@@ -1,5 +1,6 @@
 /// GiiTerm
 pub struct GiiTerm {
+    neg_sum_xm1: f64,
     eta0: (f64, f64),
     eta1: (f64, f64),
     eta2: (f64, f64),
@@ -40,22 +41,26 @@ impl GiiTerm {
 }
 impl GiiTerm {
     pub fn lngii_t0d0(&mut self, eta: f64) -> f64 {
-        self.eta0(eta).ln()
+        self.neg_sum_xm1 * self.eta0(eta).ln()
     }
     pub fn lngii_t0d1(&mut self, eta: f64) -> f64 {
-        eta / self.eta0(eta) * self.eta1(eta)
+        self.neg_sum_xm1 * eta / self.eta0(eta) * self.eta1(eta)
     }
     pub fn lngii_t0d2(&mut self, eta: f64) -> f64 {
-        (eta / self.eta0(eta)).powi(2) * (self.eta2(eta) * self.eta0(eta) - self.eta1(eta).powi(2))
+        self.neg_sum_xm1
+            * (eta / self.eta0(eta)).powi(2)
+            * (self.eta2(eta) * self.eta0(eta) - self.eta1(eta).powi(2))
     }
     pub fn lngii_t0d3(&mut self, eta: f64) -> f64 {
-        (eta / self.eta0(eta)).powi(3)
+        self.neg_sum_xm1
+            * (eta / self.eta0(eta)).powi(3)
             * (self.eta3(eta) * self.eta0(eta).powi(2)
                 - 3.0 * self.eta2(eta) * self.eta1(eta) * self.eta0(eta)
                 + 2.0 * self.eta1(eta).powi(3))
     }
     pub fn lngii_t0d4(&mut self, eta: f64) -> f64 {
-        (eta / self.eta0(eta)).powi(4)
+        self.neg_sum_xm1
+            * (eta / self.eta0(eta)).powi(4)
             * (self.eta4(eta) * self.eta0(eta).powi(3)
                 - 4.0 * self.eta3(eta) * self.eta1(eta) * self.eta0(eta).powi(2)
                 - 3.0 * self.eta2(eta).powi(2) * self.eta0(eta).powi(2)
@@ -63,15 +68,15 @@ impl GiiTerm {
                 - 6.0 * self.eta1(eta).powi(4))
     }
     pub fn lngii_t1d0(&mut self, eta: f64, eta1: f64) -> f64 {
-        eta1 / self.eta0(eta) * self.eta1(eta)
+        self.neg_sum_xm1 * eta1 / self.eta0(eta) * self.eta1(eta)
     }
     pub fn lngii_t1d1(&mut self, eta: f64, eta1: f64) -> f64 {
-        eta1 / self.eta0(eta).powi(2)
+        self.neg_sum_xm1 * eta1 / self.eta0(eta).powi(2)
             * (eta * (self.eta2(eta) * self.eta0(eta) - self.eta1(eta).powi(2))
                 + self.eta1(eta) * self.eta0(eta))
     }
     pub fn lngii_t1d2(&mut self, eta: f64, eta1: f64) -> f64 {
-        eta1 * eta / self.eta0(eta).powi(3)
+        self.neg_sum_xm1 * eta1 * eta / self.eta0(eta).powi(3)
             * (eta
                 * (self.eta3(eta) * self.eta0(eta).powi(2)
                     - 3.0 * self.eta2(eta) * self.eta1(eta) * self.eta0(eta)
@@ -81,7 +86,7 @@ impl GiiTerm {
                         - self.eta1(eta).powi(2) * self.eta0(eta)))
     }
     pub fn lngii_t1d3(&mut self, eta: f64, eta1: f64) -> f64 {
-        eta1 * eta.powi(2) / self.eta0(eta).powi(4)
+        self.neg_sum_xm1 * eta1 * eta.powi(2) / self.eta0(eta).powi(4)
             * (eta
                 * (self.eta4(eta) * self.eta0(eta).powi(3)
                     - 4.0 * self.eta3(eta) * self.eta1(eta) * self.eta0(eta).powi(2)
@@ -94,14 +99,15 @@ impl GiiTerm {
                         + 2.0 * self.eta1(eta).powi(3) * self.eta0(eta)))
     }
     pub fn lngii_t2d0(&mut self, eta: f64, eta1: f64, eta2: f64) -> f64 {
-        self.eta0(eta).powi(2).recip()
+        self.neg_sum_xm1 / self.eta0(eta).powi(2)
             * (eta2 * self.eta1(eta) * self.eta0(eta)
                 + eta1.powi(2) * (self.eta2(eta) * self.eta0(eta) - self.eta1(eta).powi(2)))
     }
 }
 impl GiiTerm {
-    pub fn new() -> Self {
+    pub fn new(sum_xm1: f64) -> Self {
         Self {
+            neg_sum_xm1: -sum_xm1,
             eta0: (0.0, 0.0),
             eta1: (0.0, 0.0),
             eta2: (0.0, 0.0),

@@ -46,7 +46,7 @@ pub struct AssocTerm {
 impl AssocTerm {
     pub fn new_1_term(kappa_AB_sigma3: f64, epsilon_AB: f64) -> Self {
         Self {
-            gii: GiiTerm::new(),
+            gii: GiiTerm::new(0.0),
             assoc_type: AssocType::Type1,
             kappa_AB_sigma3_dens: 0.0,
             epsilon_AB_temp: 0.0,

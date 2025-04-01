@@ -48,8 +48,8 @@ impl PcSaftGlyPure {
             m,
             sigma3,
             epsilon,
-            hs: HsTerm::new(),                       // HsTerm
-            gii: GiiTerm::new(),                     // GiiTerm
+            hs: HsTerm::new(m),                      // HsTerm
+            gii: GiiTerm::new(m - 1.0),              // GiiTerm
             disp: DispTerm::new(m, sigma3, epsilon), // DispTerm
             assoc: None,                             // AssocTerm
             // state
@@ -172,7 +172,8 @@ impl PcSaftGlyPure {
     }
     fn r_t0d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta0 = self.eta0_coef(temp) * rho_num;
-        self.m * self.hs.t0d0(eta0) - (self.m - 1.0) * self.gii.lngii_t0d0(eta0)
+        self.hs.t0d0(eta0)
+            + self.gii.lngii_t0d0(eta0)
             + self.disp.t0d0(temp, rho_num, eta0)
             + self
                 .assoc
@@ -181,7 +182,8 @@ impl PcSaftGlyPure {
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta0 = self.eta0_coef(temp) * rho_num;
-        self.m * self.hs.t0d1(eta0) - (self.m - 1.0) * self.gii.lngii_t0d1(eta0)
+        self.hs.t0d1(eta0)
+            + self.gii.lngii_t0d1(eta0)
             + self.disp.t0d1(temp, rho_num, eta0)
             + self
                 .assoc
@@ -190,7 +192,8 @@ impl PcSaftGlyPure {
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta0 = self.eta0_coef(temp) * rho_num;
-        self.m * self.hs.t0d2(eta0) - (self.m - 1.0) * self.gii.lngii_t0d2(eta0)
+        self.hs.t0d2(eta0)
+            + self.gii.lngii_t0d2(eta0)
             + self.disp.t0d2(temp, rho_num, eta0)
             + self
                 .assoc
@@ -199,7 +202,8 @@ impl PcSaftGlyPure {
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta0 = self.eta0_coef(temp) * rho_num;
-        self.m * self.hs.t0d3(eta0) - (self.m - 1.0) * self.gii.lngii_t0d3(eta0)
+        self.hs.t0d3(eta0)
+            + self.gii.lngii_t0d3(eta0)
             + self.disp.t0d3(temp, rho_num, eta0)
             + self
                 .assoc
@@ -208,7 +212,8 @@ impl PcSaftGlyPure {
     }
     fn r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta0 = self.eta0_coef(temp) * rho_num;
-        self.m * self.hs.t0d4(eta0) - (self.m - 1.0) * self.gii.lngii_t0d4(eta0)
+        self.hs.t0d4(eta0)
+            + self.gii.lngii_t0d4(eta0)
             + self.disp.t0d4(temp, rho_num, eta0)
             + self
                 .assoc
@@ -220,7 +225,8 @@ impl PcSaftGlyPure {
             self.eta0_coef(temp) * rho_num,
             self.eta1_coef(temp) * rho_num,
         );
-        self.m * self.hs.t1d0(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d0(eta0, eta1)
+        self.hs.t1d0(eta0, eta1)
+            + self.gii.lngii_t1d0(eta0, eta1)
             + self.disp.t1d0(temp, rho_num, eta0, eta1)
             + self
                 .assoc
@@ -232,7 +238,8 @@ impl PcSaftGlyPure {
             self.eta0_coef(temp) * rho_num,
             self.eta1_coef(temp) * rho_num,
         );
-        self.m * self.hs.t1d1(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d1(eta0, eta1)
+        self.hs.t1d1(eta0, eta1)
+            + self.gii.lngii_t1d1(eta0, eta1)
             + self.disp.t1d1(temp, rho_num, eta0, eta1)
             + self
                 .assoc
@@ -244,7 +251,8 @@ impl PcSaftGlyPure {
             self.eta0_coef(temp) * rho_num,
             self.eta1_coef(temp) * rho_num,
         );
-        self.m * self.hs.t1d2(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d2(eta0, eta1)
+        self.hs.t1d2(eta0, eta1)
+            + self.gii.lngii_t1d2(eta0, eta1)
             + self.disp.t1d2(temp, rho_num, eta0, eta1)
             + self
                 .assoc
@@ -256,7 +264,8 @@ impl PcSaftGlyPure {
             self.eta0_coef(temp) * rho_num,
             self.eta1_coef(temp) * rho_num,
         );
-        self.m * self.hs.t1d3(eta0, eta1) - (self.m - 1.0) * self.gii.lngii_t1d3(eta0, eta1)
+        self.hs.t1d3(eta0, eta1)
+            + self.gii.lngii_t1d3(eta0, eta1)
             + self.disp.t1d3(temp, rho_num, eta0, eta1)
             + self
                 .assoc
@@ -269,8 +278,8 @@ impl PcSaftGlyPure {
             self.eta1_coef(temp) * rho_num,
             self.eta2_coef(temp) * rho_num,
         );
-        self.m * self.hs.t2d0(eta0, eta1, eta2)
-            - (self.m - 1.0) * self.gii.lngii_t2d0(eta0, eta1, eta2)
+        self.hs.t2d0(eta0, eta1, eta2)
+            + self.gii.lngii_t2d0(eta0, eta1, eta2)
             + self.disp.t2d0(temp, rho_num, eta0, eta1, eta2)
             + self
                 .assoc
