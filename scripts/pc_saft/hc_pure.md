@@ -1,0 +1,15 @@
+$$ hs0 = - \frac{\eta \left(3 \eta - 4\right)}{\left(\eta - 1\right)^{2}} $$
+$$ hs1 = \frac{2 \left(\eta - 2\right)}{\left(\eta - 1\right)^{3}} $$
+$$ hs2 = - \frac{2 \left(2 \eta - 5\right)}{\left(\eta - 1\right)^{4}} $$
+$$ hs3 = \frac{12 \left(\eta - 3\right)}{\left(\eta - 1\right)^{5}} $$
+$$ hs4 = - \frac{24 \left(2 \eta - 7\right)}{\left(\eta - 1\right)^{6}} $$
+$$ gii0 = \frac{\eta - 2}{2 \left(\eta - 1\right)^{3}} $$
+$$ gii1 = - \frac{2 \eta - 5}{2 \left(\eta - 1\right)^{4}} $$
+$$ gii2 = \frac{3 \left(\eta - 3\right)}{\left(\eta - 1\right)^{5}} $$
+$$ gii3 = - \frac{6 \left(2 \eta - 7\right)}{\left(\eta - 1\right)^{6}} $$
+$$ gii4 = \frac{60 \left(\eta - 4\right)}{\left(\eta - 1\right)^{7}} $$
+$$ lng0 = \log{\left(\frac{1 - \frac{\eta}{2}}{\left(1 - \eta\right)^{3}} \right)} $$
+$$ lng1 = - \frac{2 \eta - 5}{\left(\eta - 2\right) \left(\eta - 1\right)} $$
+$$ lng2 = \frac{2 \eta^{2} - 10 \eta + 11}{\left(\eta - 2\right)^{2} \left(\eta - 1\right)^{2}} $$
+$$ lng3 = - \frac{2 \left(2 \eta^{3} - 15 \eta^{2} + 33 \eta - 23\right)}{\left(\eta - 2\right)^{3} \left(\eta - 1\right)^{3}} $$
+$$ lng4 = \frac{6 \left(2 \eta^{4} - 20 \eta^{3} + 66 \eta^{2} - 92 \eta + 47\right)}{\left(\eta - 2\right)^{4} \left(\eta - 1\right)^{4}} $$
