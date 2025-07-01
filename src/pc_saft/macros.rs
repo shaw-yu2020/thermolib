@@ -50,10 +50,9 @@ macro_rules! fn_vec {
                 temp.into_iter()
                     .zip(pres)
                     .map(|(t, p)| {
-                        let d3 =
-                            self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
+                        let eta0_coef = self.eta0_coef(t);
                         // Iteration from vapor phase: eta = 1E-10
-                        self.calc_density(t, p, 1E-10 / (FRAC_PI_6 * self.m * d3))
+                        self.calc_density(t, p, 1E-10 / eta0_coef)
                     })
                     .collect()
             }
@@ -61,10 +60,9 @@ macro_rules! fn_vec {
                 temp.into_iter()
                     .zip(pres)
                     .map(|(t, p)| {
-                        let d3 =
-                            self.sigma3 * (1.0 - 0.12 * (-3.0 * self.epsilon / t).exp()).powi(3);
+                        let eta0_coef = self.eta0_coef(t);
                         // Iteration from liquid phase: eta = 0.5
-                        self.calc_density(t, p, 0.5 / (FRAC_PI_6 * self.m * d3))
+                        self.calc_density(t, p, 0.5 / eta0_coef)
                     })
                     .collect()
             }
@@ -149,8 +147,8 @@ macro_rules! fn_c_flash {
         }
     };
 }
-/// macro_rules! fn_flash
-macro_rules! fn_flash {
+/// macro_rules! fn_t_flash
+macro_rules! fn_t_flash {
     ($name:ty) => {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
         impl $name {
@@ -211,6 +209,14 @@ macro_rules! fn_flash {
                     Ok(())
                 }
             }
+        }
+    };
+}
+/// macro_rules! fn_tp_flash
+macro_rules! fn_tp_flash {
+    ($name:ty) => {
+        #[cfg_attr(feature = "with_pyo3", pymethods)]
+        impl $name {
             pub fn tp_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<()> {
                 let eta0_coef = self.eta0_coef(temp);
                 // Iteration from vapor phase: eta = 1E-10
@@ -245,8 +251,6 @@ macro_rules! fn_flash {
                     Ok(())
                 }
             }
-        }
-        impl $name {
             fn calc_density(&mut self, temp: f64, p: f64, rho_num_guess: f64) -> f64 {
                 let mut rho_num = rho_num_guess;
                 let (mut p_diff, mut val_p_t0d1, mut rho_num_diff);

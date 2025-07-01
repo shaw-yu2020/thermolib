@@ -139,8 +139,9 @@ impl PcSaftPure {
     }
 }
 fn_vec!(PcSaftPure);
-fn_flash!(PcSaftPure);
 fn_c_flash!(PcSaftPure);
+fn_t_flash!(PcSaftPure);
+fn_tp_flash!(PcSaftPure);
 fn_single_prop!(PcSaftPure);
 fn_double_prop!(PcSaftPure);
 fn_virial_prop!(PcSaftPure);

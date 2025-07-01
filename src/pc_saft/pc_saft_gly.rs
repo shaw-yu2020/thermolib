@@ -121,8 +121,9 @@ impl PcSaftGlyPure {
     }
 }
 fn_vec!(PcSaftGlyPure);
-fn_flash!(PcSaftGlyPure);
 fn_c_flash!(PcSaftGlyPure);
+fn_t_flash!(PcSaftGlyPure);
+fn_tp_flash!(PcSaftGlyPure);
 fn_single_prop!(PcSaftGlyPure);
 fn_double_prop!(PcSaftGlyPure);
 fn_virial_prop!(PcSaftGlyPure);
