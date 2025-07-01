@@ -12,8 +12,8 @@ mod pc_saft_pure;
 mod polar_term;
 use assoc_pure::{AssocGlyPure, AssocPure};
 use disp_term::DispTerm;
-use gii_term::GiiTerm;
-use hs_term::HsTerm;
+use gii_term::GiiPure;
+use hs_term::HsPure;
 use polar_term::PolarTerm;
 // public
 pub use pc_saft_gly::PcSaftGlyPure;

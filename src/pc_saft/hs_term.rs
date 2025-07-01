@@ -1,5 +1,5 @@
-/// HsTerm
-pub struct HsTerm {
+/// HsPure
+pub struct HsPure {
     sum_xm: f64,
     eta0: (f64, f64),
     eta1: (f64, f64),
@@ -7,7 +7,7 @@ pub struct HsTerm {
     eta3: (f64, f64),
     eta4: (f64, f64),
 }
-impl HsTerm {
+impl HsPure {
     pub fn t0d0(&mut self, eta: f64) -> f64 {
         self.sum_xm * self.eta0(eta)
     }
@@ -39,7 +39,7 @@ impl HsTerm {
         self.sum_xm * (eta2 * self.eta1(eta) + eta1.powi(2) * self.eta2(eta))
     }
 }
-impl HsTerm {
+impl HsPure {
     pub fn new(sum_xm: f64) -> Self {
         Self {
             sum_xm,

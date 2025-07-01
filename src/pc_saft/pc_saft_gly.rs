@@ -1,5 +1,5 @@
 use super::PcSaftErr;
-use super::{AssocGlyPure, DispTerm, GiiTerm, HsTerm};
+use super::{AssocGlyPure, DispTerm, GiiPure, HsPure};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
@@ -20,8 +20,8 @@ pub struct PcSaftGlyPure {
     m: f64,
     sigma3: f64,
     epsilon: f64,
-    hs: HsTerm,                  // HsTerm
-    gii: GiiTerm,                // GiiTerm
+    hs: HsPure,                  // HsPure
+    gii: GiiPure,                // GiiPure
     disp: DispTerm,              // DispTerm
     assoc: Option<AssocGlyPure>, // AssocPure
     // state
@@ -48,10 +48,14 @@ impl PcSaftGlyPure {
             m,
             sigma3,
             epsilon,
-            hs: HsTerm::new(m),                      // HsTerm
-            gii: GiiTerm::new(m - 1.0),              // GiiTerm
-            disp: DispTerm::new(m, sigma3, epsilon), // DispTerm
-            assoc: None,                             // AssocTerm
+            hs: HsPure::new(m),         // HsPure
+            gii: GiiPure::new(m - 1.0), // GiiPure
+            disp: DispTerm::new(
+                m,
+                m * m * epsilon * sigma3,
+                m * m * epsilon * epsilon * sigma3,
+            ), // DispTerm
+            assoc: None,                // AssocTerm
             // state
             temp: 1.0,
             rho_num: 1.0,

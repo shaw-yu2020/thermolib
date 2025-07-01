@@ -1,4 +1,4 @@
-use super::GiiTerm as GiiPure;
+use super::GiiPure;
 enum AssocType {
     Type1,
     Type2B,
