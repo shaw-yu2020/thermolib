@@ -7,7 +7,7 @@ mod assoc_pure;
 mod disp_term;
 mod gii_term;
 mod hs_term;
-mod pc_saft_gly;
+mod pc_saft_gly_pure;
 mod pc_saft_pure;
 mod polar_term;
 use assoc_pure::{AssocGlyPure, AssocPure};
@@ -16,7 +16,7 @@ use gii_term::GiiPure;
 use hs_term::HsPure;
 use polar_term::PolarTerm;
 // public
-pub use pc_saft_gly::PcSaftGlyPure;
+pub use pc_saft_gly_pure::PcSaftGlyPure;
 pub use pc_saft_pure::PcSaftPure;
 /// PcSaftError
 use thiserror::Error;
