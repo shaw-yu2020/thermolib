@@ -1,5 +1,5 @@
 use super::PcSaftErr;
-use super::{AssocGlyTerm, DispTerm, GiiTerm, HsTerm};
+use super::{AssocGlyPure, DispTerm, GiiTerm, HsTerm};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
@@ -23,7 +23,7 @@ pub struct PcSaftGlyPure {
     hs: HsTerm,                  // HsTerm
     gii: GiiTerm,                // GiiTerm
     disp: DispTerm,              // DispTerm
-    assoc: Option<AssocGlyTerm>, // AssocTerm
+    assoc: Option<AssocGlyPure>, // AssocPure
     // state
     temp: f64,
     rho_num: f64,
@@ -80,7 +80,7 @@ impl PcSaftGlyPure {
         Self::new_fluid(m, sigma, epsilon)
     }
     pub fn set_1_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64, c0: f64, c1: f64, c2: f64) {
-        self.assoc = Some(AssocGlyTerm::new_1_term(
+        self.assoc = Some(AssocGlyPure::new_1_term(
             kappa_AB * self.sigma3,
             epsilon_AB,
             c0,
@@ -89,7 +89,7 @@ impl PcSaftGlyPure {
         ));
     }
     pub fn set_2B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64, c0: f64, c1: f64, c2: f64) {
-        self.assoc = Some(AssocGlyTerm::new_2B_term(
+        self.assoc = Some(AssocGlyPure::new_2B_term(
             kappa_AB * self.sigma3,
             epsilon_AB,
             c0,
@@ -98,7 +98,7 @@ impl PcSaftGlyPure {
         ))
     }
     pub fn set_3B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64, c0: f64, c1: f64, c2: f64) {
-        self.assoc = Some(AssocGlyTerm::new_3B_term(
+        self.assoc = Some(AssocGlyPure::new_3B_term(
             kappa_AB * self.sigma3,
             epsilon_AB,
             c0,
@@ -107,7 +107,7 @@ impl PcSaftGlyPure {
         ))
     }
     pub fn set_4C_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64, c0: f64, c1: f64, c2: f64) {
-        self.assoc = Some(AssocGlyTerm::new_4C_term(
+        self.assoc = Some(AssocGlyPure::new_4C_term(
             kappa_AB * self.sigma3,
             epsilon_AB,
             c0,

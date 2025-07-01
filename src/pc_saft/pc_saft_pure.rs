@@ -1,5 +1,5 @@
 use super::PcSaftErr;
-use super::{AssocTerm, DispTerm, GiiTerm, HsTerm, PddTerm, PqqTerm};
+use super::{AssocPure, DispTerm, GiiTerm, HsTerm, PolarTerm};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
@@ -32,7 +32,7 @@ use std::f64::consts::FRAC_PI_6;
 /// let mut fluid = PcSaftPure::new_fluid(2.7447, 3.2742, 232.99); // Acetone
 /// fluid.set_DD_polar_term(2.88); // |u|(D)
 /// fluid.tp_flash(298.15, 0.1e6).unwrap();
-/// assert_eq!(fluid.rho().unwrap().round(), 13276.0);
+/// assert_eq!(fluid.rho().unwrap().round(), 13337.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)] // For pyclass hhh
@@ -43,9 +43,8 @@ pub struct PcSaftPure {
     hs: HsTerm,               // HsTerm
     gii: GiiTerm,             // GiiTerm
     disp: DispTerm,           // DispTerm
-    assoc: Option<AssocTerm>, // AssocTerm
-    qq: Option<PqqTerm>,      // PqqTerm
-    dd: Option<PddTerm>,      // PddTerm
+    assoc: Option<AssocPure>, // AssocPure
+    polar: Option<PolarTerm>, // PolarTerm
     // state
     temp: f64,
     rho_num: f64,
@@ -73,9 +72,8 @@ impl PcSaftPure {
             hs: HsTerm::new(m),                      // HsTerm
             gii: GiiTerm::new(m - 1.0),              // GiiTerm
             disp: DispTerm::new(m, sigma3, epsilon), // DispTerm
-            assoc: None,                             // AssocTerm
-            dd: None,                                // PqqTerm
-            qq: None,                                // PddTerm
+            assoc: None,                             // AssocPure
+            polar: None,                             // PolarTerm
             // state
             temp: 1.0,
             rho_num: 1.0,
@@ -104,22 +102,36 @@ impl PcSaftPure {
         Self::new_fluid(m, sigma, epsilon)
     }
     pub fn set_1_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
-        self.assoc = Some(AssocTerm::new_1_term(kappa_AB * self.sigma3, epsilon_AB));
+        self.assoc = Some(AssocPure::new_1_term(kappa_AB * self.sigma3, epsilon_AB));
     }
     pub fn set_2B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
-        self.assoc = Some(AssocTerm::new_2B_term(kappa_AB * self.sigma3, epsilon_AB))
+        self.assoc = Some(AssocPure::new_2B_term(kappa_AB * self.sigma3, epsilon_AB))
     }
     pub fn set_3B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
-        self.assoc = Some(AssocTerm::new_3B_term(kappa_AB * self.sigma3, epsilon_AB))
+        self.assoc = Some(AssocPure::new_3B_term(kappa_AB * self.sigma3, epsilon_AB))
     }
     pub fn set_4C_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
-        self.assoc = Some(AssocTerm::new_4C_term(kappa_AB * self.sigma3, epsilon_AB))
+        self.assoc = Some(AssocPure::new_4C_term(kappa_AB * self.sigma3, epsilon_AB))
     }
     pub fn set_QQ_polar_term(&mut self, Q: f64) {
-        self.qq = Some(PqqTerm::new(self.m, self.sigma3, self.epsilon, Q))
+        self.polar = Some(PolarTerm::new(
+            &[1.0],
+            &[self.m],
+            &[self.sigma3.cbrt()],
+            &[self.epsilon],
+            &[Q],
+            &[4],
+        ));
     }
     pub fn set_DD_polar_term(&mut self, u: f64) {
-        self.dd = Some(PddTerm::new(self.m, self.sigma3, self.epsilon, u))
+        self.polar = Some(PolarTerm::new(
+            &[1.0],
+            &[self.m],
+            &[self.sigma3.cbrt()],
+            &[self.epsilon],
+            &[u],
+            &[2],
+        ))
     }
 }
 fn_vec!(PcSaftPure);
@@ -186,11 +198,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t0d0(temp, rho_num, eta0))
     }
@@ -204,11 +212,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t0d1(temp, rho_num, eta0))
     }
@@ -222,11 +226,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t0d2(temp, rho_num, eta0))
     }
@@ -240,11 +240,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t0d3(temp, rho_num, eta0))
     }
@@ -258,11 +254,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t0d4(temp, rho_num, eta0))
     }
@@ -279,11 +271,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t1d0(temp, rho_num, eta0, eta1))
     }
@@ -300,11 +288,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t1d1(temp, rho_num, eta0, eta1))
     }
@@ -321,11 +305,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t1d2(temp, rho_num, eta0, eta1))
     }
@@ -342,11 +322,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t1d3(temp, rho_num, eta0, eta1))
     }
@@ -364,11 +340,7 @@ impl PcSaftPure {
                 .as_mut()
                 .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
             + self
-                .qq
-                .as_mut()
-                .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
-            + self
-                .dd
+                .polar
                 .as_mut()
                 .map_or(0.0, |a| a.t2d0(temp, rho_num, eta0, eta1, eta2))
     }
