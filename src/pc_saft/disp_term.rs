@@ -37,6 +37,36 @@ impl DispTerm {
             c1t1d3: (0.0, 0.0),
         }
     }
+    #[allow(clippy::too_many_arguments)]
+    pub fn mu_k<'a>(
+        &mut self,
+        temp: f64,
+        rho_num: f64,
+        eta: f64,
+        m_k: &'a [f64],
+        eta_k: &'a [f64],
+        m2e1s3_k: &'a [f64],
+        m2e2s3_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef_i1 = -TAU * rho_num.powi(2) * self.m2e1s3 / temp;
+        let coef_m2e1s3 = -TAU * rho_num * self.i1.t0d0(eta) / temp;
+        let coef_c1 = -PI * rho_num.powi(2) * self.i2.t0d0(eta) * self.m2e2s3 / temp.powi(2);
+        let coef_i2 = -PI * rho_num.powi(2) * self.c1t0d0(eta) * self.m2e2s3 / temp.powi(2);
+        let coef_m2e2s3 = -PI * rho_num * self.c1t0d0(eta) * self.i2.t0d0(eta) / temp.powi(2);
+        self.i1
+            .mu_k(eta, rho_num, m_k, eta_k)
+            .zip(m2e1s3_k)
+            .zip(self.c1_mu_k(eta, rho_num, m_k, eta_k))
+            .zip(self.i2.mu_k(eta, rho_num, m_k, eta_k))
+            .zip(m2e2s3_k)
+            .map(move |((((i1, m2e1s3), c1), i2), m2e2s3)| {
+                coef_i1 * i1
+                    + coef_m2e1s3 * m2e1s3
+                    + coef_c1 * c1
+                    + coef_i2 * i2
+                    + coef_m2e2s3 * m2e2s3
+            })
+    }
     pub fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
         -rho_num
             * (TAU * self.m2e1s3 / temp * self.i1.t0d0(eta)
@@ -125,6 +155,32 @@ impl DispTerm {
     }
 }
 impl DispTerm {
+    fn c1_mu_k<'a>(
+        &mut self,
+        eta: f64,
+        rho_num: f64,
+        m_k: &'a [f64],
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef_1 = -self.sum_xm
+            * (1.0
+                + ((20.0 * eta + 12.0 * eta.powi(3)) - (27.0 * eta.powi(2) + 2.0 * eta.powi(4)))
+                    / ((1.0 - eta) * (2.0 - eta)).powi(2))
+            / self.c.eta0(eta).powi(2)
+            / rho_num;
+        let coef_m = (self.c.eta0(eta)
+            - self.sum_xm
+                * (2.0 * (4.0 * eta - eta.powi(2)) / (1.0 - eta).powi(4)
+                    - ((20.0 * eta + 12.0 * eta.powi(3))
+                        - (27.0 * eta.powi(2) + 2.0 * eta.powi(4)))
+                        / ((1.0 - eta) * (2.0 - eta)).powi(2)))
+            / self.c.eta0(eta).powi(2)
+            / rho_num;
+        let coef_eta = -self.sum_xm * self.c.eta1(eta) / self.c.eta0(eta).powi(2);
+        m_k.iter()
+            .zip(eta_k)
+            .map(move |(m_k, eta_k)| coef_1 + coef_m * m_k + coef_eta * eta_k)
+    }
     #[inline]
     fn c1t0d0(&mut self, eta: f64) -> f64 {
         self.sum_xm / self.c.eta0(eta)
@@ -327,6 +383,7 @@ impl CTerm {
 }
 /// I1Term
 struct I1Term {
+    m: f64,
     a0: f64,
     a1: f64,
     a2: f64,
@@ -334,6 +391,7 @@ struct I1Term {
     a4: f64,
     a5: f64,
     a6: f64,
+    coef: (f64, f64, f64, f64, f64, f64, f64),
     // cached variables
     eta1: (f64, f64),
     t0d0: (f64, f64),
@@ -367,7 +425,10 @@ impl I1Term {
     fn new(m: f64) -> Self {
         let m1 = (m - 1.0) / m; // (m-1)/m
         let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
+        let coef1 = 1.0 / m;
+        let coef2 = (3.0 * m - 4.0) / m.powi(2);
         Self {
+            m,
             a0: A00 + m1 * A10 + m12 * A20,
             a1: A01 + m1 * A11 + m12 * A21,
             a2: A02 + m1 * A12 + m12 * A22,
@@ -375,6 +436,15 @@ impl I1Term {
             a4: A04 + m1 * A14 + m12 * A24,
             a5: A05 + m1 * A15 + m12 * A25,
             a6: A06 + m1 * A16 + m12 * A26,
+            coef: (
+                coef1 * A10 + coef2 * A20,
+                coef1 * A11 + coef2 * A21,
+                coef1 * A12 + coef2 * A22,
+                coef1 * A13 + coef2 * A23,
+                coef1 * A14 + coef2 * A24,
+                coef1 * A15 + coef2 * A25,
+                coef1 * A16 + coef2 * A26,
+            ),
             // cached variables
             eta1: (0.0, 0.0),
             t0d0: (0.0, 0.0),
@@ -396,6 +466,27 @@ impl I1Term {
             )
         }
         self.eta1.1
+    }
+    fn mu_k<'a>(
+        &mut self,
+        eta: f64,
+        rho_num: f64,
+        m_k: &'a [f64],
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef = self.coef.0
+            + self.coef.1 * eta
+            + self.coef.2 * eta.powi(2)
+            + self.coef.3 * eta.powi(3)
+            + self.coef.4 * eta.powi(4)
+            + self.coef.5 * eta.powi(5)
+            + self.coef.6 * eta.powi(6);
+        let coef_1 = -coef / rho_num;
+        let coef_m = coef / rho_num / self.m;
+        let coef_eta = self.eta1(eta);
+        m_k.iter()
+            .zip(eta_k)
+            .map(move |(m_k, eta_k)| coef_1 + coef_m * m_k + coef_eta * eta_k)
     }
     /// equal to = [rho/T *i1]_t0d0 / {rho/T}
     /// equal to = i1t0d0
@@ -535,6 +626,7 @@ impl I1Term {
 }
 /// I2Term
 struct I2Term {
+    m: f64,
     b0: f64,
     b1: f64,
     b2: f64,
@@ -542,6 +634,7 @@ struct I2Term {
     b4: f64,
     b5: f64,
     b6: f64,
+    coef: (f64, f64, f64, f64, f64, f64, f64),
     // cached variables
     eta1: (f64, f64),
     t0d0: (f64, f64),
@@ -581,7 +674,10 @@ impl I2Term {
     fn new(m: f64) -> Self {
         let m1 = (m - 1.0) / m; // (m-1)/m
         let m12 = (m - 1.0) * (m - 2.0) / m.powi(2); // (m-1)/m * (m-2)/m
+        let coef1 = 1.0 / m;
+        let coef2 = (3.0 * m - 4.0) / m.powi(2);
         Self {
+            m,
             b0: B00 + m1 * B10 + m12 * B20,
             b1: B01 + m1 * B11 + m12 * B21,
             b2: B02 + m1 * B12 + m12 * B22,
@@ -589,6 +685,15 @@ impl I2Term {
             b4: B04 + m1 * B14 + m12 * B24,
             b5: B05 + m1 * B15 + m12 * B25,
             b6: B06 + m1 * B16 + m12 * B26,
+            coef: (
+                coef1 * B10 + coef2 * B20,
+                coef1 * B11 + coef2 * B21,
+                coef1 * B12 + coef2 * B22,
+                coef1 * B13 + coef2 * B23,
+                coef1 * B14 + coef2 * B24,
+                coef1 * B15 + coef2 * B25,
+                coef1 * B16 + coef2 * B26,
+            ),
             // cached variables
             eta1: (0.0, 0.0),
             t0d0: (0.0, 0.0),
@@ -616,6 +721,27 @@ impl I2Term {
             )
         }
         self.eta1.1
+    }
+    fn mu_k<'a>(
+        &mut self,
+        eta: f64,
+        rho_num: f64,
+        m_k: &'a [f64],
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef = self.coef.0
+            + self.coef.1 * eta
+            + self.coef.2 * eta.powi(2)
+            + self.coef.3 * eta.powi(3)
+            + self.coef.4 * eta.powi(4)
+            + self.coef.5 * eta.powi(5)
+            + self.coef.6 * eta.powi(6);
+        let coef_1 = -coef / rho_num;
+        let coef_m = coef / rho_num / self.m;
+        let coef_eta = self.eta1(eta);
+        m_k.iter()
+            .zip(eta_k)
+            .map(move |(m_k, eta_k)| coef_1 + coef_m * m_k + coef_eta * eta_k)
     }
     /// equal to = [rho/T^2 *i2]_t0d0 / {rho/T^2}
     /// equal to = i2t0d0

@@ -10,6 +10,7 @@ mod hs_term;
 mod pc_saft_gly_pure;
 mod pc_saft_pure;
 mod polar_term;
+mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
 use disp_term::DispTerm;
 use gii_term::GiiPure;
@@ -18,6 +19,7 @@ use polar_term::PolarTerm;
 // public
 pub use pc_saft_gly_pure::PcSaftGlyPure;
 pub use pc_saft_pure::PcSaftPure;
+pub use s_pc_saft_mix2::SPcSaftMix2;
 /// PcSaftError
 use thiserror::Error;
 #[derive(Debug, Error)]
@@ -32,6 +34,12 @@ enum PcSaftErr {
     OnlyInSinglePhase,
     #[error("property only in double phase")]
     OnlyInDoublePhase,
+    #[error("tpz_flash diverge")]
+    NotConvForTPZ,
+    #[error("tx_flash diverge")]
+    NotConvForTX,
+    #[error("ty_flash diverge")]
+    NotConvForTY,
 }
 #[cfg(test)]
 mod tests {
