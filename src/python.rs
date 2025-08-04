@@ -5,6 +5,7 @@ fn hello() -> PyResult<String> {
     Ok(String::from("Hello, Rust And Python."))
 }
 use crate::PcSaftGlyPure;
+use crate::PcSaftMix2;
 use crate::PcSaftPure;
 use crate::SPcSaftMix2;
 /// A Python module implemented in Rust.
@@ -13,6 +14,7 @@ use crate::SPcSaftMix2;
 fn pylib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hello, m)?)?;
     m.add_class::<PcSaftGlyPure>()?;
+    m.add_class::<PcSaftMix2>()?;
     m.add_class::<PcSaftPure>()?;
     m.add_class::<SPcSaftMix2>()?;
     Ok(())

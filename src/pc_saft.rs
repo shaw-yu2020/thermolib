@@ -8,16 +8,18 @@ mod disp_term;
 mod gii_term;
 mod hs_term;
 mod pc_saft_gly_pure;
+mod pc_saft_mix2;
 mod pc_saft_pure;
 mod polar_term;
 mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
 use disp_term::DispTerm;
-use gii_term::GiiPure;
-use hs_term::HsPure;
+use gii_term::{GiiPure, GiiTerm};
+use hs_term::{HsPure, HsTerm};
 use polar_term::PolarTerm;
 // public
 pub use pc_saft_gly_pure::PcSaftGlyPure;
+pub use pc_saft_mix2::PcSaftMix2;
 pub use pc_saft_pure::PcSaftPure;
 pub use s_pc_saft_mix2::SPcSaftMix2;
 /// PcSaftError

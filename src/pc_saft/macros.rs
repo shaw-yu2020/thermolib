@@ -660,6 +660,83 @@ macro_rules! fn_check_derivatives {
         }
     };
 }
+macro_rules! fn_check_derivatives_mix {
+    () => {
+        pub fn check_derivatives(&mut self, print_val: bool) {
+            let (t, d) = (self.temp, self.rho_num);
+            if print_val {
+                println!("[t0d0 == t0d0] t0d0 ={}", self.r_t0d0(t, d));
+            }
+            let compare_val = |val_calc: f64, val_diff: f64| {
+                assert_eq!(
+                    format!("{:.8e}", &val_calc.abs()),
+                    format!("{:.8e}", &val_diff.abs())
+                )
+            };
+            // derivative for density
+            let val_calc = self.r_t0d1(t, d) / d;
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d0(t, dx), d);
+            if print_val {
+                println!("[t0d1 => t0d1] t0d1 ={:e}", val_calc);
+                println!("[t0d0 -> t0d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for density+density
+            let val_calc = self.r_t0d2(t, d) / d.powi(2);
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d1(t, dx) / dx, d);
+            if print_val {
+                println!("[t0d2 == t0d2] t0d2 ={:e}", val_calc);
+                println!("[t0d1 -> t0d2] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for density+density+density
+            let val_calc = self.r_t0d3(t, d) / d.powi(3);
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d2(t, dx) / dx.powi(2), d);
+            if print_val {
+                println!("[t0d3 == t0d3] t0d3 ={:e}", val_calc);
+                println!("[t0d2 -> t0d3] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature
+            let val_calc = self.r_t1d0(t, d) / t;
+            let val_diff = romberg_diff(|tx: f64| self.r_t0d0(tx, d), t);
+            if print_val {
+                println!("[t1d0 == t1d0] t1d0 ={:e}", val_calc);
+                println!("[t0d0 -> t1d0] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature+density
+            let val_calc = self.r_t1d1(t, d) / t / d;
+            let val_diff = romberg_diff(|dx: f64| self.r_t1d0(t, dx) / t, d);
+            if print_val {
+                println!("[t1d1 == t1d1] t1d1 ={:e}", val_calc);
+                println!("[t1d0 -> t1d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            let val_diff = romberg_diff(|tx: f64| self.r_t0d1(tx, d) / d, t);
+            if print_val {
+                println!("[t1d1 == t1d1] t1d1 ={:e}", val_calc);
+                println!("[t0d1 -> t1d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature+temperature
+            let val_calc = self.r_t2d0(t, d) / t.powi(2);
+            let val_diff = romberg_diff(|tx: f64| self.r_t1d0(tx, d) / tx, t);
+            if print_val {
+                println!("[t2d0 == t2d0] t2d0 ={:e}", val_calc);
+                println!("[t1d0 -> t2d0] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+        }
+    };
+}
 /// macro_rules! fn_tpz_flash_mix2
 macro_rules! fn_tpz_flash_mix2 {
     ($name:ty) => {
