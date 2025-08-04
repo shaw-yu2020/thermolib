@@ -1,4 +1,5 @@
 /// GiiTerm
+#[derive(Clone)]
 pub struct GiiTerm {
     neg_xm1: Vec<f64>,
     t0d0: (f64, Vec<f64>),
@@ -8,6 +9,62 @@ pub struct GiiTerm {
     t1d0: (f64, Vec<f64>),
     t1d1: (f64, Vec<f64>),
     t2d0: (f64, Vec<f64>),
+}
+impl GiiTerm {
+    #[inline]
+    pub fn t0d0(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: &[f64]) -> &[f64] {
+        self.t0d0_flash(zeta2t0, zeta3t0, dit0);
+        &self.t0d0.1
+    }
+    #[inline]
+    pub fn t0d1(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: &[f64]) -> &[f64] {
+        self.t0d1_flash(zeta2t0, zeta3t0, dit0);
+        &self.t0d1.1
+    }
+    #[inline]
+    pub fn t0d2(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: &[f64]) -> &[f64] {
+        self.t0d2_flash(zeta2t0, zeta3t0, dit0);
+        &self.t0d2.1
+    }
+    #[inline]
+    pub fn t0d3(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: &[f64]) -> &[f64] {
+        self.t0d3_flash(zeta2t0, zeta3t0, dit0);
+        &self.t0d3.1
+    }
+    #[inline]
+    pub fn t1d0(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (&[f64], &[f64]),
+    ) -> &[f64] {
+        self.t1d0_flash((zeta2t0, zeta2t1), (zeta3t0, zeta3t1), (dit0, dit1));
+        &self.t1d0.1
+    }
+    #[inline]
+    pub fn t1d1(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (&[f64], &[f64]),
+    ) -> &[f64] {
+        self.t1d1_flash((zeta2t0, zeta2t1), (zeta3t0, zeta3t1), (dit0, dit1));
+        &self.t1d1.1
+    }
+    #[inline]
+    pub fn t2d0(
+        &mut self,
+        (zeta2t0, zeta2t1, zeta2t2): (f64, f64, f64),
+        (zeta3t0, zeta3t1, zeta3t2): (f64, f64, f64),
+        (dit0, dit1, dit2): (&[f64], &[f64], &[f64]),
+    ) -> &[f64] {
+        self.t2d0_flash(
+            (zeta2t0, zeta2t1, zeta2t2),
+            (zeta3t0, zeta3t1, zeta3t2),
+            (dit0, dit1, dit2),
+        );
+        &self.t2d0.1
+    }
 }
 impl GiiTerm {
     #[allow(clippy::too_many_arguments)]

@@ -4,6 +4,7 @@ const FRAC_RE30_NA: f64 = R / FRAC_NA_1E30;
 #[macro_use]
 mod macros;
 mod assoc_pure;
+mod assoc_term;
 mod disp_term;
 mod gii_term;
 mod hs_term;
@@ -13,6 +14,7 @@ mod pc_saft_pure;
 mod polar_term;
 mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
+use assoc_term::{AssocTerm, AssocType};
 use disp_term::DispTerm;
 use gii_term::{GiiPure, GiiTerm};
 use hs_term::{HsPure, HsTerm};
