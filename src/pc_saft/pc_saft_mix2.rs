@@ -9,7 +9,9 @@ use pyo3::{pyclass, pymethods};
 use std::f64::consts::FRAC_PI_6;
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 pub struct PcSaftMix2 {
-    xm: [f64; 2],
+    x: [f64; 2],
+    m: [f64; 2],
+    m1: [f64; 2],
     sigma: [f64; 2],
     epsilon: [f64; 2],
     hs: HsTerm,               // HsTerm
@@ -24,19 +26,14 @@ pub struct PcSaftMix2 {
     dt0: (f64, [f64; 2]),
     dt1: (f64, [f64; 2]),
     dt2: (f64, [f64; 2]),
-    zeta_t0_coef: (f64, [f64; 3]), // zeta1t0,zeta2t0,zeta3t0
-    zeta_t1_coef: (f64, [f64; 3]), // zeta1t1,zeta2t1,zeta3t1
-    zeta_t2_coef: (f64, [f64; 3]), // zeta1t2,zeta2t2,zeta3t2
-    eta0_coef: (f64, f64),
-    is_single_phase: bool,
-    // ln_phi
-    m_k: [f64; 2],
-    m1_k: [f64; 2],
-    m2e1s3_k: [f64; 2],
-    m2e2s3_k: [f64; 2],
+    zeta_t0_coef: (f64, [[f64; 3]; 2]), // zeta1t0,zeta2t0,zeta3t0
+    zeta_t1_coef: (f64, [[f64; 3]; 2]), // zeta1t1,zeta2t1,zeta3t1
+    zeta_t2_coef: (f64, [[f64; 3]; 2]), // zeta1t2,zeta2t2,zeta3t2
+    eta0_coef: (f64, [f64; 2]),
     zeta1_mu_k: (f64, [f64; 2]),
     zeta2_mu_k: (f64, [f64; 2]),
     zeta3_mu_k: (f64, [f64; 2]),
+    is_single_phase: bool,
     // critical point
     omega1: Option<[f64; 2]>,
     temp_c: [f64; 2],
@@ -65,16 +62,17 @@ impl PcSaftMix2 {
                 * (epsilon[0] * epsilon[1] * (1.0 - kij).powi(2))
                 * ((sigma[0] + sigma[1]).powi(3) / 8.0),
         ];
-        let xm = [x[0] * m[0], x[1] * m[1]];
         let m1 = [m[0] - 1.0, m[1] - 1.0];
         Self {
-            xm,
+            x,
+            m,
+            m1,
             sigma,
             epsilon,
-            hs: HsTerm::new(xm[0] + xm[1]),
+            hs: HsTerm::new(x[0] * m[0] + x[1] * m[1]),
             gii: GiiTerm::new(&[x[0] * m1[0], x[1] * m1[1]]),
             disp: DispTerm::new(
-                xm[0] + xm[1],
+                x[0] * m[0] + x[1] * m[1],
                 x[0].powi(2) * m2e1s3_coef[0]
                     + x[1].powi(2) * m2e1s3_coef[1]
                     + x[0] * x[1] * m2e1s3_coef[2],
@@ -91,25 +89,14 @@ impl PcSaftMix2 {
             dt0: (0.0, [0.0, 0.0]),
             dt1: (0.0, [0.0, 0.0]),
             dt2: (0.0, [0.0, 0.0]),
-            zeta_t0_coef: (0.0, [0.0, 0.0, 0.0]),
-            zeta_t1_coef: (0.0, [0.0, 0.0, 0.0]),
-            zeta_t2_coef: (0.0, [0.0, 0.0, 0.0]),
-            eta0_coef: (0.0, 0.0),
-            is_single_phase: true,
-            // ln_phi
-            m_k: m,
-            m1_k: m1,
-            m2e1s3_k: [
-                2.0 * x[0] * m2e1s3_coef[0] + x[1] * m2e1s3_coef[2],
-                2.0 * x[1] * m2e1s3_coef[1] + x[0] * m2e1s3_coef[2],
-            ],
-            m2e2s3_k: [
-                2.0 * x[0] * m2e2s3_coef[0] + x[1] * m2e2s3_coef[2],
-                2.0 * x[1] * m2e2s3_coef[1] + x[0] * m2e2s3_coef[2],
-            ],
+            zeta_t0_coef: (0.0, [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            zeta_t1_coef: (0.0, [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            zeta_t2_coef: (0.0, [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            eta0_coef: (0.0, [0.0, 0.0]),
             zeta1_mu_k: (0.0, [0.0, 0.0]),
             zeta2_mu_k: (0.0, [0.0, 0.0]),
             zeta3_mu_k: (0.0, [0.0, 0.0]),
+            is_single_phase: true,
             // critical point
             omega1: None,
             temp_c: [0.0, 0.0],
@@ -117,13 +104,12 @@ impl PcSaftMix2 {
         }
     }
     fn new_fracs(&self, x: [f64; 2]) -> Self {
-        let xm = [x[0] * self.m_k[0], x[1] * self.m_k[1]];
         Self {
-            xm,
-            hs: HsTerm::new(xm[0] + xm[1]),
-            gii: GiiTerm::new(&[x[0] * self.m1_k[0], x[1] * self.m1_k[1]]),
+            x,
+            hs: HsTerm::new(x[0] * self.m[0] + x[1] * self.m[1]),
+            gii: GiiTerm::new(&[x[0] * self.m1[0], x[1] * self.m1[1]]),
             disp: DispTerm::new(
-                xm[0] + xm[1],
+                x[0] * self.m[0] + x[1] * self.m[1],
                 x[0].powi(2) * self.m2e1s3_coef[0]
                     + x[1].powi(2) * self.m2e1s3_coef[1]
                     + x[0] * x[1] * self.m2e1s3_coef[2],
@@ -132,20 +118,6 @@ impl PcSaftMix2 {
                     + x[0] * x[1] * self.m2e2s3_coef[2],
             ),
             assoc: self.assoc.as_ref().map(|a| a.new_x_frac(x[0])),
-            // state
-            zeta_t0_coef: (0.0, [0.0, 0.0, 0.0]),
-            zeta_t1_coef: (0.0, [0.0, 0.0, 0.0]),
-            zeta_t2_coef: (0.0, [0.0, 0.0, 0.0]),
-            eta0_coef: (0.0, 0.0),
-            // ln_phi
-            m2e1s3_k: [
-                2.0 * x[0] * self.m2e1s3_coef[0] + x[1] * self.m2e1s3_coef[2],
-                2.0 * x[1] * self.m2e1s3_coef[1] + x[0] * self.m2e1s3_coef[2],
-            ],
-            m2e2s3_k: [
-                2.0 * x[0] * self.m2e2s3_coef[0] + x[1] * self.m2e2s3_coef[2],
-                2.0 * x[1] * self.m2e2s3_coef[1] + x[0] * self.m2e2s3_coef[2],
-            ],
             ..*self
         }
     }
@@ -158,30 +130,30 @@ impl PcSaftMix2 {
     pub fn new_py(x: [f64; 2], m: [f64; 2], sigma: [f64; 2], epsilon: [f64; 2], kij: f64) -> Self {
         Self::new_fluid(x, m, sigma, epsilon, kij)
     }
-    pub fn set_1_assoc_term(&mut self, x: f64, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_1_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc = Some(AssocTerm::new_1_term(
-            x,
+            self.x[0],
             kappa_AB * self.sigma[0].powi(3),
             epsilon_AB,
         ));
     }
-    pub fn set_2B_assoc_term(&mut self, x: f64, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_2B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc = Some(AssocTerm::new_2B_term(
-            x,
+            self.x[0],
             kappa_AB * self.sigma[0].powi(3),
             epsilon_AB,
         ))
     }
-    pub fn set_3B_assoc_term(&mut self, x: f64, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_3B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc = Some(AssocTerm::new_3B_term(
-            x,
+            self.x[0],
             kappa_AB * self.sigma[0].powi(3),
             epsilon_AB,
         ))
     }
-    pub fn set_4C_assoc_term(&mut self, x: f64, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_4C_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
         self.assoc = Some(AssocTerm::new_4C_term(
-            x,
+            self.x[0],
             kappa_AB * self.sigma[0].powi(3),
             epsilon_AB,
         ))
@@ -249,18 +221,26 @@ impl PcSaftMix2 {
             self.zeta_t0_coef = (
                 temp,
                 [
-                    FRAC_PI_6 * (self.xm[0] * self.dt0.1[0] + self.xm[1] * self.dt0.1[1]),
-                    FRAC_PI_6
-                        * (self.xm[0] * self.dt0.1[0].powi(2) + self.xm[1] * self.dt0.1[1].powi(2)),
-                    FRAC_PI_6
-                        * (self.xm[0] * self.dt0.1[0].powi(3) + self.xm[1] * self.dt0.1[1].powi(3)),
+                    [
+                        FRAC_PI_6 * self.m[0] * self.dt0.1[0],
+                        FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(2),
+                        FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(3),
+                    ],
+                    [
+                        FRAC_PI_6 * self.m[1] * self.dt0.1[1],
+                        FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(2),
+                        FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(3),
+                    ],
                 ],
             )
         }
         (
-            self.zeta_t0_coef.1[0] * rho_num, // zeta1t0
-            self.zeta_t0_coef.1[1] * rho_num, // zeta2t0
-            self.zeta_t0_coef.1[2] * rho_num, // zeta3t0
+            (self.x[0] * self.zeta_t0_coef.1[0][0] + self.x[1] * self.zeta_t0_coef.1[1][0])
+                * rho_num, // zeta1t0
+            (self.x[0] * self.zeta_t0_coef.1[0][1] + self.x[1] * self.zeta_t0_coef.1[1][1])
+                * rho_num, // zeta2t2
+            (self.x[0] * self.zeta_t0_coef.1[0][2] + self.x[1] * self.zeta_t0_coef.1[1][2])
+                * rho_num, // zeta3t0
         )
     }
     fn zeta_t1(&mut self, temp: f64, rho_num: f64) -> (f64, f64, f64) {
@@ -270,20 +250,26 @@ impl PcSaftMix2 {
             self.zeta_t1_coef = (
                 temp,
                 [
-                    FRAC_PI_6 * (self.xm[0] * self.dt1.1[0] + self.xm[1] * self.dt1.1[1]),
-                    FRAC_PI_6
-                        * (self.xm[0] * self.dt0.1[0] * self.dt1.1[0]
-                            + self.xm[1] * self.dt0.1[1] * self.dt1.1[1]),
-                    FRAC_PI_6
-                        * (self.xm[0] * self.dt0.1[0].powi(2) * self.dt1.1[0]
-                            + self.xm[1] * self.dt0.1[1].powi(2) * self.dt1.1[1]),
+                    [
+                        FRAC_PI_6 * self.m[0] * self.dt1.1[0],
+                        FRAC_PI_6 * self.m[0] * self.dt0.1[0] * self.dt1.1[0],
+                        FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(2) * self.dt1.1[0],
+                    ],
+                    [
+                        FRAC_PI_6 * self.m[1] * self.dt1.1[1],
+                        FRAC_PI_6 * self.m[1] * self.dt0.1[1] * self.dt1.1[1],
+                        FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(2) * self.dt1.1[1],
+                    ],
                 ],
             )
         }
         (
-            self.zeta_t1_coef.1[0] * rho_num, // zeta1t1
-            self.zeta_t1_coef.1[1] * rho_num, // zeta2t1
-            self.zeta_t1_coef.1[2] * rho_num, // zeta3t1
+            (self.x[0] * self.zeta_t1_coef.1[0][0] + self.x[1] * self.zeta_t1_coef.1[1][0])
+                * rho_num, // zeta1t1
+            (self.x[0] * self.zeta_t1_coef.1[0][1] + self.x[1] * self.zeta_t1_coef.1[1][1])
+                * rho_num, // zeta2t1
+            (self.x[0] * self.zeta_t1_coef.1[0][2] + self.x[1] * self.zeta_t1_coef.1[1][2])
+                * rho_num, // zeta3t1
         )
     }
     fn zeta_t2(&mut self, temp: f64, rho_num: f64) -> (f64, f64, f64) {
@@ -294,24 +280,36 @@ impl PcSaftMix2 {
             self.zeta_t2_coef = (
                 temp,
                 [
-                    FRAC_PI_6 * (self.xm[0] * self.dt2.1[0] + self.xm[1] * self.dt2.1[1]),
-                    FRAC_PI_6
-                        * (self.xm[0] * (self.dt1.1[0].powi(2) + self.dt0.1[0] * self.dt2.1[0])
-                            + self.xm[1] * (self.dt1.1[1].powi(2) + self.dt0.1[1] * self.dt2.1[1])),
-                    FRAC_PI_6
-                        * (self.xm[0]
+                    [
+                        FRAC_PI_6 * self.m[0] * self.dt2.1[0],
+                        FRAC_PI_6
+                            * self.m[0]
+                            * (self.dt1.1[0].powi(2) + self.dt0.1[0] * self.dt2.1[0]),
+                        FRAC_PI_6
+                            * self.m[0]
                             * (2.0 * self.dt0.1[0] * self.dt1.1[0].powi(2)
-                                + self.dt0.1[0].powi(2) * self.dt2.1[0])
-                            + self.xm[1]
-                                * (2.0 * self.dt0.1[1] * self.dt1.1[1].powi(2)
-                                    + self.dt0.1[1].powi(2) * self.dt2.1[1])),
+                                + self.dt0.1[0].powi(2) * self.dt2.1[0]),
+                    ],
+                    [
+                        FRAC_PI_6 * self.m[1] * self.dt2.1[1],
+                        FRAC_PI_6
+                            * self.m[1]
+                            * (self.dt1.1[1].powi(2) + self.dt0.1[1] * self.dt2.1[1]),
+                        FRAC_PI_6
+                            * self.m[1]
+                            * (2.0 * self.dt0.1[1] * self.dt1.1[1].powi(2)
+                                + self.dt0.1[1].powi(2) * self.dt2.1[1]),
+                    ],
                 ],
             )
         }
         (
-            self.zeta_t2_coef.1[0] * rho_num, // zeta1t2
-            self.zeta_t2_coef.1[1] * rho_num, // zeta2t2
-            self.zeta_t2_coef.1[2] * rho_num, // zeta3t2
+            (self.x[0] * self.zeta_t2_coef.1[0][0] + self.x[1] * self.zeta_t2_coef.1[1][0])
+                * rho_num, // zeta1t2
+            (self.x[0] * self.zeta_t2_coef.1[0][1] + self.x[1] * self.zeta_t2_coef.1[1][1])
+                * rho_num, // zeta2t2
+            (self.x[0] * self.zeta_t2_coef.1[0][2] + self.x[1] * self.zeta_t2_coef.1[1][2])
+                * rho_num, // zeta3t2
         )
     }
     fn eta0_coef(&mut self, temp: f64) -> f64 {
@@ -319,11 +317,13 @@ impl PcSaftMix2 {
             self.dt0_flash(temp);
             self.eta0_coef = (
                 temp,
-                FRAC_PI_6
-                    * (self.xm[0] * self.dt0.1[0].powi(3) + self.xm[1] * self.dt0.1[1].powi(3)),
+                [
+                    FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(3),
+                    FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(3),
+                ],
             );
         }
-        self.eta0_coef.1
+        self.x[0] * self.eta0_coef.1[0] + self.x[1] * self.eta0_coef.1[1]
     }
     fn zeta1_mu_k(&mut self, temp: f64) -> [f64; 2] {
         if temp != self.zeta1_mu_k.0 {
@@ -331,8 +331,8 @@ impl PcSaftMix2 {
             self.zeta1_mu_k = (
                 temp,
                 [
-                    FRAC_PI_6 * self.m_k[0] * self.dt0.1[0],
-                    FRAC_PI_6 * self.m_k[1] * self.dt0.1[1],
+                    FRAC_PI_6 * self.m[0] * self.dt0.1[0],
+                    FRAC_PI_6 * self.m[1] * self.dt0.1[1],
                 ],
             )
         }
@@ -344,8 +344,8 @@ impl PcSaftMix2 {
             self.zeta2_mu_k = (
                 temp,
                 [
-                    FRAC_PI_6 * self.m_k[0] * self.dt0.1[0].powi(2),
-                    FRAC_PI_6 * self.m_k[1] * self.dt0.1[1].powi(2),
+                    FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(2),
+                    FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(2),
                 ],
             )
         }
@@ -357,8 +357,8 @@ impl PcSaftMix2 {
             self.zeta3_mu_k = (
                 temp,
                 [
-                    FRAC_PI_6 * self.m_k[0] * self.dt0.1[0].powi(3),
-                    FRAC_PI_6 * self.m_k[1] * self.dt0.1[1].powi(3),
+                    FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(3),
+                    FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(3),
                 ],
             )
         }
@@ -475,13 +475,21 @@ impl PcSaftMix2 {
         let zeta1_k = self.zeta1_mu_k(temp);
         let zeta2_k = self.zeta2_mu_k(temp);
         let zeta3_k = self.zeta3_mu_k(temp);
+        let m2e1s3_k = [
+            2.0 * self.x[0] * self.m2e1s3_coef[0] + self.x[1] * self.m2e1s3_coef[2],
+            2.0 * self.x[1] * self.m2e1s3_coef[1] + self.x[0] * self.m2e1s3_coef[2],
+        ];
+        let m2e2s3_k = [
+            2.0 * self.x[0] * self.m2e2s3_coef[0] + self.x[1] * self.m2e2s3_coef[2],
+            2.0 * self.x[1] * self.m2e2s3_coef[1] + self.x[0] * self.m2e2s3_coef[2],
+        ];
         let t0d1 = self.r_t0d1(temp, rho_num);
         let ln_phi: Vec<f64> = self
             .hs
             .mu_k(
                 rho_num,
                 (zeta1t0, zeta2t0, zeta3t0),
-                &self.m_k,
+                &self.m,
                 &zeta1_k,
                 &zeta2_k,
                 &zeta3_k,
@@ -491,18 +499,12 @@ impl PcSaftMix2 {
                 zeta3t0,
                 &self.dt0.1,
                 rho_num,
-                &self.m1_k,
+                &self.m1,
                 &zeta2_k,
                 &zeta3_k,
             ))
             .zip(self.disp.mu_k(
-                temp,
-                rho_num,
-                zeta3t0,
-                &self.m_k,
-                &zeta3_k,
-                &self.m2e1s3_k,
-                &self.m2e2s3_k,
+                temp, rho_num, zeta3t0, &self.m, &zeta3_k, &m2e1s3_k, &m2e2s3_k,
             ))
             .map(|((hs, gii), disp)| hs + gii + disp - (1.0 + t0d1).ln())
             .collect();
@@ -531,8 +533,8 @@ impl PcSaftMix2 {
     fn guess_ps(&mut self, temp: f64) -> [f64; 2] {
         if self.omega1.is_none() {
             let mut fluid = [
-                PcSaftPure::new_fluid(self.m_k[0], self.sigma[0], self.epsilon[0]),
-                PcSaftPure::new_fluid(self.m_k[1], self.sigma[1], self.epsilon[1]),
+                PcSaftPure::new_fluid(self.m[0], self.sigma[0], self.epsilon[0]),
+                PcSaftPure::new_fluid(self.m[1], self.sigma[1], self.epsilon[1]),
             ];
             if let Some(a) = &self.assoc {
                 let (assoc_type, kappa_AB_sigma3, epsilon_AB) = a.parameters();

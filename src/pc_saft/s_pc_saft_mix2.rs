@@ -5,11 +5,13 @@ use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::f64::consts::FRAC_PI_6;
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_6};
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 pub struct SPcSaftMix2 {
-    xm: [f64; 2],
-    sigma3: [f64; 2],
+    x: [f64; 2],
+    m: [f64; 2],
+    m1: [f64; 2],
+    sigma: [f64; 2],
     epsilon: [f64; 2],
     hs: HsPure,     // HsPure
     gii: GiiPure,   // GiiPure
@@ -19,16 +21,11 @@ pub struct SPcSaftMix2 {
     // state
     temp: f64,
     rho_num: f64,
-    eta0_coef: (f64, f64),
-    eta1_coef: (f64, f64),
-    eta2_coef: (f64, f64),
-    is_single_phase: bool,
-    // ln_phi
-    m_k: [f64; 2],  // m
-    m1_k: [f64; 2], // m1
-    m2e1s3_k: [f64; 2],
-    m2e2s3_k: [f64; 2],
+    eta0_coef: (f64, [f64; 2]),
+    eta1_coef: (f64, [f64; 2]),
+    eta2_coef: (f64, [f64; 2]),
     eta0_mu_k: (f64, [f64; 2]),
+    is_single_phase: bool,
     // critical point
     omega1: Option<[f64; 2]>,
     temp_c: [f64; 2],
@@ -57,16 +54,17 @@ impl SPcSaftMix2 {
                 * (epsilon[0] * epsilon[1] * (1.0 - kij).powi(2))
                 * ((sigma[0] + sigma[1]).powi(3) / 8.0),
         ];
-        let xm = [x[0] * m[0], x[1] * m[1]];
         let m1 = [m[0] - 1.0, m[1] - 1.0];
         Self {
-            xm,
-            sigma3,
+            x,
+            m,
+            m1,
+            sigma,
             epsilon,
-            hs: HsPure::new(xm[0] + xm[1]),
+            hs: HsPure::new(x[0] * m[0] + x[1] * m[1]),
             gii: GiiPure::new(x[0] * m1[0] + x[1] * m1[1]),
             disp: DispTerm::new(
-                xm[0] + xm[1],
+                x[0] * m[0] + x[1] * m[1],
                 x[0].powi(2) * m2e1s3_coef[0]
                     + x[1].powi(2) * m2e1s3_coef[1]
                     + x[0] * x[1] * m2e1s3_coef[2],
@@ -79,22 +77,11 @@ impl SPcSaftMix2 {
             // state
             temp: 0.0,
             rho_num: 0.0,
-            eta0_coef: (0.0, 0.0),
-            eta1_coef: (0.0, 0.0),
-            eta2_coef: (0.0, 0.0),
-            is_single_phase: true,
-            // ln_phi
-            m_k: m,
-            m1_k: m1,
-            m2e1s3_k: [
-                2.0 * x[0] * m2e1s3_coef[0] + x[1] * m2e1s3_coef[2],
-                2.0 * x[1] * m2e1s3_coef[1] + x[0] * m2e1s3_coef[2],
-            ],
-            m2e2s3_k: [
-                2.0 * x[0] * m2e2s3_coef[0] + x[1] * m2e2s3_coef[2],
-                2.0 * x[1] * m2e2s3_coef[1] + x[0] * m2e2s3_coef[2],
-            ],
+            eta0_coef: (0.0, [0.0, 0.0]),
+            eta1_coef: (0.0, [0.0, 0.0]),
+            eta2_coef: (0.0, [0.0, 0.0]),
             eta0_mu_k: (0.0, [0.0, 0.0]),
+            is_single_phase: true,
             // critical point
             omega1: None,
             temp_c: [0.0, 0.0],
@@ -102,13 +89,12 @@ impl SPcSaftMix2 {
         }
     }
     fn new_fracs(&self, x: [f64; 2]) -> Self {
-        let xm = [x[0] * self.m_k[0], x[1] * self.m_k[1]];
         Self {
-            xm,
-            hs: HsPure::new(xm[0] + xm[1]),
-            gii: GiiPure::new(x[0] * self.m1_k[0] + x[1] * self.m1_k[1]),
+            x,
+            hs: HsPure::new(x[0] * self.m[0] + x[1] * self.m[1]),
+            gii: GiiPure::new(x[0] * self.m1[0] + x[1] * self.m1[1]),
             disp: DispTerm::new(
-                xm[0] + xm[1],
+                x[0] * self.m[0] + x[1] * self.m[1],
                 x[0].powi(2) * self.m2e1s3_coef[0]
                     + x[1].powi(2) * self.m2e1s3_coef[1]
                     + x[0] * x[1] * self.m2e1s3_coef[2],
@@ -116,17 +102,6 @@ impl SPcSaftMix2 {
                     + x[1].powi(2) * self.m2e2s3_coef[1]
                     + x[0] * x[1] * self.m2e2s3_coef[2],
             ),
-            eta0_coef: (0.0, 0.0),
-            eta1_coef: (0.0, 0.0),
-            eta2_coef: (0.0, 0.0),
-            m2e1s3_k: [
-                2.0 * x[0] * self.m2e1s3_coef[0] + x[1] * self.m2e1s3_coef[2],
-                2.0 * x[1] * self.m2e1s3_coef[1] + x[0] * self.m2e1s3_coef[2],
-            ],
-            m2e2s3_k: [
-                2.0 * x[0] * self.m2e2s3_coef[0] + x[1] * self.m2e2s3_coef[2],
-                2.0 * x[1] * self.m2e2s3_coef[1] + x[0] * self.m2e2s3_coef[2],
-            ],
             ..*self
         }
     }
@@ -153,74 +128,89 @@ impl SPcSaftMix2 {
         if temp != self.eta0_coef.0 {
             self.eta0_coef = (
                 temp,
-                FRAC_PI_6
-                    * ((self.xm[0] * self.sigma3[0])
-                        * (1.0 - 0.12 * (-3.0 * self.epsilon[0] / temp).exp()).powi(3)
-                        + (self.xm[1] * self.sigma3[1])
-                            * (1.0 - 0.12 * (-3.0 * self.epsilon[1] / temp).exp()).powi(3)),
+                [
+                    FRAC_PI_6
+                        * self.m[0]
+                        * (self.sigma[0] * (1.0 - 0.12 * (-3.0 * self.epsilon[0] / temp).exp()))
+                            .powi(3),
+                    FRAC_PI_6
+                        * self.m[1]
+                        * (self.sigma[1] * (1.0 - 0.12 * (-3.0 * self.epsilon[1] / temp).exp()))
+                            .powi(3),
+                ],
             );
         }
-        self.eta0_coef.1
+        self.x[0] * self.eta0_coef.1[0] + self.x[1] * self.eta0_coef.1[1]
     }
     fn eta1_coef(&mut self, temp: f64) -> f64 {
         if temp != self.eta1_coef.0 {
             let epsilon_temp_plus = [3.0 * self.epsilon[0] / temp, 3.0 * self.epsilon[1] / temp];
             self.eta1_coef = (
                 temp,
-                FRAC_PI_6
-                    * ((self.xm[0] * self.sigma3[0])
-                        * (3.0
-                            * (1.0 - 0.12 * (-epsilon_temp_plus[0]).exp()).powi(2)
-                            * (-0.12 * (-epsilon_temp_plus[0]).exp() * epsilon_temp_plus[0]))
-                        + (self.xm[1] * self.sigma3[1])
-                            * (3.0
-                                * (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp()).powi(2)
-                                * (-0.12 * (-epsilon_temp_plus[1]).exp() * epsilon_temp_plus[1]))),
+                [
+                    FRAC_PI_2
+                        * self.m[0]
+                        * (self.sigma[0] * (1.0 - 0.12 * (-epsilon_temp_plus[0]).exp())).powi(2)
+                        * (self.sigma[0]
+                            * (-0.12 * (-epsilon_temp_plus[0]).exp() * epsilon_temp_plus[0])),
+                    FRAC_PI_2
+                        * self.m[1]
+                        * (self.sigma[1] * (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp())).powi(2)
+                        * (self.sigma[1]
+                            * (-0.12 * (-epsilon_temp_plus[1]).exp() * epsilon_temp_plus[1])),
+                ],
             );
         }
-        self.eta1_coef.1
+        self.x[0] * self.eta1_coef.1[0] + self.x[1] * self.eta1_coef.1[1]
     }
     fn eta2_coef(&mut self, temp: f64) -> f64 {
         if temp != self.eta2_coef.0 {
             let epsilon_temp_plus = [3.0 * self.epsilon[0] / temp, 3.0 * self.epsilon[1] / temp];
             self.eta2_coef = (
                 temp,
-                FRAC_PI_6
-                    * ((self.xm[0] * self.sigma3[0])
-                        * (6.0
+                [
+                    FRAC_PI_2
+                        * self.m[0]
+                        * self.sigma[0].powi(3)
+                        * (2.0
                             * (1.0 - 0.12 * (-epsilon_temp_plus[0]).exp())
                             * (-0.12 * (-epsilon_temp_plus[0]).exp() * epsilon_temp_plus[0])
                                 .powi(2)
-                            + 3.0
-                                * (1.0 - 0.12 * (-epsilon_temp_plus[0]).exp()).powi(2)
+                            + (1.0 - 0.12 * (-epsilon_temp_plus[0]).exp()).powi(2)
                                 * (-0.12
                                     * (-epsilon_temp_plus[0]).exp()
                                     * epsilon_temp_plus[0]
-                                    * (epsilon_temp_plus[0] - 2.0)))
-                        + (self.xm[1] * self.sigma3[1])
-                            * (6.0
-                                * (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp())
-                                * (-0.12 * (-epsilon_temp_plus[1]).exp() * epsilon_temp_plus[1])
-                                    .powi(2)
-                                + 3.0
-                                    * (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp()).powi(2)
-                                    * (-0.12
-                                        * (-epsilon_temp_plus[1]).exp()
-                                        * epsilon_temp_plus[1]
-                                        * (epsilon_temp_plus[1] - 2.0)))),
+                                    * (epsilon_temp_plus[0] - 2.0))),
+                    FRAC_PI_2
+                        * self.m[1]
+                        * self.sigma[1].powi(3)
+                        * (2.0
+                            * (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp())
+                            * (-0.12 * (-epsilon_temp_plus[1]).exp() * epsilon_temp_plus[1])
+                                .powi(2)
+                            + (1.0 - 0.12 * (-epsilon_temp_plus[1]).exp()).powi(2)
+                                * (-0.12
+                                    * (-epsilon_temp_plus[1]).exp()
+                                    * epsilon_temp_plus[1]
+                                    * (epsilon_temp_plus[1] - 2.0))),
+                ],
             );
         }
-        self.eta2_coef.1
+        self.x[0] * self.eta2_coef.1[0] + self.x[1] * self.eta2_coef.1[1]
     }
     fn eta0_mu_k(&mut self, temp: f64) -> [f64; 2] {
         if temp != self.eta0_mu_k.0 {
             self.eta0_mu_k = (
                 temp,
                 [
-                    (FRAC_PI_6 * self.m_k[0] * self.sigma3[0])
-                        * (1.0 - 0.12 * (-3.0 * self.epsilon[0] / temp).exp()).powi(3),
-                    (FRAC_PI_6 * self.m_k[1] * self.sigma3[1])
-                        * (1.0 - 0.12 * (-3.0 * self.epsilon[1] / temp).exp()).powi(3),
+                    FRAC_PI_6
+                        * self.m[0]
+                        * (self.sigma[0] * (1.0 - 0.12 * (-3.0 * self.epsilon[0] / temp).exp()))
+                            .powi(3),
+                    FRAC_PI_6
+                        * self.m[1]
+                        * (self.sigma[1] * (1.0 - 0.12 * (-3.0 * self.epsilon[1] / temp).exp()))
+                            .powi(3),
                 ],
             );
         }
@@ -297,20 +287,23 @@ impl SPcSaftMix2 {
         let rho_num = self.calc_density(temp, pres, eta0_guess / eta0_coef);
         let eta = eta0_coef * rho_num;
         let eta_k = self.eta0_mu_k(temp);
+        let m2e1s3_k = [
+            2.0 * self.x[0] * self.m2e1s3_coef[0] + self.x[1] * self.m2e1s3_coef[2],
+            2.0 * self.x[1] * self.m2e1s3_coef[1] + self.x[0] * self.m2e1s3_coef[2],
+        ];
+        let m2e2s3_k = [
+            2.0 * self.x[0] * self.m2e2s3_coef[0] + self.x[1] * self.m2e2s3_coef[2],
+            2.0 * self.x[1] * self.m2e2s3_coef[1] + self.x[0] * self.m2e2s3_coef[2],
+        ];
         let t0d1 = self.r_t0d1(temp, rho_num);
         let ln_phi: Vec<f64> = self
             .hs
-            .mu_k(eta, rho_num, &self.m_k, &eta_k)
-            .zip(self.gii.lngii_mu_k(eta, rho_num, &self.m1_k, &eta_k))
-            .zip(self.disp.mu_k(
-                temp,
-                rho_num,
-                eta,
-                &self.m_k,
-                &eta_k,
-                &self.m2e1s3_k,
-                &self.m2e2s3_k,
-            ))
+            .mu_k(eta, rho_num, &self.m, &eta_k)
+            .zip(self.gii.lngii_mu_k(eta, rho_num, &self.m1, &eta_k))
+            .zip(
+                self.disp
+                    .mu_k(temp, rho_num, eta, &self.m, &eta_k, &m2e1s3_k, &m2e2s3_k),
+            )
             .map(|((hs, gii), disp)| hs + gii + disp - (1.0 + t0d1).ln())
             .collect();
         [ln_phi[0], ln_phi[1]]
@@ -323,8 +316,8 @@ impl SPcSaftMix2 {
     fn guess_ps(&mut self, temp: f64) -> [f64; 2] {
         if self.omega1.is_none() {
             let mut fluid = [
-                PcSaftPure::new_fluid(self.m_k[0], self.sigma3[0].cbrt(), self.epsilon[0]),
-                PcSaftPure::new_fluid(self.m_k[1], self.sigma3[1].cbrt(), self.epsilon[1]),
+                PcSaftPure::new_fluid(self.m[0], self.sigma[0], self.epsilon[0]),
+                PcSaftPure::new_fluid(self.m[1], self.sigma[1], self.epsilon[1]),
             ];
             fluid[0].c_flash().unwrap();
             fluid[1].c_flash().unwrap();
