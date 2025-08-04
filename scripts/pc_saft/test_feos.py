@@ -9,6 +9,9 @@ from feos.eos import State  # pylint: disable=E0401,E0611
 from feos.eos import PhaseEquilibrium  # pylint: disable=E0401,E0611
 
 
+from thermolib import PcSaftMix2  # pylint:disable=no-name-in-module
+
+
 def test_pc_saft_gly_pure():
     """test_pc_saft_gly_pure"""
     recoed = PcSaftRecord(
@@ -97,10 +100,86 @@ def test_pc_saft_pure():
         print("Error in tp_flash :: rho() # Acetone")
 
 
+def test_pc_saft_mix2():  # pylint: disable=too-many-branches
+    """test_pc_saft_mix2"""
+    methane = PcSaftRecord(1.0000, 3.7039, 150.03)  # methane (Gross and Sadowski 2001)
+    ethane = PcSaftRecord(1.6069, 3.5206, 191.42)  # ethane (Gross and Sadowski 2001)
+    parameters = PcSaftParameters.from_model_records([methane, ethane])
+    eos = EquationOfState.pcsaft(parameters)
+    fluids = PcSaftMix2(
+        [0.5, 0.5], [1.0000, 1.6069], [3.7039, 3.5206], [150.03, 191.42], 0
+    )
+    temp = 199.92
+    xyp_exp = np.array(
+        [
+            [0.0214, 0.3005, 362e3],
+            [0.0512, 0.5098, 442e3],
+            [0.1039, 0.6800, 680e3],
+            [0.1875, 0.7957, 1090e3],
+            [0.3100, 0.8679, 1700e3],
+            [0.4526, 0.9052, 2380e3],
+            [0.6601, 0.9337, 3400e3],
+            [0.7852, 0.9461, 4080e3],
+            [0.8942, 0.9562, 4765e3],
+            [0.9126, 0.9584, 4890e3],
+            [0.9175, 0.9578, 4940e3],
+            [0.9222, 0.9575, 4980e3],
+            [0.9319, 0.9577, 5035e3],
+        ]
+    )
+    for xyp in xyp_exp:  # check tx_flash
+        try:
+            py = fluids.tx_flash(temp, xyp[0])
+        except RuntimeError:
+            ok_thermolib = False
+        else:
+            ok_thermolib = True
+        try:
+            bubble = PhaseEquilibrium.bubble_point(
+                eos, temp * si.KELVIN, np.array([xyp[0], 1.0 - xyp[0]])
+            )
+        except RuntimeError:
+            ok_feos = False
+        else:
+            ok_feos = True
+        if ok_thermolib and ok_feos:
+            if np.round(py[1] * 1e6) != np.round(bubble.vapor.molefracs[0] * 1e6):
+                print(f"Error in tx_flash :: {py[1]:.6f} (thermolib::tx_flash)")
+                print(
+                    f"Error in tx_flash :: {bubble.vapor.molefracs[0]:.6f} (feos::bubble_point)"
+                )
+        elif ok_feos and ~ok_thermolib:
+            print(f"x = {xyp[0]} :: Ok(bubble_point) but Err(tx_flash)")
+    for xyp in xyp_exp:  # check ty_flash
+        try:
+            px = fluids.ty_flash(temp, xyp[1])
+        except RuntimeError:
+            ok_thermolib = False
+        else:
+            ok_thermolib = True
+        try:
+            dew = PhaseEquilibrium.dew_point(
+                eos, temp * si.KELVIN, np.array([xyp[1], 1.0 - xyp[1]])
+            )
+        except RuntimeError:
+            ok_feos = False
+        else:
+            ok_feos = True
+        if ok_thermolib and ok_feos:
+            if np.round(px[1] * 1e6) != np.round(dew.liquid.molefracs[0] * 1e6):
+                print(f"Error in ty_flash :: {px[1]:.6f} (thermolib::ty_flash)")
+                print(
+                    f"Error in ty_flash :: {dew.liquid.molefracs[0]:.6f} (feos::dew_point)"
+                )
+        elif ok_feos and ~ok_thermolib:
+            print(f"y = {xyp[0]} :: Ok(dew_point) but Err(ty_flash)")
+
+
 def main():
     """main"""
     test_pc_saft_gly_pure()
     test_pc_saft_pure()
+    test_pc_saft_mix2()
 
 
 if __name__ == "__main__":
