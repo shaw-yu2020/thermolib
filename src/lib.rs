@@ -12,6 +12,7 @@ mod algorithms;
 mod pc_saft;
 pub use pc_saft::PcSaftGlyPure;
 pub use pc_saft::PcSaftPure;
+pub use pc_saft::SPcSaftMix2;
 /// Python wrappers
 #[cfg(feature = "with_pyo3")]
 mod python;

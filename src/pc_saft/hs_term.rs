@@ -8,6 +8,19 @@ pub struct HsPure {
     eta4: (f64, f64),
 }
 impl HsPure {
+    pub fn mu_k<'a>(
+        &mut self,
+        eta: f64,
+        rho_num: f64,
+        m_k: &'a [f64],
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef_m = self.eta0(eta);
+        let coef_eta = rho_num * self.sum_xm * self.eta1(eta);
+        m_k.iter()
+            .zip(eta_k)
+            .map(move |(m_k, eta_k)| coef_m * m_k + coef_eta * eta_k)
+    }
     pub fn t0d0(&mut self, eta: f64) -> f64 {
         self.sum_xm * self.eta0(eta)
     }

@@ -44,6 +44,19 @@ impl GiiPure {
     }
 }
 impl GiiPure {
+    pub fn lngii_mu_k<'a>(
+        &mut self,
+        eta: f64,
+        rho_num: f64,
+        m1_k: &'a [f64],
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef_m1 = -self.lngii_eta0(eta);
+        let coef_eta = rho_num * self.neg_sum_xm1 * self.lngii_eta1(eta);
+        m1_k.iter()
+            .zip(eta_k)
+            .map(move |(m1_k, eta_k)| coef_m1 * m1_k + coef_eta * eta_k)
+    }
     pub fn lngii_t0d0(&mut self, eta: f64) -> f64 {
         self.neg_sum_xm1 * self.lngii_eta0(eta)
     }
