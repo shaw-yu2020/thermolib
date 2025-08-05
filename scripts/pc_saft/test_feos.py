@@ -103,6 +103,14 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements
     ethane = PcSaftRecord(1.6069, 3.5206, 191.42)  # ethane (Gross and Sadowski 2001)
     parameters = PcSaftParameters.from_model_records([methane, ethane])
     eos = EquationOfState.pcsaft(parameters)
+    state = State(
+        eos,
+        molefracs=np.asarray([0.5, 0.5]),
+        temperature=298.15 * si.KELVIN,
+        pressure=0.1e6 * si.PASCAL,
+    )
+    if np.round(state.density / (si.MOL / si.METER**3)) != 41:
+        print("Error in tp_flash :: rho() # C1-C2")
     temp = 199.92 * si.KELVIN
     # check tx_flash
     bubble = PhaseEquilibrium.bubble_point(eos, temp, np.array([0.0214, 0.9786]))
@@ -154,6 +162,31 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements
     dew = PhaseEquilibrium.dew_point(eos, temp, np.array([0.9461, 0.0539]))
     if np.round(dew.liquid.molefracs[0] * 1e4) / 1e4 != 0.7474:
         print(f"Error in ty_flash :: y = {0.9461}, # C1-C2")
+    # test assoc_term
+    carbon_dioxide = PcSaftRecord(
+        2.0729, 2.7852, 169.21
+    )  # carbon_dioxide (Gross and Sadowski 2001)
+    methanol = PcSaftRecord(
+        1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=1
+    )  # methanol (Gross and Sadowski 2002)
+    parameters = PcSaftParameters.from_model_records([carbon_dioxide, methanol])
+    eos = EquationOfState.pcsaft(parameters)
+    state = State(
+        eos,
+        molefracs=np.asarray([0.5, 0.5]),
+        temperature=298.15 * si.KELVIN,
+        pressure=0.1e6 * si.PASCAL,
+    )
+    if np.round(state.density / (si.MOL / si.METER**3)) != 45:
+        print("Error in tp_flash :: rho() # carbon_dioxide + methanol")
+    bubble = PhaseEquilibrium.bubble_point(
+        eos, 298.15 * si.KELVIN, np.array([0.5, 0.5])
+    )
+    if np.round(bubble.vapor.molefracs[0] * 1e4) / 1e4 != 0.9965:
+        print(f"Error in tx_flash :: x = {0.5}, # carbon_dioxide + methanol")
+    dew = PhaseEquilibrium.dew_point(eos, 298.15 * si.KELVIN, np.array([0.5, 0.5]))
+    if np.round(dew.liquid.molefracs[0] * 1e4) / 1e4 != 0.0014:
+        print(f"Error in ty_flash :: y = {0.5}, # carbon_dioxide + methanol")
 
 
 def main():
