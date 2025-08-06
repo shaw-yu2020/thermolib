@@ -14,6 +14,7 @@ pub use pc_saft::PcSaftGlyMix2;
 pub use pc_saft::PcSaftGlyPure;
 pub use pc_saft::PcSaftMix2;
 pub use pc_saft::PcSaftPure;
+pub use pc_saft::PcSaftYglPure;
 pub use pc_saft::SPcSaftMix2;
 /// Python wrappers
 #[cfg(feature = "with_pyo3")]

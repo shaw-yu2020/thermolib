@@ -8,6 +8,7 @@ use crate::PcSaftGlyMix2;
 use crate::PcSaftGlyPure;
 use crate::PcSaftMix2;
 use crate::PcSaftPure;
+use crate::PcSaftYglPure;
 use crate::SPcSaftMix2;
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -18,6 +19,7 @@ fn pylib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PcSaftGlyPure>()?;
     m.add_class::<PcSaftMix2>()?;
     m.add_class::<PcSaftPure>()?;
+    m.add_class::<PcSaftYglPure>()?;
     m.add_class::<SPcSaftMix2>()?;
     Ok(())
 }

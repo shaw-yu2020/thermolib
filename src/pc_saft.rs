@@ -12,6 +12,7 @@ mod pc_saft_gly_mix2;
 mod pc_saft_gly_pure;
 mod pc_saft_mix2;
 mod pc_saft_pure;
+mod pc_saft_ygl_pure;
 mod polar_term;
 mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
@@ -25,6 +26,7 @@ pub use pc_saft_gly_mix2::PcSaftGlyMix2;
 pub use pc_saft_gly_pure::PcSaftGlyPure;
 pub use pc_saft_mix2::PcSaftMix2;
 pub use pc_saft_pure::PcSaftPure;
+pub use pc_saft_ygl_pure::PcSaftYglPure;
 pub use s_pc_saft_mix2::SPcSaftMix2;
 /// PcSaftError
 use thiserror::Error;
