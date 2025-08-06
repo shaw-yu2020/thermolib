@@ -134,45 +134,92 @@ macro_rules! fn_assoc {
                 }
             }
             #[allow(clippy::too_many_arguments)]
-            pub fn mu_k(
+            pub fn mu_k<'a>(
                 &mut self,
                 temp: f64,
                 rho_num: f64,
                 zeta2t0: f64,
                 zeta3t0: f64,
                 dit0: f64,
-                zeta2_k: f64,
-                zeta3_k: f64,
-            ) -> f64 {
-                self.t0d0(temp, rho_num, zeta2t0, zeta3t0, dit0) / self.x
+                k: usize,
+                zeta2_k: &'a [f64],
+                zeta3_k: &'a [f64],
+            ) -> impl Iterator<Item = f64> + use<'a> {
+                let val = self.t0d0(temp, rho_num, zeta2t0, zeta3t0, dit0) / self.x
                     + rho_num
                         * self.x
                         * match self.assoc_type {
-                            AssocType::Type1 => self
-                                .site_mu_k::<1>(self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k),
+                            AssocType::Type1 => self.site_mu_k::<1>(
+                                self.XA, zeta2t0, zeta3t0, dit0, zeta2_k[k], zeta3_k[k],
+                            ),
                             AssocType::Type2B => {
                                 2.0 * self.site_mu_k::<1>(
-                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k[k], zeta3_k[k],
                                 )
                             }
                             AssocType::Type3B => {
                                 2.0 * self.site_mu_k::<1>(
-                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k[k], zeta3_k[k],
                                 ) + self.site_mu_k::<2>(
                                     2.0 * self.XA - 1.0,
                                     zeta2t0,
                                     zeta3t0,
                                     dit0,
-                                    zeta2_k,
-                                    zeta3_k,
+                                    zeta2_k[k],
+                                    zeta3_k[k],
                                 )
                             }
                             AssocType::Type4C => {
                                 4.0 * self.site_mu_k::<1>(
-                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                    self.XA, zeta2t0, zeta3t0, dit0, zeta2_k[k], zeta3_k[k],
                                 )
                             }
+                        };
+                let vec: Vec<f64> = zeta2_k
+                    .iter()
+                    .zip(zeta3_k)
+                    .enumerate()
+                    .map(|(index, (&zeta2_k, &zeta3_k))| {
+                        if k == index {
+                            0.0
+                        } else {
+                            rho_num
+                                * self.x
+                                * match self.assoc_type {
+                                    AssocType::Type1 => self.site_mu_k_g::<1>(
+                                        self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                    ),
+                                    AssocType::Type2B => {
+                                        2.0 * self.site_mu_k_g::<1>(
+                                            self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                        )
+                                    }
+                                    AssocType::Type3B => {
+                                        2.0 * self.site_mu_k_g::<1>(
+                                            self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                        ) + self.site_mu_k_g::<2>(
+                                            2.0 * self.XA - 1.0,
+                                            zeta2t0,
+                                            zeta3t0,
+                                            dit0,
+                                            zeta2_k,
+                                            zeta3_k,
+                                        )
+                                    }
+                                    AssocType::Type4C => {
+                                        4.0 * self.site_mu_k_g::<1>(
+                                            self.XA, zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k,
+                                        )
+                                    }
+                                }
                         }
+                    })
+                    .collect();
+                zeta3_k
+                    .iter()
+                    .zip(vec)
+                    .enumerate()
+                    .map(move |(index, (_, vec))| if k == index { val } else { vec })
             }
             pub fn t0d0(
                 &mut self,
@@ -423,6 +470,17 @@ macro_rules! fn_assoc {
             ) -> f64 {
                 self.site_x1::<C>(x) * self.x_mu_k(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
             }
+            fn site_mu_k_g<const C: i32>(
+                &mut self,
+                x: f64,
+                zeta2t0: f64,
+                zeta3t0: f64,
+                dit0: f64,
+                zeta2_k: f64,
+                zeta3_k: f64,
+            ) -> f64 {
+                self.site_x1::<C>(x) * self.x_mu_k_g(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
+            }
             fn site_t0d0<const C: i32>(&mut self, x: f64) -> f64 {
                 x.ln() - x / 2.0 + 0.5
             }
@@ -521,7 +579,17 @@ macro_rules! fn_assoc {
                 zeta2_k: f64,
                 zeta3_k: f64,
             ) -> f64 {
-                self.xt1() / self.x * self.t_mu_k(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
+                self.xt1() * self.t_mu_k(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
+            }
+            fn x_mu_k_g(
+                &mut self,
+                zeta2t0: f64,
+                zeta3t0: f64,
+                dit0: f64,
+                zeta2_k: f64,
+                zeta3_k: f64,
+            ) -> f64 {
+                self.xt1() * self.t_mu_k_g(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
             }
             fn x_t0d1(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
                 if self.x_t0d1.0 != self.XA {
@@ -615,17 +683,16 @@ macro_rules! fn_assoc {
                 if self.xt1.0 != self.XA {
                     self.xt1 = (
                         self.XA,
-                        self.x
-                            * match self.assoc_type {
-                                AssocType::Type1 | AssocType::Type2B => {
-                                    self.XA.powi(3) / (self.XA - 2.0)
-                                }
-                                AssocType::Type3B => {
-                                    (self.XA * (2.0 * self.XA - 1.0)).powi(2)
-                                        / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0)
-                                }
-                                AssocType::Type4C => 2.0 * self.XA.powi(3) / (self.XA - 2.0),
-                            },
+                        match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(3) / (self.XA - 2.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(2)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0)
+                            }
+                            AssocType::Type4C => 2.0 * self.XA.powi(3) / (self.XA - 2.0),
+                        },
                     )
                 }
                 self.xt1.1
@@ -634,23 +701,21 @@ macro_rules! fn_assoc {
                 if self.xt2.0 != self.XA {
                     self.xt2 = (
                         self.XA,
-                        2.0 * self.x.powi(2)
-                            * match self.assoc_type {
-                                AssocType::Type1 | AssocType::Type2B => {
-                                    self.XA.powi(5) / (self.XA - 2.0).powi(3) * (self.XA - 3.0)
-                                }
-                                AssocType::Type3B => {
-                                    (self.XA * (2.0 * self.XA - 1.0)).powi(3)
-                                        / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(3)
-                                        * (4.0 * self.XA.powi(3) - 12.0 * self.XA.powi(2)
-                                            + 6.0 * self.XA
-                                            - 1.0)
-                                }
-                                AssocType::Type4C => {
-                                    4.0 * self.XA.powi(5) / (self.XA - 2.0).powi(3)
-                                        * (self.XA - 3.0)
-                                }
-                            },
+                        2.0 * match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(5) / (self.XA - 2.0).powi(3) * (self.XA - 3.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(3)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(3)
+                                    * (4.0 * self.XA.powi(3) - 12.0 * self.XA.powi(2)
+                                        + 6.0 * self.XA
+                                        - 1.0)
+                            }
+                            AssocType::Type4C => {
+                                4.0 * self.XA.powi(5) / (self.XA - 2.0).powi(3) * (self.XA - 3.0)
+                            }
+                        },
                     )
                 }
                 self.xt2.1
@@ -659,24 +724,23 @@ macro_rules! fn_assoc {
                 if self.xt3.0 != self.XA {
                     self.xt3 = (
                         self.XA,
-                        6.0 * self.x.powi(3)
-                            * match self.assoc_type {
-                                AssocType::Type1 | AssocType::Type2B => {
-                                    self.XA.powi(7) / (self.XA - 2.0).powi(5)
-                                        * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
-                                }
-                                AssocType::Type3B => {
-                                    (self.XA * (2.0 * self.XA - 1.0)).powi(4)
-                                        / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(5)
-                                        * (16.0 * self.XA.powi(6) - 96.0 * self.XA.powi(5)
-                                            + (200.0 * self.XA.powi(4) - 160.0 * self.XA.powi(3))
-                                            + (62.0 * self.XA.powi(2) - 12.0 * self.XA + 1.0))
-                                }
-                                AssocType::Type4C => {
-                                    8.0 * self.XA.powi(7) / (self.XA - 2.0).powi(5)
-                                        * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
-                                }
-                            },
+                        6.0 * match self.assoc_type {
+                            AssocType::Type1 | AssocType::Type2B => {
+                                self.XA.powi(7) / (self.XA - 2.0).powi(5)
+                                    * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
+                            }
+                            AssocType::Type3B => {
+                                (self.XA * (2.0 * self.XA - 1.0)).powi(4)
+                                    / (2.0 * self.XA.powi(2) - 4.0 * self.XA + 1.0).powi(5)
+                                    * (16.0 * self.XA.powi(6) - 96.0 * self.XA.powi(5)
+                                        + (200.0 * self.XA.powi(4) - 160.0 * self.XA.powi(3))
+                                        + (62.0 * self.XA.powi(2) - 12.0 * self.XA + 1.0))
+                            }
+                            AssocType::Type4C => {
+                                8.0 * self.XA.powi(7) / (self.XA - 2.0).powi(5)
+                                    * (self.XA.powi(2) - 6.0 * self.XA + 10.0)
+                            }
+                        },
                     )
                 }
                 self.xt3.1
@@ -698,6 +762,25 @@ impl AssocTerm {
                             * (zeta2_k * zeta2t0 / (1.0 - zeta3t0).powi(3)
                                 + 1.5 * zeta3_k * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(4))))
     }
+    fn t_mu_k_g(
+        &mut self,
+        zeta2t0: f64,
+        zeta3t0: f64,
+        dit0: f64,
+        zeta2_k: f64,
+        zeta3_k: f64,
+    ) -> f64 {
+        self.x
+            * self.kappa_AB_sigma3_dens
+            * (self.epsilon_AB_temp.exp() - 1.0)
+            * (zeta3_k / (1.0 - zeta3t0).powi(2)
+                + dit0
+                    * (1.5 * zeta2_k / (1.0 - zeta3t0).powi(2)
+                        + 3.0 * zeta3_k * zeta2t0 / (1.0 - zeta3t0).powi(3))
+                + dit0.powi(2)
+                    * (zeta2_k * zeta2t0 / (1.0 - zeta3t0).powi(3)
+                        + 1.5 * zeta3_k * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(4)))
+    }
     fn t_t0d0(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
         if zeta3t0 != self.t_t0d0.0 {
             self.t_t0d0 = (
@@ -714,7 +797,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t0d1.0 {
             self.t_t0d1 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * (self.epsilon_AB_temp.exp() - 1.0)
                     * (self.gii.t0d1(zeta2t0, zeta3t0, &[dit0])[0]
                         + self.gii.t0d0(zeta2t0, zeta3t0, &[dit0])[0]),
@@ -726,7 +810,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t0d2.0 {
             self.t_t0d2 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * (self.epsilon_AB_temp.exp() - 1.0)
                     * (self.gii.t0d2(zeta2t0, zeta3t0, &[dit0])[0]
                         + 2.0 * self.gii.t0d1(zeta2t0, zeta3t0, &[dit0])[0]),
@@ -738,7 +823,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t0d3.0 {
             self.t_t0d3 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * (self.epsilon_AB_temp.exp() - 1.0)
                     * (self.gii.t0d3(zeta2t0, zeta3t0, &[dit0])[0]
                         + 3.0 * self.gii.t0d2(zeta2t0, zeta3t0, &[dit0])[0]),
@@ -755,7 +841,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t1d0.0 {
             self.t_t1d0 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * ((self.epsilon_AB_temp.exp() - 1.0)
                         * self.gii.t1d0(
                             (zeta2t0, zeta2t1),
@@ -777,7 +864,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t1d1.0 {
             self.t_t1d1 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * ((self.epsilon_AB_temp.exp() - 1.0)
                         * (self.gii.t1d1(
                             (zeta2t0, zeta2t1),
@@ -804,7 +892,8 @@ impl AssocTerm {
         if zeta3t0 != self.t_t2d0.0 {
             self.t_t2d0 = (
                 zeta3t0,
-                self.kappa_AB_sigma3_dens
+                self.x
+                    * self.kappa_AB_sigma3_dens
                     * ((self.epsilon_AB_temp.exp() - 1.0)
                         * self.gii.t2d0(
                             (zeta2t0, zeta2t1, zeta2t2),

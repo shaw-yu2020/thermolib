@@ -1,7 +1,7 @@
 use super::{AssocTerm, AssocType};
 use super::{DispTerm, GiiTerm, HsTerm};
-use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use super::{PcSaftErr, PcSaftPure};
+use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
@@ -18,6 +18,7 @@ pub struct PcSaftMix2 {
     gii: GiiTerm,             // GiiTerm
     disp: DispTerm,           // DispTerm
     assoc: Option<AssocTerm>, // AssocTerm
+    n_assoc: usize,
     m2e1s3_coef: [f64; 3],
     m2e2s3_coef: [f64; 3],
     // state
@@ -81,6 +82,7 @@ impl PcSaftMix2 {
                     + x[0] * x[1] * m2e2s3_coef[2],
             ),
             assoc: None,
+            n_assoc: 0,
             m2e1s3_coef,
             m2e2s3_coef,
             // state
@@ -117,7 +119,7 @@ impl PcSaftMix2 {
                     + x[1].powi(2) * self.m2e2s3_coef[1]
                     + x[0] * x[1] * self.m2e2s3_coef[2],
             ),
-            assoc: self.assoc.as_ref().map(|a| a.new_x_frac(x[0])),
+            assoc: self.assoc.as_ref().map(|a| a.new_x_frac(x[self.n_assoc])),
             ..*self
         }
     }
@@ -130,31 +132,35 @@ impl PcSaftMix2 {
     pub fn new_py(x: [f64; 2], m: [f64; 2], sigma: [f64; 2], epsilon: [f64; 2], kij: f64) -> Self {
         Self::new_fluid(x, m, sigma, epsilon, kij)
     }
-    pub fn set_1_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_1_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
+        self.n_assoc = if n == 1 { 1 } else { 0 };
         self.assoc = Some(AssocTerm::new_1_term(
-            self.x[0],
-            kappa_AB * self.sigma[0].powi(3),
+            self.x[self.n_assoc],
+            kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
         ));
     }
-    pub fn set_2B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_2B_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
+        self.n_assoc = if n == 1 { 1 } else { 0 };
         self.assoc = Some(AssocTerm::new_2B_term(
-            self.x[0],
-            kappa_AB * self.sigma[0].powi(3),
+            self.x[self.n_assoc],
+            kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
         ))
     }
-    pub fn set_3B_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_3B_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
+        self.n_assoc = if n == 1 { 1 } else { 0 };
         self.assoc = Some(AssocTerm::new_3B_term(
-            self.x[0],
-            kappa_AB * self.sigma[0].powi(3),
+            self.x[self.n_assoc],
+            kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
         ))
     }
-    pub fn set_4C_assoc_term(&mut self, kappa_AB: f64, epsilon_AB: f64) {
+    pub fn set_4C_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
+        self.n_assoc = if n == 1 { 1 } else { 0 };
         self.assoc = Some(AssocTerm::new_4C_term(
-            self.x[0],
-            kappa_AB * self.sigma[0].powi(3),
+            self.x[self.n_assoc],
+            kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
         ))
     }
@@ -370,7 +376,7 @@ impl PcSaftMix2 {
             + self.gii.lngii_t0d0(zeta2t0, zeta3t0, &self.dt0.1)
             + self.disp.t0d0(temp, rho_num, zeta3t0)
             + self.assoc.as_mut().map_or(0.0, |a| {
-                a.t0d0(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[0])
+                a.t0d0(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[self.n_assoc])
             })
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
@@ -379,7 +385,7 @@ impl PcSaftMix2 {
             + self.gii.lngii_t0d1(zeta2t0, zeta3t0, &self.dt0.1)
             + self.disp.t0d1(temp, rho_num, zeta3t0)
             + self.assoc.as_mut().map_or(0.0, |a| {
-                a.t0d1(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[0])
+                a.t0d1(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[self.n_assoc])
             })
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
@@ -388,7 +394,7 @@ impl PcSaftMix2 {
             + self.gii.lngii_t0d2(zeta2t0, zeta3t0, &self.dt0.1)
             + self.disp.t0d2(temp, rho_num, zeta3t0)
             + self.assoc.as_mut().map_or(0.0, |a| {
-                a.t0d2(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[0])
+                a.t0d2(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[self.n_assoc])
             })
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
@@ -397,7 +403,7 @@ impl PcSaftMix2 {
             + self.gii.lngii_t0d3(zeta2t0, zeta3t0, &self.dt0.1)
             + self.disp.t0d3(temp, rho_num, zeta3t0)
             + self.assoc.as_mut().map_or(0.0, |a| {
-                a.t0d3(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[0])
+                a.t0d3(temp, rho_num, zeta2t0, zeta3t0, self.dt0.1[self.n_assoc])
             })
     }
     fn r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
@@ -418,7 +424,7 @@ impl PcSaftMix2 {
                     rho_num,
                     (zeta2t0, zeta2t1),
                     (zeta3t0, zeta3t1),
-                    (self.dt0.1[0], self.dt1.1[0]),
+                    (self.dt0.1[self.n_assoc], self.dt1.1[self.n_assoc]),
                 )
             })
     }
@@ -440,7 +446,7 @@ impl PcSaftMix2 {
                     rho_num,
                     (zeta2t0, zeta2t1),
                     (zeta3t0, zeta3t1),
-                    (self.dt0.1[0], self.dt1.1[0]),
+                    (self.dt0.1[self.n_assoc], self.dt1.1[self.n_assoc]),
                 )
             })
     }
@@ -464,7 +470,11 @@ impl PcSaftMix2 {
                     rho_num,
                     (zeta2t0, zeta2t1, zeta2t2),
                     (zeta3t0, zeta3t1, zeta3t2),
-                    (self.dt0.1[0], self.dt1.1[0], self.dt2.1[0]),
+                    (
+                        self.dt0.1[self.n_assoc],
+                        self.dt1.1[self.n_assoc],
+                        self.dt2.1[self.n_assoc],
+                    ),
                 )
             })
     }
@@ -506,23 +516,27 @@ impl PcSaftMix2 {
             .zip(self.disp.mu_k(
                 temp, rho_num, zeta3t0, &self.m, &zeta3_k, &m2e1s3_k, &m2e2s3_k,
             ))
-            .map(|((hs, gii), disp)| hs + gii + disp - (1.0 + t0d1).ln())
-            .collect();
-        [
-            ln_phi[0]
-                + self.assoc.as_mut().map_or(0.0, |a| {
-                    a.mu_k(
+            .zip(if self.assoc.is_some() {
+                self.assoc
+                    .as_mut()
+                    .unwrap()
+                    .mu_k(
                         temp,
                         rho_num,
                         zeta2t0,
                         zeta3t0,
-                        self.dt0.1[0],
-                        zeta2_k[0],
-                        zeta3_k[0],
+                        self.dt0.1[self.n_assoc],
+                        self.n_assoc,
+                        &zeta2_k,
+                        &zeta3_k,
                     )
-                }),
-            ln_phi[1],
-        ]
+                    .collect::<Vec<f64>>()
+            } else {
+                vec![0.0, 0.0]
+            })
+            .map(|(((hs, gii), disp), assoc)| hs + gii + disp + assoc - (1.0 + t0d1).ln())
+            .collect();
+        [ln_phi[0], ln_phi[1]]
     }
     fn calc_ln_k(&mut self, temp: f64, pres: f64, x: [f64; 2], y: [f64; 2]) -> [f64; 2] {
         let ln_phi_l = self.new_fracs(x).ln_phi(temp, pres, 0.5);
@@ -539,14 +553,22 @@ impl PcSaftMix2 {
             if let Some(a) = &self.assoc {
                 let (assoc_type, kappa_AB_sigma3, epsilon_AB) = a.parameters();
                 match assoc_type {
-                    AssocType::Type1 => fluid[0]
-                        .set_1_assoc_term(kappa_AB_sigma3 / self.sigma[0].powi(3), epsilon_AB),
-                    AssocType::Type2B => fluid[0]
-                        .set_2B_assoc_term(kappa_AB_sigma3 / self.sigma[0].powi(3), epsilon_AB),
-                    AssocType::Type3B => fluid[0]
-                        .set_3B_assoc_term(kappa_AB_sigma3 / self.sigma[0].powi(3), epsilon_AB),
-                    AssocType::Type4C => fluid[0]
-                        .set_4C_assoc_term(kappa_AB_sigma3 / self.sigma[0].powi(3), epsilon_AB),
+                    AssocType::Type1 => fluid[self.n_assoc].set_1_assoc_term(
+                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
+                        epsilon_AB,
+                    ),
+                    AssocType::Type2B => fluid[self.n_assoc].set_2B_assoc_term(
+                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
+                        epsilon_AB,
+                    ),
+                    AssocType::Type3B => fluid[self.n_assoc].set_3B_assoc_term(
+                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
+                        epsilon_AB,
+                    ),
+                    AssocType::Type4C => fluid[self.n_assoc].set_4C_assoc_term(
+                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
+                        epsilon_AB,
+                    ),
                 }
             }
             fluid[0].c_flash().unwrap();
@@ -579,6 +601,8 @@ mod tests {
             [150.03, 191.42],
             0.0,
         );
+        fluids.tp_flash(298.15, 0.1e6).unwrap();
+        assert_eq!(fluids.rho().unwrap().round(), 41.0);
         let temp = 199.92;
         // test tpz_flash
         let p_data = [
@@ -659,5 +683,20 @@ mod tests {
             assert_eq!((px[1] * 1e4).round() / 1e4, x);
         })
         .count();
+        // test assoc_term
+        let mut fluids = super::PcSaftMix2::new_fluid(
+            [0.5, 0.5],
+            [2.0729, 1.5255],
+            [2.7852, 3.2300],
+            [169.21, 188.90],
+            0.0,
+        );
+        fluids.set_2B_assoc_term(1, 0.035176, 2899.5);
+        fluids.tp_flash(298.15, 0.1e6).unwrap();
+        assert_eq!(fluids.rho().unwrap().round(), 45.0);
+        let py = fluids.tx_flash(298.15, 0.5).unwrap();
+        assert_eq!((py[1] * 1e4).round() / 1e4, 0.9965);
+        let px = fluids.ty_flash(298.15, 0.5).unwrap();
+        assert_eq!((px[1] * 1e4).round() / 1e4, 0.0014);
     }
 }
