@@ -104,6 +104,154 @@ impl AssocTerm {
         }
     }
 }
+/// AssocGlyTerm
+#[allow(non_snake_case)]
+pub struct AssocGlyTerm {
+    assoc_type: AssocType,
+    kappa_AB_sigma3_dens: f64,
+    epsilon_AB_temp: f64,
+    kappa_AB_sigma3: f64,
+    epsilon_AB: f64,
+    dens: f64,
+    temp: f64,
+    XA: f64,
+    x: f64,
+    // parameters for gly
+    c0: f64,
+    c1: f64,
+    c2: f64,
+    // cached variables
+    xt1: (f64, f64),
+    xt2: (f64, f64),
+    xt3: (f64, f64),
+    x_t0d1: (f64, f64),
+    x_t0d2: (f64, f64),
+    x_t0d3: (f64, f64),
+    x_t1d0: (f64, f64),
+    x_t1d1: (f64, f64),
+    x_t2d0: (f64, f64),
+    t_t0d0: (f64, f64),
+    t_t0d1: (f64, f64),
+    t_t0d2: (f64, f64),
+    t_t0d3: (f64, f64),
+    t_t1d0: (f64, f64),
+    t_t1d1: (f64, f64),
+    t_t2d0: (f64, f64),
+    g_t0d0: (f64, f64),
+    g_t0d1: (f64, f64),
+    g_t0d2: (f64, f64),
+    g_t0d3: (f64, f64),
+    g_t1d0: (f64, f64),
+    g_t1d1: (f64, f64),
+    g_t2d0: (f64, f64),
+}
+#[allow(non_snake_case)]
+impl AssocGlyTerm {
+    pub fn parameters(&self) -> (AssocType, f64, f64, f64, f64, f64) {
+        (
+            self.assoc_type.clone(),
+            self.kappa_AB_sigma3,
+            self.epsilon_AB,
+            self.c0,
+            self.c1,
+            self.c2,
+        )
+    }
+    pub fn new_1_term(
+        x: f64,
+        kappa_AB_sigma3: f64,
+        epsilon_AB: f64,
+        c0: f64,
+        c1: f64,
+        c2: f64,
+    ) -> Self {
+        Self {
+            assoc_type: AssocType::Type1,
+            kappa_AB_sigma3_dens: 0.0,
+            epsilon_AB_temp: 0.0,
+            kappa_AB_sigma3,
+            epsilon_AB,
+            dens: 0.0,
+            temp: 0.0,
+            XA: 1.0,
+            x,
+            // parameters for gly
+            c0,
+            c1,
+            c2,
+            // cached variables
+            xt1: (0.0, 0.0),
+            xt2: (0.0, 0.0),
+            xt3: (0.0, 0.0),
+            x_t0d1: (0.0, 0.0),
+            x_t0d2: (0.0, 0.0),
+            x_t0d3: (0.0, 0.0),
+            x_t1d0: (0.0, 0.0),
+            x_t1d1: (0.0, 0.0),
+            x_t2d0: (0.0, 0.0),
+            t_t0d0: (0.0, 0.0),
+            t_t0d1: (0.0, 0.0),
+            t_t0d2: (0.0, 0.0),
+            t_t0d3: (0.0, 0.0),
+            t_t1d0: (0.0, 0.0),
+            t_t1d1: (0.0, 0.0),
+            t_t2d0: (0.0, 0.0),
+            g_t0d0: (0.0, 0.0),
+            g_t0d1: (0.0, 0.0),
+            g_t0d2: (0.0, 0.0),
+            g_t0d3: (0.0, 0.0),
+            g_t1d0: (0.0, 0.0),
+            g_t1d1: (0.0, 0.0),
+            g_t2d0: (0.0, 0.0),
+        }
+    }
+    pub fn new_x_frac(&self, x: f64) -> Self {
+        Self {
+            x,
+            assoc_type: self.assoc_type.clone(),
+            ..*self
+        }
+    }
+    pub fn new_2B_term(
+        x: f64,
+        kappa_AB_sigma3: f64,
+        epsilon_AB: f64,
+        c0: f64,
+        c1: f64,
+        c2: f64,
+    ) -> Self {
+        Self {
+            assoc_type: AssocType::Type2B,
+            ..AssocGlyTerm::new_1_term(x, kappa_AB_sigma3, epsilon_AB, c0, c1, c2)
+        }
+    }
+    pub fn new_3B_term(
+        x: f64,
+        kappa_AB_sigma3: f64,
+        epsilon_AB: f64,
+        c0: f64,
+        c1: f64,
+        c2: f64,
+    ) -> Self {
+        Self {
+            assoc_type: AssocType::Type3B,
+            ..AssocGlyTerm::new_1_term(x, kappa_AB_sigma3, epsilon_AB, c0, c1, c2)
+        }
+    }
+    pub fn new_4C_term(
+        x: f64,
+        kappa_AB_sigma3: f64,
+        epsilon_AB: f64,
+        c0: f64,
+        c1: f64,
+        c2: f64,
+    ) -> Self {
+        Self {
+            assoc_type: AssocType::Type4C,
+            ..AssocGlyTerm::new_1_term(x, kappa_AB_sigma3, epsilon_AB, c0, c1, c2)
+        }
+    }
+}
 /// macro_rules! fn_assoc
 macro_rules! fn_assoc {
     ($name:ty) => {
@@ -915,5 +1063,308 @@ impl AssocTerm {
             )
         }
         self.t_t2d0.1
+    }
+}
+fn_assoc!(AssocGlyTerm); // fn_assoc!(AssocGlyTerm);
+impl AssocGlyTerm {
+    fn t_mu_k(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64, zeta2_k: f64, zeta3_k: f64) -> f64 {
+        (self.epsilon_AB_temp.exp() - 1.0)
+            * (self.kappa_AB_sigma3 * self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0)
+                + (self.x * self.kappa_AB_sigma3_dens)
+                    * self.gii_gly_mu_k(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k))
+    }
+    fn t_mu_k_g(
+        &mut self,
+        zeta2t0: f64,
+        zeta3t0: f64,
+        dit0: f64,
+        zeta2_k: f64,
+        zeta3_k: f64,
+    ) -> f64 {
+        self.x
+            * self.kappa_AB_sigma3_dens
+            * (self.epsilon_AB_temp.exp() - 1.0)
+            * self.gii_gly_mu_k(zeta2t0, zeta3t0, dit0, zeta2_k, zeta3_k)
+    }
+    fn t_t0d0(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.t_t0d0.0 {
+            self.t_t0d0 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * (self.epsilon_AB_temp.exp() - 1.0)
+                    * self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0),
+            )
+        }
+        self.t_t0d0.1
+    }
+    fn t_t0d1(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.t_t0d1.0 {
+            self.t_t0d1 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * (self.epsilon_AB_temp.exp() - 1.0)
+                    * (self.gii_gly_t0d1(zeta2t0, zeta3t0, dit0)
+                        + self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0)),
+            )
+        }
+        self.t_t0d1.1
+    }
+    fn t_t0d2(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.t_t0d2.0 {
+            self.t_t0d2 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * (self.epsilon_AB_temp.exp() - 1.0)
+                    * (self.gii_gly_t0d2(zeta2t0, zeta3t0, dit0)
+                        + 2.0 * self.gii_gly_t0d1(zeta2t0, zeta3t0, dit0)),
+            )
+        }
+        self.t_t0d2.1
+    }
+    fn t_t0d3(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.t_t0d3.0 {
+            self.t_t0d3 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * (self.epsilon_AB_temp.exp() - 1.0)
+                    * (self.gii_gly_t0d3(zeta2t0, zeta3t0, dit0)
+                        + 3.0 * self.gii_gly_t0d2(zeta2t0, zeta3t0, dit0)),
+            )
+        }
+        self.t_t0d3.1
+    }
+    fn t_t1d0(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.t_t1d0.0 {
+            self.t_t1d0 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * ((self.epsilon_AB_temp.exp() - 1.0)
+                        * self.gii_gly_t1d0((zeta2t0, zeta2t1), (zeta3t0, zeta3t1), (dit0, dit1))
+                        - (self.epsilon_AB_temp.exp() * self.epsilon_AB_temp)
+                            * self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0)),
+            )
+        }
+        self.t_t1d0.1
+    }
+    fn t_t1d1(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.t_t1d1.0 {
+            self.t_t1d1 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * ((self.epsilon_AB_temp.exp() - 1.0)
+                        * (self.gii_gly_t1d1(
+                            (zeta2t0, zeta2t1),
+                            (zeta3t0, zeta3t1),
+                            (dit0, dit1),
+                        ) + self.gii_gly_t1d0(
+                            (zeta2t0, zeta2t1),
+                            (zeta3t0, zeta3t1),
+                            (dit0, dit1),
+                        ))
+                        - (self.epsilon_AB_temp.exp() * self.epsilon_AB_temp)
+                            * (self.gii_gly_t0d1(zeta2t0, zeta3t0, dit0)
+                                + self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0))),
+            )
+        }
+        self.t_t1d1.1
+    }
+    fn t_t2d0(
+        &mut self,
+        (zeta2t0, zeta2t1, zeta2t2): (f64, f64, f64),
+        (zeta3t0, zeta3t1, zeta3t2): (f64, f64, f64),
+        (dit0, dit1, dit2): (f64, f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.t_t2d0.0 {
+            self.t_t2d0 = (
+                zeta3t0,
+                self.x
+                    * self.kappa_AB_sigma3_dens
+                    * ((self.epsilon_AB_temp.exp() - 1.0)
+                        * self.gii_gly_t2d0(
+                            (zeta2t0, zeta2t1, zeta2t2),
+                            (zeta3t0, zeta3t1, zeta3t2),
+                            (dit0, dit1, dit2),
+                        )
+                        - 2.0
+                            * self.epsilon_AB_temp.exp()
+                            * self.epsilon_AB_temp
+                            * self.gii_gly_t1d0(
+                                (zeta2t0, zeta2t1),
+                                (zeta3t0, zeta3t1),
+                                (dit0, dit1),
+                            )
+                        + self.epsilon_AB_temp.exp()
+                            * self.epsilon_AB_temp
+                            * (self.epsilon_AB_temp + 2.0)
+                            * self.gii_gly_t0d0(zeta2t0, zeta3t0, dit0)),
+            )
+        }
+        self.t_t2d0.1
+    }
+}
+impl AssocGlyTerm {
+    fn gii_gly_mu_k(
+        &mut self,
+        zeta2t0: f64,
+        zeta3t0: f64,
+        dit0: f64,
+        zeta2_k: f64,
+        zeta3_k: f64,
+    ) -> f64 {
+        self.c0 * zeta3_k / (1.0 - zeta3t0).powi(2)
+            + (self.c1 * dit0)
+                * (1.5 * zeta2_k / (1.0 - zeta3t0).powi(2)
+                    + 3.0 * zeta3_k * zeta2t0 / (1.0 - zeta3t0).powi(3))
+            + (self.c2 * dit0.powi(2))
+                * (zeta2_k * zeta2t0 / (1.0 - zeta3t0).powi(3)
+                    + 1.5 * zeta3_k * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(4))
+    }
+    fn gii_gly_t0d0(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.g_t0d0.0 {
+            self.g_t0d0 = (
+                zeta3t0,
+                self.c0 / (1.0 - zeta3t0)
+                    + self.c1 * dit0 * 1.5 * zeta2t0 / (1.0 - zeta3t0).powi(2)
+                    + self.c2 * dit0.powi(2) * 0.5 * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(3),
+            )
+        }
+        self.g_t0d0.1
+    }
+    fn gii_gly_t0d1(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.g_t0d1.0 {
+            self.g_t0d1 = (
+                zeta3t0,
+                self.c0 * zeta3t0 / (1.0 - zeta3t0).powi(2)
+                    + self.c1 * dit0 * 1.5 * zeta2t0 / (1.0 - zeta3t0).powi(3) * (1.0 + zeta3t0)
+                    + self.c2 * dit0.powi(2) * 0.5 * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(4)
+                        * (2.0 + zeta3t0),
+            )
+        }
+        self.g_t0d1.1
+    }
+    fn gii_gly_t0d2(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.g_t0d2.0 {
+            self.g_t0d2 = (
+                zeta3t0,
+                self.c0 * 2.0 * zeta3t0.powi(2) / (1.0 - zeta3t0).powi(3)
+                    + self.c1 * dit0 * 3.0 * zeta2t0 * zeta3t0 / (1.0 - zeta3t0).powi(4)
+                        * (2.0 + zeta3t0)
+                    + self.c2 * dit0.powi(2) * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(5)
+                        * (1.0 + 4.0 * zeta3t0 + zeta3t0.powi(2)),
+            )
+        }
+        self.g_t0d2.1
+    }
+    fn gii_gly_t0d3(&mut self, zeta2t0: f64, zeta3t0: f64, dit0: f64) -> f64 {
+        if zeta3t0 != self.g_t0d3.0 {
+            self.g_t0d3 = (
+                zeta3t0,
+                self.c0 * 6.0 * zeta3t0.powi(3) / (1.0 - zeta3t0).powi(4)
+                    + self.c1 * dit0 * 9.0 * zeta2t0 * zeta3t0.powi(2) / (1.0 - zeta3t0).powi(5)
+                        * (3.0 + zeta3t0)
+                    + self.c2 * dit0.powi(2) * 3.0 * zeta2t0.powi(2) * zeta3t0
+                        / (1.0 - zeta3t0).powi(6)
+                        * (3.0 + 6.0 * zeta3t0 + zeta3t0.powi(2)),
+            )
+        }
+        self.g_t0d3.1
+    }
+    fn gii_gly_t1d0(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.g_t1d0.0 {
+            self.g_t1d0 = (
+                zeta3t0,
+                self.c0 * zeta3t1 / (1.0 - zeta3t0).powi(2)
+                    + self.c1 * dit1 * 1.5 * zeta2t0 / (1.0 - zeta3t0).powi(2)
+                    + (self.c1 * dit0)
+                        * (1.5 * zeta2t1 / (1.0 - zeta3t0).powi(2)
+                            + 3.0 * zeta2t0 * zeta3t1 / (1.0 - zeta3t0).powi(3))
+                    + self.c2 * dit0 * dit1 * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(3)
+                    + (self.c2 * dit0.powi(2))
+                        * (zeta2t0 * zeta2t1 / (1.0 - zeta3t0).powi(3)
+                            + 1.5 * zeta2t0.powi(2) * zeta3t1 / (1.0 - zeta3t0).powi(4)),
+            )
+        }
+        self.g_t1d0.1
+    }
+    fn gii_gly_t1d1(
+        &mut self,
+        (zeta2t0, zeta2t1): (f64, f64),
+        (zeta3t0, zeta3t1): (f64, f64),
+        (dit0, dit1): (f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.g_t1d1.0 {
+            self.g_t1d1 = (
+                zeta3t0,
+                self.c0 * zeta3t1 / (1.0 - zeta3t0).powi(3) * (1.0 + zeta3t0)
+                    + self.c1 * dit1 * 1.5 * zeta2t0 / (1.0 - zeta3t0).powi(3) * (1.0 + zeta3t0)
+                    + (self.c1 * dit0)
+                        * (1.5 * zeta2t1 / (1.0 - zeta3t0).powi(3) * (1.0 + zeta3t0)
+                            + 3.0 * zeta2t0 * zeta3t1 / (1.0 - zeta3t0).powi(4) * (2.0 + zeta3t0))
+                    + self.c2 * dit0 * dit1 * zeta2t0.powi(2) / (1.0 - zeta3t0).powi(4)
+                        * (2.0 + zeta3t0)
+                    + (self.c2 * dit0.powi(2))
+                        * (zeta2t0 * zeta2t1 / (1.0 - zeta3t0).powi(4) * (2.0 + zeta3t0)
+                            + 1.5 * zeta2t0.powi(2) * zeta3t1 / (1.0 - zeta3t0).powi(5)
+                                * (3.0 + zeta3t0)),
+            )
+        }
+        self.g_t1d1.1
+    }
+    fn gii_gly_t2d0(
+        &mut self,
+        (zeta2t0, zeta2t1, zeta2t2): (f64, f64, f64),
+        (zeta3t0, zeta3t1, zeta3t2): (f64, f64, f64),
+        (dit0, dit1, dit2): (f64, f64, f64),
+    ) -> f64 {
+        if zeta3t0 != self.g_t2d0.0 {
+            self.g_t2d0 = (
+                zeta3t0,
+                self.c0
+                    * (zeta3t2 / (1.0 - zeta3t0).powi(2)
+                        + 2.0 * zeta3t1.powi(2) / (1.0 - zeta3t0).powi(3))
+                    + self.c1 * dit2 * 1.5 * zeta2t0 / (1.0 - zeta3t0).powi(2)
+                    + (self.c1 * dit1)
+                        * (3.0 * zeta2t1 / (1.0 - zeta3t0).powi(2)
+                            + 6.0 * zeta2t0 * zeta3t1 / (1.0 - zeta3t0).powi(3))
+                    + (self.c1 * dit0)
+                        * (1.5 * zeta2t2 / (1.0 - zeta3t0).powi(2)
+                            + 6.0 * zeta2t1 * zeta3t1 / (1.0 - zeta3t0).powi(3)
+                            + 3.0 * zeta2t0 * zeta3t2 / (1.0 - zeta3t0).powi(3)
+                            + 9.0 * zeta2t0 * zeta3t1.powi(2) / (1.0 - zeta3t0).powi(4))
+                    + self.c2 * (dit1.powi(2) + dit0 * dit2) * zeta2t0.powi(2)
+                        / (1.0 - zeta3t0).powi(3)
+                    + (self.c2 * dit0 * dit1)
+                        * (4.0 * zeta2t0 * zeta2t1 / (1.0 - zeta3t0).powi(3)
+                            + 6.0 * zeta2t0.powi(2) * zeta3t1 / (1.0 - zeta3t0).powi(4))
+                    + (self.c2 * dit0.powi(2))
+                        * (zeta2t1.powi(2) / (1.0 - zeta3t0).powi(3)
+                            + zeta2t0 * zeta2t2 / (1.0 - zeta3t0).powi(3)
+                            + 6.0 * zeta2t0 * zeta2t1 * zeta3t1 / (1.0 - zeta3t0).powi(4)
+                            + 1.5 * zeta2t0.powi(2) * zeta3t2 / (1.0 - zeta3t0).powi(4)
+                            + 6.0 * zeta2t0.powi(2) * zeta3t1.powi(2) / (1.0 - zeta3t0).powi(5)),
+            )
+        }
+        self.g_t2d0.1
     }
 }

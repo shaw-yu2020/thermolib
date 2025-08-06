@@ -10,6 +10,7 @@
 mod algorithms;
 /// PC-SAFT EOS
 mod pc_saft;
+pub use pc_saft::PcSaftGlyMix2;
 pub use pc_saft::PcSaftGlyPure;
 pub use pc_saft::PcSaftMix2;
 pub use pc_saft::PcSaftPure;

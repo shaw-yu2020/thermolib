@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 fn hello() -> PyResult<String> {
     Ok(String::from("Hello, Rust And Python."))
 }
+use crate::PcSaftGlyMix2;
 use crate::PcSaftGlyPure;
 use crate::PcSaftMix2;
 use crate::PcSaftPure;
@@ -13,6 +14,7 @@ use crate::SPcSaftMix2;
 #[pyo3(name = "thermolib")] // Rename pymodule
 fn pylib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hello, m)?)?;
+    m.add_class::<PcSaftGlyMix2>()?;
     m.add_class::<PcSaftGlyPure>()?;
     m.add_class::<PcSaftMix2>()?;
     m.add_class::<PcSaftPure>()?;
