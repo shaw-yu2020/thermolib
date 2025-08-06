@@ -1,7 +1,7 @@
 use super::{AssocTerm, AssocType};
 use super::{DispTerm, GiiTerm, HsTerm};
-use super::{PcSaftErr, PcSaftPure};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
+use super::{PcSaftErr, PcSaftPure};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
