@@ -198,6 +198,27 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements
     dew = PhaseEquilibrium.dew_point(eos, 298.15 * si.KELVIN, np.array([0.5, 0.5]))
     if np.round(dew.liquid.molefracs[0] * 1e4) / 1e4 != 0.0014:
         print(f"Error in ty_flash :: y = {0.5}, # carbon_dioxide + methanol")
+    # test_polar_term
+    carbon_dioxide = PcSaftRecord(1.5131, 3.1869, 163.33, q=4.4)  # CO2
+    acetone = PcSaftRecord(2.7447, 3.2742, 232.99, mu=2.88)  # Acetone
+    parameters = PcSaftParameters.from_model_records([carbon_dioxide, acetone])
+    eos = EquationOfState.pcsaft(parameters)
+    state = State(
+        eos,
+        molefracs=np.asarray([0.5, 0.5]),
+        temperature=298.15 * si.KELVIN,
+        pressure=0.1e6 * si.PASCAL,
+    )
+    if np.round(state.density / (si.MOL / si.METER**3)) != 41:
+        print("Error in tp_flash :: rho() # carbon_dioxide + acetone")
+    bubble = PhaseEquilibrium.bubble_point(
+        eos, 298.15 * si.KELVIN, np.array([0.5, 0.5])
+    )
+    if np.round(bubble.vapor.molefracs[0] * 1e5) / 1e5 != 0.98973:
+        print(f"Error in tx_flash :: x = {0.5}, # carbon_dioxide + acetone")
+    dew = PhaseEquilibrium.dew_point(eos, 298.15 * si.KELVIN, np.array([0.5, 0.5]))
+    if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.00688:
+        print(f"Error in ty_flash :: y = {0.5}, # carbon_dioxide + acetone")
 
 
 def main():
