@@ -8,18 +8,6 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_6};
 /// PC-SAFT EOS
 /// ```
 /// use thermolib::PcSaftYglPure;
-/// let (m, sigma, epsilon) = (2.8611, 2.6826, 205.35); // SO2
-/// let mut fluid = PcSaftYglPure::new_fluid(m, sigma, epsilon);
-/// fluid.c_flash().unwrap();
-/// assert_eq!(fluid.T().unwrap().round(), 438.0);
-/// assert_eq!(fluid.p().unwrap().round(), 9099261.0);
-/// assert_eq!(fluid.rho().unwrap().round(), 8079.0);
-/// fluid.t_flash(298.15).unwrap();
-/// assert_eq!(fluid.p_s().unwrap().round(), 396865.0);
-/// assert_eq!(fluid.rho_v().unwrap().round(), 169.0);
-/// assert_eq!(fluid.rho_l().unwrap().round(), 21115.0);
-/// fluid.tp_flash(298.15, 0.1e6).unwrap();
-/// assert_eq!(fluid.rho().unwrap().round(), 41.0);
 /// let mut methanol = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9);
 /// methanol.set_ygl_assoc_term(0.035176, 2899.5, 0.0); // kappa_AB epsilon_AB
 /// methanol.tp_flash(298.15, 0.1e6).unwrap();

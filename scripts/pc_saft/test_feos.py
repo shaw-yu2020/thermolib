@@ -9,52 +9,6 @@ from feos.eos import State  # pylint: disable=E0401,E0611
 from feos.eos import PhaseEquilibrium  # pylint: disable=E0401,E0611
 
 
-def test_pc_saft_ygl_pure():
-    """test_pc_saft_ygl_pure"""
-    methanol = PcSaftRecord(
-        1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=1
-    )  # methanol (Gross and Sadowski 2002)
-    parameters = PcSaftParameters.from_model_records([methanol])
-    eos = EquationOfState.pcsaft(parameters)
-    state = State(
-        eos,
-        molefracs=np.asarray([1.0]),
-        temperature=298.15 * si.KELVIN,
-        pressure=0.1e6 * si.PASCAL,
-    )
-    if np.round(state.density / (si.MOL / si.METER**3)) != 24676:
-        print("Error in tp_flash :: rho() # methanol_2B")
-    methanol = PcSaftRecord(
-        1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=2
-    )  # methanol (Gross and Sadowski 2002)
-    parameters = PcSaftParameters.from_model_records([methanol])
-    eos = EquationOfState.pcsaft(parameters)
-    state = State(
-        eos,
-        molefracs=np.asarray([1.0]),
-        temperature=298.15 * si.KELVIN,
-        pressure=0.1e6 * si.PASCAL,
-    )
-    if np.round(state.density / (si.MOL / si.METER**3)) != 24836:
-        print("Error in tp_flash :: rho() # methanol_3B")
-
-
-def test_pc_saft_gly_pure():
-    """test_pc_saft_gly_pure"""
-    recoed = PcSaftRecord(
-        1.5255, 3.23, 188.9, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=1
-    )  # methanol
-    parameters = PcSaftParameters.from_model_records([recoed])
-    eos = EquationOfState.pcsaft(parameters)
-    state = State(
-        eos,
-        temperature=298.15 * si.KELVIN,
-        pressure=0.1e6 * si.PASCAL,
-    )
-    if np.round(state.density / (si.MOL / si.METER**3)) != 24676:
-        print("Error in tp_flash :: rho() # methanol")
-
-
 def test_pc_saft_pure():
     """test_pc_saft_pure"""
     recoed = PcSaftRecord(2.8611, 2.6826, 205.35)  # SO2
@@ -125,6 +79,33 @@ def test_pc_saft_pure():
     )
     if np.round(state.density / (si.MOL / si.METER**3)) != 13337:
         print("Error in tp_flash :: rho() # Acetone")
+    # test_pc_saft_assoc_pure
+    methanol = PcSaftRecord(
+        1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=1
+    )  # methanol (Gross and Sadowski 2002)
+    parameters = PcSaftParameters.from_model_records([methanol])
+    eos = EquationOfState.pcsaft(parameters)
+    state = State(
+        eos,
+        molefracs=np.asarray([1.0]),
+        temperature=298.15 * si.KELVIN,
+        pressure=0.1e6 * si.PASCAL,
+    )
+    if np.round(state.density / (si.MOL / si.METER**3)) != 24676:
+        print("Error in tp_flash :: rho() # methanol_2B")
+    methanol = PcSaftRecord(
+        1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=2
+    )  # methanol (Gross and Sadowski 2002)
+    parameters = PcSaftParameters.from_model_records([methanol])
+    eos = EquationOfState.pcsaft(parameters)
+    state = State(
+        eos,
+        molefracs=np.asarray([1.0]),
+        temperature=298.15 * si.KELVIN,
+        pressure=0.1e6 * si.PASCAL,
+    )
+    if np.round(state.density / (si.MOL / si.METER**3)) != 24836:
+        print("Error in tp_flash :: rho() # methanol_3B")
 
 
 def test_pc_saft_mix2():  # pylint: disable=too-many-statements
@@ -221,8 +202,6 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements
 
 def main():
     """main"""
-    test_pc_saft_ygl_pure()
-    test_pc_saft_gly_pure()
     test_pc_saft_pure()
     test_pc_saft_mix2()
 
