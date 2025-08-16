@@ -6,7 +6,25 @@ use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::f64::consts::FRAC_PI_6;
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_6};
+/// PC-SAFT EOS :: PcSaftGlyMix2
+/// ```
+/// use thermolib::PcSaftGlyMix2;
+/// let mut fluids = PcSaftGlyMix2::new_fluid(
+///     [0.5, 0.5],
+///     [2.0729, 1.5255],
+///     [2.7852, 3.2300],
+///     [169.21, 188.90],
+///     0.0,
+/// ); // CO2+CH3OH_2B
+/// fluids.set_2B_assoc_term(1, 0.035176, 2899.5, 1.0, 1.0, 1.0);
+/// fluids.tp_flash(298.15, 0.1e6).unwrap();
+/// assert_eq!(fluids.rho().unwrap().round(), 45.0);
+/// let py = fluids.tx_flash(298.15, 0.5).unwrap();
+/// assert_eq!((py.1 * 1e5).round() / 1e5, 0.99649);
+/// let px = fluids.ty_flash(298.15, 0.5).unwrap();
+/// assert_eq!((px.1 * 1e5).round() / 1e5, 0.00143);
+/// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 pub struct PcSaftGlyMix2 {
     x: [f64; 2],
@@ -302,13 +320,13 @@ impl PcSaftGlyMix2 {
                 [
                     [
                         FRAC_PI_6 * self.m[0] * self.dt1.1[0],
-                        FRAC_PI_6 * self.m[0] * self.dt0.1[0] * self.dt1.1[0],
-                        FRAC_PI_6 * self.m[0] * self.dt0.1[0].powi(2) * self.dt1.1[0],
+                        FRAC_PI_3 * self.m[0] * self.dt0.1[0] * self.dt1.1[0],
+                        FRAC_PI_2 * self.m[0] * self.dt0.1[0].powi(2) * self.dt1.1[0],
                     ],
                     [
                         FRAC_PI_6 * self.m[1] * self.dt1.1[1],
-                        FRAC_PI_6 * self.m[1] * self.dt0.1[1] * self.dt1.1[1],
-                        FRAC_PI_6 * self.m[1] * self.dt0.1[1].powi(2) * self.dt1.1[1],
+                        FRAC_PI_3 * self.m[1] * self.dt0.1[1] * self.dt1.1[1],
+                        FRAC_PI_2 * self.m[1] * self.dt0.1[1].powi(2) * self.dt1.1[1],
                     ],
                 ],
             )
@@ -332,20 +350,20 @@ impl PcSaftGlyMix2 {
                 [
                     [
                         FRAC_PI_6 * self.m[0] * self.dt2.1[0],
-                        FRAC_PI_6
+                        FRAC_PI_3
                             * self.m[0]
                             * (self.dt1.1[0].powi(2) + self.dt0.1[0] * self.dt2.1[0]),
-                        FRAC_PI_6
+                        FRAC_PI_2
                             * self.m[0]
                             * (2.0 * self.dt0.1[0] * self.dt1.1[0].powi(2)
                                 + self.dt0.1[0].powi(2) * self.dt2.1[0]),
                     ],
                     [
                         FRAC_PI_6 * self.m[1] * self.dt2.1[1],
-                        FRAC_PI_6
+                        FRAC_PI_3
                             * self.m[1]
                             * (self.dt1.1[1].powi(2) + self.dt0.1[1] * self.dt2.1[1]),
-                        FRAC_PI_6
+                        FRAC_PI_2
                             * self.m[1]
                             * (2.0 * self.dt0.1[1] * self.dt1.1[1].powi(2)
                                 + self.dt0.1[1].powi(2) * self.dt2.1[1]),
@@ -582,6 +600,7 @@ impl PcSaftGlyMix2 {
             .collect();
         [ln_phi[0], ln_phi[1]]
     }
+    #[inline]
     fn calc_ln_k(&mut self, temp: f64, pres: f64, x: [f64; 2], y: [f64; 2]) -> [f64; 2] {
         let ln_phi_l = self.new_fracs(x).ln_phi(temp, pres, 0.5);
         let ln_phi_v = self.new_fracs(y).ln_phi(temp, pres, 1e-10);
@@ -644,25 +663,5 @@ impl PcSaftGlyMix2 {
             self.pres_c[1]
                 * 10_f64.powf(7.0 / 3.0 * self.omega1.unwrap()[1] * (1.0 - self.temp_c[1] / temp)),
         ]
-    }
-}
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_pc_saft_gly_mix2() {
-        let mut fluids = super::PcSaftGlyMix2::new_fluid(
-            [0.5, 0.5],
-            [2.0729, 1.5255],
-            [2.7852, 3.2300],
-            [169.21, 188.90],
-            0.0,
-        );
-        fluids.set_2B_assoc_term(1, 0.035176, 2899.5, 1.0, 1.0, 1.0);
-        fluids.tp_flash(298.15, 0.1e6).unwrap();
-        assert_eq!(fluids.rho().unwrap().round(), 45.0);
-        let py = fluids.tx_flash(298.15, 0.5).unwrap();
-        assert_eq!((py[1] * 1e4).round() / 1e4, 0.9965);
-        let px = fluids.ty_flash(298.15, 0.5).unwrap();
-        assert_eq!((px[1] * 1e4).round() / 1e4, 0.0014);
     }
 }

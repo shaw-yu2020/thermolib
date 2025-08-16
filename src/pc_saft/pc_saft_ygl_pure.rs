@@ -5,16 +5,17 @@ use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_6};
-/// PC-SAFT EOS
+/// PC-SAFT EOS :: PcSaftYglPure
 /// ```
 /// use thermolib::PcSaftYglPure;
-/// let mut methanol = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9);
-/// methanol.set_ygl_assoc_term(0.035176, 2899.5, 0.0); // kappa_AB epsilon_AB
-/// methanol.tp_flash(298.15, 0.1e6).unwrap();
-/// assert_eq!(methanol.rho().unwrap().round(), 24676.0);
-/// methanol.set_ygl_assoc_term(0.035176, 2899.5, 1.0); // kappa_AB epsilon_AB
-/// methanol.tp_flash(298.15, 0.1e6).unwrap();
-/// assert_eq!(methanol.rho().unwrap().round(), 24836.0);
+/// let mut fluid = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9); // METHANOL_2B
+/// fluid.set_ygl_assoc_term(0.035176, 2899.5, 0.0); // kappa_AB epsilon_AB
+/// fluid.tp_flash(298.15, 0.1e6).unwrap();
+/// assert_eq!(fluid.rho().unwrap().round(), 24676.0);
+/// let mut fluid = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9); // METHANOL_3B
+/// fluid.set_ygl_assoc_term(0.035176, 2899.5, 1.0); // kappa_AB epsilon_AB
+/// fluid.tp_flash(298.15, 0.1e6).unwrap();
+/// assert_eq!(fluid.rho().unwrap().round(), 24836.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)] // For pyclass hhh

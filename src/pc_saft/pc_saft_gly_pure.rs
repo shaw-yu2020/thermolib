@@ -5,14 +5,18 @@ use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
 #[cfg(feature = "with_pyo3")]
 use pyo3::{pyclass, pymethods};
-use std::f64::consts::FRAC_PI_6;
-/// PC-SAFT EOS
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_6};
+/// PC-SAFT EOS :: PcSaftGlyPure
 /// ```
 /// use thermolib::PcSaftGlyPure;
-/// let mut methanol = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9);
-/// methanol.set_2B_assoc_term(0.035176, 2899.5, 1.0, 1.0, 1.0); // kappa_AB epsilon_AB
-/// methanol.tp_flash(298.15, 0.1e6).unwrap();
-/// assert_eq!(methanol.rho().unwrap().round(), 24676.0);
+/// let mut fluid = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9); // METHANOL_2B
+/// fluid.set_2B_assoc_term(0.035176, 2899.5, 1.0, 1.0, 1.0); // kappa_AB epsilon_AB
+/// fluid.tp_flash(298.15, 0.1e6).unwrap();
+/// assert_eq!(fluid.rho().unwrap().round(), 24676.0);
+/// let mut fluid = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9); // METHANOL_3B
+/// fluid.set_3B_assoc_term(0.035176, 2899.5, 1.0, 1.0, 1.0); // kappa_AB epsilon_AB
+/// fluid.tp_flash(298.15, 0.1e6).unwrap();
+/// assert_eq!(fluid.rho().unwrap().round(), 24836.0);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 #[allow(non_snake_case)] // For pyclass hhh
@@ -148,10 +152,9 @@ impl PcSaftGlyPure {
             let epsilon_temp_plus = 3.0 * self.epsilon / temp;
             self.eta1_coef = (
                 temp,
-                (FRAC_PI_6 * self.m * self.sigma3)
-                    * (3.0
-                        * (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
-                        * (-0.12 * (-epsilon_temp_plus).exp() * epsilon_temp_plus)),
+                (FRAC_PI_2 * self.m * self.sigma3)
+                    * (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
+                    * (-0.12 * (-epsilon_temp_plus).exp() * epsilon_temp_plus),
             );
         }
         self.eta1_coef.1
@@ -161,12 +164,11 @@ impl PcSaftGlyPure {
             let epsilon_temp_plus = 3.0 * self.epsilon / temp;
             self.eta2_coef = (
                 temp,
-                (FRAC_PI_6 * self.m * self.sigma3)
-                    * (6.0
+                (FRAC_PI_2 * self.m * self.sigma3)
+                    * (2.0
                         * (1.0 - 0.12 * (-epsilon_temp_plus).exp())
                         * (-0.12 * (-epsilon_temp_plus).exp() * epsilon_temp_plus).powi(2)
-                        + 3.0
-                            * (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
+                        + (1.0 - 0.12 * (-epsilon_temp_plus).exp()).powi(2)
                             * (-0.12
                                 * (-epsilon_temp_plus).exp()
                                 * epsilon_temp_plus

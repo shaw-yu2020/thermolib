@@ -308,6 +308,7 @@ impl SPcSaftMix2 {
             .collect();
         [ln_phi[0], ln_phi[1]]
     }
+    #[inline]
     fn calc_ln_k(&mut self, temp: f64, pres: f64, x: [f64; 2], y: [f64; 2]) -> [f64; 2] {
         let ln_phi_l = self.new_fracs(x).ln_phi(temp, pres, 0.5);
         let ln_phi_v = self.new_fracs(y).ln_phi(temp, pres, 1e-10);
@@ -374,8 +375,8 @@ mod tests {
         .zip(p_data.iter())
         .map(|(&(x, y), &p)| {
             let xy = fluids.tpz_flash(temp, p).unwrap();
-            assert_eq!((xy[0] * 1e4).round() / 1e4, x);
-            assert_eq!((xy[1] * 1e4).round() / 1e4, y);
+            assert_eq!((xy.0 * 1e4).round() / 1e4, x);
+            assert_eq!((xy.1 * 1e4).round() / 1e4, y);
         })
         .count();
         // test tx_flash
@@ -402,8 +403,8 @@ mod tests {
         .zip(x_data.iter())
         .map(|(&(p, y), &x)| {
             let py = fluids.tx_flash(temp, x).unwrap();
-            assert_eq!((py[0] / 1e3).round() * 1e3, p);
-            assert_eq!((py[1] * 1e4).round() / 1e4, y);
+            assert_eq!((py.0 / 1e3).round() * 1e3, p);
+            assert_eq!((py.1 * 1e4).round() / 1e4, y);
         })
         .count();
         // test ty_flash
@@ -425,8 +426,8 @@ mod tests {
         .zip(y_data.iter())
         .map(|(&(p, x), &y)| {
             let px = fluids.ty_flash(temp, y).unwrap();
-            assert_eq!((px[0] / 1e3).round() * 1e3, p);
-            assert_eq!((px[1] * 1e4).round() / 1e4, x);
+            assert_eq!((px.0 / 1e3).round() * 1e3, p);
+            assert_eq!((px.1 * 1e4).round() / 1e4, x);
         })
         .count();
     }

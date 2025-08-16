@@ -742,7 +742,7 @@ macro_rules! fn_tpz_flash_mix2 {
     ($name:ty) => {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
         impl $name {
-            pub fn tpz_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<[f64; 2]> {
+            pub fn tpz_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<(f64, f64)> {
                 let ps = self.guess_ps(temp);
                 let mut k = [ps[0] / pres, ps[1] / pres];
                 let mut z = brent_zero(
@@ -770,7 +770,7 @@ macro_rules! fn_tpz_flash_mix2 {
                     y = [k[0] * x[0], k[1] * x[1]];
                     v_new = self.calc_ln_k(temp, pres, x, y);
                     if (v_new[0] - v_old[0]).abs().max((v_new[1] - v_old[1]).abs()) < 1E-9 {
-                        return Ok([x[0], y[0]]);
+                        return Ok((x[0], y[0]));
                     }
                     if (x[0] - y[0]).abs() < 1E-9 {
                         break;
@@ -787,7 +787,7 @@ macro_rules! fn_tx_flash_mix2 {
     ($name:ty) => {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
         impl $name {
-            pub fn tx_flash(&mut self, temp: f64, x: f64) -> anyhow::Result<[f64; 2]> {
+            pub fn tx_flash(&mut self, temp: f64, x: f64) -> anyhow::Result<(f64, f64)> {
                 if x <= 0.0 || x >= 1.0 {
                     return Err(anyhow!(PcSaftErr::NotConvForTX));
                 }
@@ -822,7 +822,7 @@ macro_rules! fn_tx_flash_mix2 {
                         .max((v_new[1] - v_old[1]).abs())
                         < 1E-9
                     {
-                        return Ok([pres, y[0]]);
+                        return Ok((pres, y[0]));
                     }
                     if (x[0] - y[0]).abs() < 1E-9 {
                         break;
@@ -840,7 +840,7 @@ macro_rules! fn_ty_flash_mix2 {
     ($name:ty) => {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
         impl $name {
-            pub fn ty_flash(&mut self, temp: f64, y: f64) -> anyhow::Result<[f64; 2]> {
+            pub fn ty_flash(&mut self, temp: f64, y: f64) -> anyhow::Result<(f64, f64)> {
                 if y <= 0.0 || y >= 1.0 {
                     return Err(anyhow!(PcSaftErr::NotConvForTY));
                 }
@@ -875,7 +875,7 @@ macro_rules! fn_ty_flash_mix2 {
                         .max((v_new[1] - v_old[1]).abs())
                         < 1E-9
                     {
-                        return Ok([pres, x[0]]);
+                        return Ok((pres, x[0]));
                     }
                     if (x[0] - y[0]).abs() < 1E-9 {
                         break;

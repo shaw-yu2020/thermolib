@@ -1,7 +1,11 @@
 use crate::f64consts::K;
 use std::f64::consts::PI;
 const PI2: f64 = PI * PI;
+use std::iter::zip;
+#[derive(Clone)]
 pub struct PolarTerm {
+    index_qq: Vec<usize>,
+    index_dd: Vec<usize>,
     qq: Option<PqqTerm>,
     dd: Option<PddTerm>,
     dq: Option<PdqTerm>,
@@ -9,51 +13,108 @@ pub struct PolarTerm {
 impl PolarTerm {
     pub fn new(x: &[f64], m: &[f64], sigma: &[f64], epsilon: &[f64], p: &[f64], n: &[i32]) -> Self {
         // qq
-        let n_q: Vec<usize> = n
+        let index_qq: Vec<usize> = n
             .iter()
             .enumerate()
             .filter(|&(_, &n)| n == 4)
             .map(|(i, _)| i)
             .collect();
-        let x_q: Vec<f64> = n_q.iter().map(|&i| x[i]).collect();
-        let m_q: Vec<f64> = n_q.iter().map(|&i| m[i]).collect();
-        let sigma_q: Vec<f64> = n_q.iter().map(|&i| sigma[i]).collect();
-        let epsilon_q: Vec<f64> = n_q.iter().map(|&i| epsilon[i]).collect();
-        let p_q: Vec<f64> = n_q.iter().map(|&i| p[i]).collect();
-        let qq = if n_q.is_empty() {
+        let x_qq: Vec<f64> = index_qq.iter().map(|&i| x[i]).collect();
+        let m_qq: Vec<f64> = index_qq.iter().map(|&i| m[i]).collect();
+        let sigma_qq: Vec<f64> = index_qq.iter().map(|&i| sigma[i]).collect();
+        let epsilon_qq: Vec<f64> = index_qq.iter().map(|&i| epsilon[i]).collect();
+        let q: Vec<f64> = index_qq.iter().map(|&i| p[i]).collect();
+        let qq = if index_qq.is_empty() {
             None
         } else {
-            Some(PqqTerm::new(&x_q, &m_q, &sigma_q, &epsilon_q, &p_q))
+            Some(PqqTerm::new(&x_qq, &m_qq, &sigma_qq, &epsilon_qq, &q))
         };
         // dd
-        let n_d: Vec<usize> = n
+        let index_dd: Vec<usize> = n
             .iter()
             .enumerate()
             .filter(|&(_, &n)| n == 2)
             .map(|(i, _)| i)
             .collect();
-        let x_d: Vec<f64> = n_d.iter().map(|&i| x[i]).collect();
-        let m_d: Vec<f64> = n_d.iter().map(|&i| m[i]).collect();
-        let sigma_d: Vec<f64> = n_d.iter().map(|&i| sigma[i]).collect();
-        let epsilon_d: Vec<f64> = n_d.iter().map(|&i| epsilon[i]).collect();
-        let p_d: Vec<f64> = n_d.iter().map(|&i| p[i]).collect();
-        let dd = if n_d.is_empty() {
+        let x_dd: Vec<f64> = index_dd.iter().map(|&i| x[i]).collect();
+        let m_dd: Vec<f64> = index_dd.iter().map(|&i| m[i]).collect();
+        let sigma_dd: Vec<f64> = index_dd.iter().map(|&i| sigma[i]).collect();
+        let epsilon_dd: Vec<f64> = index_dd.iter().map(|&i| epsilon[i]).collect();
+        let mu: Vec<f64> = index_dd.iter().map(|&i| p[i]).collect();
+        let dd = if index_dd.is_empty() {
             None
         } else {
-            Some(PddTerm::new(&x_d, &m_d, &sigma_d, &epsilon_d, &p_d))
+            Some(PddTerm::new(&x_dd, &m_dd, &sigma_dd, &epsilon_dd, &mu))
         };
         // dq
         Self {
             qq,
             dd,
-            dq: if n_d.is_empty() || n_q.is_empty() {
+            dq: if index_dd.is_empty() || index_qq.is_empty() {
                 None
             } else {
                 Some(PdqTerm::new(
-                    &x_q, &m_q, &sigma_q, &epsilon_q, &p_q, &x_d, &m_d, &sigma_d, &epsilon_d, &p_d,
+                    (&x_dd, &x_qq),
+                    (&m_dd, &m_qq),
+                    (&sigma_dd, &sigma_qq),
+                    (&epsilon_dd, &epsilon_qq),
+                    (&mu, &q),
                 ))
             },
+            index_qq,
+            index_dd,
         }
+    }
+    pub fn new_fracs(&self, x: &[f64]) -> Self {
+        let x_qq: Vec<f64> = self.index_qq.iter().map(|&i| x[i]).collect();
+        let x_dd: Vec<f64> = self.index_dd.iter().map(|&i| x[i]).collect();
+        Self {
+            qq: self.qq.as_ref().map(|qq| qq.new_fracs(&x_qq)),
+            dd: self.dd.as_ref().map(|dd| dd.new_fracs(&x_dd)),
+            dq: self.dq.as_ref().map(|dq| dq.new_fracs((&x_dd, &x_qq))),
+            ..self.clone()
+        }
+    }
+    pub fn mu_k<'a>(
+        &mut self,
+        temp: f64,
+        rho_num: f64,
+        eta: f64,
+        eta_k: &'a [f64],
+    ) -> impl Iterator<Item = f64> + use<'a> {
+        let coef_eta = rho_num
+            * (self
+                .qq
+                .as_mut()
+                .map_or(0.0, |qq| qq.eta1(temp, rho_num, eta))
+                + self
+                    .dd
+                    .as_mut()
+                    .map_or(0.0, |dd| dd.eta1(temp, rho_num, eta))
+                + self
+                    .dq
+                    .as_mut()
+                    .map_or(0.0, |dq| dq.eta1(temp, rho_num, eta)));
+        let mut mu_k: Vec<f64> = eta_k.iter().map(|eta_k| coef_eta * eta_k).collect();
+        if let Some(qq) = self.qq.as_mut() {
+            zip(qq.mu_qq(temp, rho_num, eta), self.index_qq.iter())
+                .map(|(qq, &i)| mu_k[i] += qq)
+                .count();
+        }
+        if let Some(dd) = self.dd.as_mut() {
+            zip(dd.mu_dd(temp, rho_num, eta), self.index_dd.iter())
+                .map(|(dd, &i)| mu_k[i] += dd)
+                .count();
+        }
+        if let Some(dq) = self.dq.as_mut() {
+            zip(dq.mu_dd(temp, rho_num, eta), self.index_dd.iter())
+                .map(|(dq, &i)| mu_k[i] += dq)
+                .count();
+            zip(dq.mu_qq(temp, rho_num, eta), self.index_qq.iter())
+                .map(|(dq, &i)| mu_k[i] += dq)
+                .count();
+        }
+        mu_k.into_iter()
     }
     pub fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
         self.qq
@@ -190,10 +251,17 @@ impl PolarTerm {
 macro_rules! fn_polar {
     ($name:ty) => {
         impl $name {
+            #[inline]
             fn td_flash(&mut self, temp: f64, rho_num: f64) {
                 self.temp = temp;
-                self.dens1temp2 = rho_num / temp.powi(2);
-                self.dens2temp3 = rho_num.powi(2) / temp.powi(3);
+                self.dens1temp2 = rho_num / (temp * temp);
+                self.dens2temp3 = (rho_num * rho_num) / (temp * temp * temp);
+            }
+            fn eta1(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
+                self.td_flash(temp, rho_num);
+                (self.a2eta1(eta) * self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+                    + self.a3eta1(eta) * self.a2t0d0(eta).powi(2))
+                    / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2)
             }
             fn t0d0(&mut self, temp: f64, rho_num: f64, eta: f64) -> f64 {
                 self.td_flash(temp, rho_num);
@@ -761,15 +829,27 @@ macro_rules! fn_polar {
                         * self.a3t0d0(eta))
                     / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(3)
             }
+            fn a2eta1(&mut self, eta: f64) -> f64 {
+                self.vec_a2_coef
+                    .iter()
+                    .zip(self.vec_epsilon_ij.iter())
+                    .zip(self.vec_j2a.iter_mut())
+                    .zip(self.vec_j2b.iter_mut())
+                    .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
+                        a2_coef * (j2a.eta1(eta) + epsilon_ij / self.temp * j2b.eta1(eta))
+                    })
+                    .sum::<f64>()
+                    * self.dens1temp2
+            }
             fn a2t0d0(&mut self, eta: f64) -> f64 {
                 if eta != self.a2t0d0.0 {
                     self.a2t0d0 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef * (j2a.t0d0(eta) + epsilon_ij / self.temp * j2b.t0d0(eta))
                             })
@@ -783,11 +863,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t0d1.0 {
                     self.a2t0d1 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef * (j2a.t0d1(eta) + epsilon_ij / self.temp * j2b.t0d1(eta))
                             })
@@ -801,11 +881,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t0d2.0 {
                     self.a2t0d2 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef * (j2a.t0d2(eta) + epsilon_ij / self.temp * j2b.t0d2(eta))
                             })
@@ -819,11 +899,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t0d3.0 {
                     self.a2t0d3 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef * (j2a.t0d3(eta) + epsilon_ij / self.temp * j2b.t0d3(eta))
                             })
@@ -849,9 +929,9 @@ macro_rules! fn_polar {
                             .sum::<f64>()
                             * self.dens1temp2
                          */
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.j2a.iter_mut())
+                            .zip(self.vec_j2a.iter_mut())
                             .map(|(a2_coef, j2a)| a2_coef * j2a.t0d4(eta))
                             .sum::<f64>()
                             * self.dens1temp2,
@@ -863,11 +943,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t1d0.0 {
                     self.a2t1d0 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef
                                     * (j2a.t1d0(eta, eta1)
@@ -883,11 +963,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t1d1.0 {
                     self.a2t1d1 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef
                                     * (j2a.t1d1(eta, eta1)
@@ -903,11 +983,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t1d2.0 {
                     self.a2t1d2 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef
                                     * (j2a.t1d2(eta, eta1)
@@ -923,11 +1003,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t1d3.0 {
                     self.a2t1d3 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef
                                     * (j2a.t1d3(eta, eta1)
@@ -943,11 +1023,11 @@ macro_rules! fn_polar {
                 if eta != self.a2t2d0.0 {
                     self.a2t2d0 = (
                         eta,
-                        self.a2_coef
+                        self.vec_a2_coef
                             .iter()
-                            .zip(self.epsilon_ij.iter())
-                            .zip(self.j2a.iter_mut())
-                            .zip(self.j2b.iter_mut())
+                            .zip(self.vec_epsilon_ij.iter())
+                            .zip(self.vec_j2a.iter_mut())
+                            .zip(self.vec_j2b.iter_mut())
                             .map(|(((a2_coef, epsilon_ij), j2a), j2b)| {
                                 a2_coef
                                     * (j2a.t2d0(eta, eta1, eta2)
@@ -959,13 +1039,21 @@ macro_rules! fn_polar {
                 }
                 self.a2t2d0.1
             }
+            fn a3eta1(&mut self, eta: f64) -> f64 {
+                self.vec_a3_coef
+                    .iter()
+                    .zip(self.vec_j3c.iter_mut())
+                    .map(|(a3_coef, j3c)| a3_coef * j3c.eta1(eta))
+                    .sum::<f64>()
+                    * self.dens2temp3
+            }
             fn a3t0d0(&mut self, eta: f64) -> f64 {
                 if eta != self.a3t0d0.0 {
                     self.a3t0d0 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t0d0(eta))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -977,9 +1065,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t0d1.0 {
                     self.a3t0d1 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t0d1(eta))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -991,9 +1079,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t0d2.0 {
                     self.a3t0d2 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t0d2(eta))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1005,9 +1093,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t0d3.0 {
                     self.a3t0d3 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t0d3(eta))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1019,9 +1107,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t0d4.0 {
                     self.a3t0d4 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t0d4(eta))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1033,9 +1121,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t1d0.0 {
                     self.a3t1d0 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t1d0(eta, eta1))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1047,9 +1135,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t1d1.0 {
                     self.a3t1d1 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t1d1(eta, eta1))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1061,9 +1149,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t1d2.0 {
                     self.a3t1d2 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t1d2(eta, eta1))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1075,9 +1163,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t1d3.0 {
                     self.a3t1d3 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t1d3(eta, eta1))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1089,9 +1177,9 @@ macro_rules! fn_polar {
                 if eta != self.a3t2d0.0 {
                     self.a3t2d0 = (
                         eta,
-                        self.a3_coef
+                        self.vec_a3_coef
                             .iter()
-                            .zip(self.j3c.iter_mut())
+                            .zip(self.vec_j3c.iter_mut())
                             .map(|(a3_coef, j3c)| a3_coef * j3c.t2d0(eta, eta1, eta2))
                             .sum::<f64>()
                             * self.dens2temp3,
@@ -1103,6 +1191,7 @@ macro_rules! fn_polar {
     };
 }
 /// J2aTerm
+#[derive(Clone)]
 struct J2aTerm {
     a: Vec<f64>,
     eta: Vec<f64>,
@@ -1151,6 +1240,15 @@ impl J2aTerm {
         if eta != self.eta[1] {
             self.eta = vec![1.0, eta, eta.powi(2), eta.powi(3), eta.powi(4)]
         }
+    }
+    fn eta1(&mut self, eta: f64) -> f64 {
+        self.eta_flash(eta);
+        self.a[1..]
+            .iter()
+            .zip(self.eta[..4].iter())
+            .zip([1.0, 2.0, 3.0, 4.0].iter())
+            .map(|((a, eta), coef)| a * eta * coef)
+            .sum()
     }
     /// equal to = [rho/T^2 *J2]_t0d0 / {rho/T^2}
     /// equal to = J2t0d0
@@ -1341,7 +1439,7 @@ const DD_A21: f64 = 4.5258607;
 const DD_A22: f64 = 0.9751222;
 const DD_A23: f64 = -12.281038;
 const DD_A24: f64 = 5.9397575;
-const DQ_A00: f64 = 0.6970590;
+const DQ_A00: f64 = 0.6970950;
 const DQ_A01: f64 = -0.6335541;
 const DQ_A02: f64 = 2.9455090;
 const DQ_A03: f64 = -1.4670273;
@@ -1353,6 +1451,7 @@ const DQ_A20: f64 = 0.6703408;
 const DQ_A21: f64 = -4.3384718;
 const DQ_A22: f64 = 7.2341684;
 /// J2bTerm
+#[derive(Clone)]
 struct J2bTerm {
     b0: f64,
     b1: f64,
@@ -1388,6 +1487,9 @@ impl J2bTerm {
             t0d2: (0.0, 0.0),
             t0d3: (0.0, 0.0),
         }
+    }
+    fn eta1(&mut self, eta: f64) -> f64 {
+        self.b1 + self.b2 * eta * 2.0
     }
     /// equal to = [rho/T^3 *J2]_t0d0 / {rho/T^3}
     /// equal to = J2t0d0
@@ -1494,6 +1596,7 @@ const DQ_B12: f64 = 0.4674266;
 const DQ_B20: f64 = -1.1675601;
 const DQ_B21: f64 = 2.1348843;
 /// J3cTerm
+#[derive(Clone)]
 struct J3cTerm {
     c: Vec<f64>,
     eta: Vec<f64>,
@@ -1539,6 +1642,15 @@ impl J3cTerm {
         if eta != self.eta[1] {
             self.eta = vec![1.0, eta, eta.powi(2), eta.powi(3)]
         }
+    }
+    fn eta1(&mut self, eta: f64) -> f64 {
+        self.eta_flash(eta);
+        self.c[1..]
+            .iter()
+            .zip(self.eta[..3].iter())
+            .zip([1.0, 2.0, 3.0].iter())
+            .map(|((c, eta), coef)| c * eta * coef)
+            .sum()
     }
     /// equal to = [rho^2/T^3 *J3]_t0d0 / {rho^2/T^3}
     /// equal to = J3t0d0
@@ -1733,16 +1845,25 @@ const DQ_C10: f64 = -20.72202;
 const DQ_C11: f64 = -58.63904;
 const DQ_C12: f64 = -1.764887;
 /// PqqTerm
+#[derive(Clone)]
 struct PqqTerm {
     temp: f64,
     dens1temp2: f64, // dens^1 / temp^2
     dens2temp3: f64, // dens^2 / temp^3
-    epsilon_ij: Vec<f64>,
-    a2_coef: Vec<f64>,
-    a3_coef: Vec<f64>,
-    j2a: Vec<J2aTerm>,
-    j2b: Vec<J2bTerm>,
-    j3c: Vec<J3cTerm>,
+    // a2term
+    vec_epsilon_ij: Vec<f64>,
+    vec_a2_coef: Vec<f64>,
+    vec_j2a: Vec<J2aTerm>,
+    vec_j2b: Vec<J2bTerm>,
+    // a3term
+    vec_a3_coef: Vec<f64>,
+    vec_j3c: Vec<J3cTerm>,
+    // calc mu_k
+    x: Vec<f64>,
+    m: Vec<f64>,
+    epsilon: Vec<f64>, // for mat_epsilon_ij
+    mat_a2_coef: Vec<Vec<f64>>,
+    mat_a3_coef: Vec<Vec<Vec<f64>>>,
     a2t0d0: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d1: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d2: (f64, f64), // cached variables -> macro_rules! fn_polar
@@ -1767,75 +1888,107 @@ struct PqqTerm {
 fn_polar!(PqqTerm);
 impl PqqTerm {
     fn new(x: &[f64], m: &[f64], sigma: &[f64], epsilon: &[f64], q: &[f64]) -> Self {
-        let n = x.len();
-        let q2_plus: Vec<f64> = x
+        let q2_plus: Vec<f64> = q
             .iter()
-            .zip(m.iter())
-            .zip(q.iter())
-            .map(|((x, m), q)| x / m / K * q.powi(2) * 1E-19)
+            .zip(m)
+            .map(|(q, m)| q.powi(2) * 1E-19 / m / K)
             .collect();
-        let mut epsilon_ij: Vec<f64> = Vec::new();
-        let mut a2_coef: Vec<f64> = Vec::new();
-        let mut j2a: Vec<J2aTerm> = Vec::new();
-        let mut j2b: Vec<J2bTerm> = Vec::new();
-        let _ = (0..n)
+        let m: Vec<f64> = m.iter().map(|m| m.min(2.0)).collect(); // HHH
+        let mat_a2_coef: Vec<Vec<f64>> = q2_plus
+            .iter()
+            .zip(sigma)
+            .map(|(q2_i, sigma_i)| {
+                q2_plus
+                    .iter()
+                    .zip(sigma)
+                    .map(|(q2_j, sigma_j)| -72.0 * PI * q2_i * q2_j / (sigma_i + sigma_j).powi(7))
+                    .collect()
+            })
+            .collect();
+        let mat_a3_coef: Vec<Vec<Vec<f64>>> = q2_plus
+            .iter()
+            .zip(sigma)
+            .map(|(q2_i, sigma_i)| {
+                q2_plus
+                    .iter()
+                    .zip(sigma)
+                    .map(|(q2_j, sigma_j)| {
+                        q2_plus
+                            .iter()
+                            .zip(sigma)
+                            .map(|(q2_k, sigma_k)| {
+                                288.0 * PI2 * q2_i * q2_j * q2_k
+                                    / ((sigma_i + sigma_j)
+                                        * (sigma_i + sigma_k)
+                                        * (sigma_j + sigma_k))
+                                        .powi(3)
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let mut vec_epsilon_ij: Vec<f64> = Vec::new();
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let mut vec_j2a: Vec<J2aTerm> = Vec::new();
+        let mut vec_j2b: Vec<J2bTerm> = Vec::new();
+        let _ = (0..x.len())
             .map(|i| {
                 let _ = (0..i)
                     .map(|j| {
-                        epsilon_ij.push((epsilon[i] * epsilon[j]).sqrt());
-                        a2_coef.push(
-                            -72.0 * PI * q2_plus[i] * q2_plus[j] / (sigma[i] + sigma[j]).powi(7),
-                        );
-                        let m_ij = (m[i] * m[j]).sqrt().min(2.0);
-                        j2a.push(J2aTerm::new::<4>(m_ij));
-                        j2b.push(J2bTerm::new::<4>(m_ij));
+                        vec_epsilon_ij.push((epsilon[i] * epsilon[j]).sqrt());
+                        vec_a2_coef.push(2.0 * x[i] * x[j] * mat_a2_coef[i][j]);
+                        let m_ij = (m[i] * m[j]).sqrt();
+                        vec_j2a.push(J2aTerm::new::<4>(m_ij));
+                        vec_j2b.push(J2bTerm::new::<4>(m_ij));
                     })
                     .count();
-                epsilon_ij.push(epsilon[i]);
-                a2_coef.push(-0.5625 * PI * q2_plus[i].powi(2) / sigma[i].powi(7));
-                j2a.push(J2aTerm::new::<4>(m[i].min(2.0)));
-                j2b.push(J2bTerm::new::<4>(m[i].min(2.0)));
+                vec_epsilon_ij.push(epsilon[i]);
+                vec_a2_coef.push(x[i] * x[i] * mat_a2_coef[i][i]);
+                vec_j2a.push(J2aTerm::new::<4>(m[i]));
+                vec_j2b.push(J2bTerm::new::<4>(m[i]));
             })
             .count();
-        let mut a3_coef: Vec<f64> = Vec::new();
-        let mut j3c: Vec<J3cTerm> = Vec::new();
-        let _ = (0..n)
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let mut vec_j3c: Vec<J3cTerm> = Vec::new();
+        let _ = (0..x.len())
             .map(|i| {
                 let _ = (0..i)
                     .map(|j| {
                         let _ = (0..j)
                             .map(|k| {
-                                a3_coef.push(
-                                    1728.0 * PI2 * q2_plus[i] * q2_plus[j] * q2_plus[k]
-                                        / ((sigma[i] + sigma[j])
-                                            * (sigma[i] + sigma[k])
-                                            * (sigma[j] + sigma[k]))
-                                            .powi(3),
-                                );
-                                j3c.push(J3cTerm::new::<4>((m[i] * m[j] * m[k]).cbrt().min(2.0)));
+                                vec_a3_coef.push(6.0 * x[i] * x[j] * x[k] * mat_a3_coef[i][j][k]);
+                                vec_j3c.push(J3cTerm::new::<4>((m[i] * m[j] * m[k]).cbrt()));
                             })
                             .count();
-                        a3_coef.push(
-                            216.0 * PI2 * (q2_plus[i] * q2_plus[j].powi(2))
-                                / ((sigma[i] + sigma[j]).powi(6) * sigma[j].powi(3)),
-                        );
-                        j3c.push(J3cTerm::new::<4>((m[i] * m[j] * m[j]).cbrt().min(2.0)));
+                        vec_a3_coef.push(3.0 * x[i] * x[i] * x[j] * mat_a3_coef[i][i][j]);
+                        vec_j3c.push(J3cTerm::new::<4>((m[i] * m[i] * m[j]).cbrt()));
+                        vec_a3_coef.push(3.0 * x[i] * x[j] * x[j] * mat_a3_coef[i][j][j]);
+                        vec_j3c.push(J3cTerm::new::<4>((m[i] * m[j] * m[j]).cbrt()));
                     })
                     .count();
-                a3_coef.push(0.5625 * PI2 * q2_plus[i].powi(3) / sigma[i].powi(9));
-                j3c.push(J3cTerm::new::<4>(m[i].min(2.0)));
+                vec_a3_coef.push(x[i].powi(3) * mat_a3_coef[i][i][i]);
+                vec_j3c.push(J3cTerm::new::<4>(m[i]));
             })
             .count();
         Self {
             temp: 0.0,
             dens1temp2: 0.0,
             dens2temp3: 0.0,
-            epsilon_ij,
-            a2_coef,
-            a3_coef,
-            j2a,
-            j2b,
-            j3c,
+            // a2term
+            vec_epsilon_ij,
+            vec_a2_coef,
+            vec_j2a,
+            vec_j2b,
+            // a3term
+            vec_a3_coef,
+            vec_j3c,
+            // calc mu_k
+            x: x.to_owned(),
+            m: m.to_owned(),
+            epsilon: epsilon.to_owned(),
+            mat_a2_coef,
+            mat_a3_coef,
             a2t0d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d1: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d2: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
@@ -1858,18 +2011,119 @@ impl PqqTerm {
             a3t2d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
         }
     }
+    fn new_fracs(&self, x: &[f64]) -> Self {
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let _ = (0..x.len())
+            .map(|i| {
+                let _ = (0..i)
+                    .map(|j| {
+                        vec_a2_coef.push(2.0 * x[i] * x[j] * self.mat_a2_coef[i][j]);
+                    })
+                    .count();
+                vec_a2_coef.push(x[i] * x[i] * self.mat_a2_coef[i][i]);
+            })
+            .count();
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let _ = (0..x.len())
+            .map(|i| {
+                let _ = (0..i)
+                    .map(|j| {
+                        let _ = (0..j)
+                            .map(|k| {
+                                vec_a3_coef
+                                    .push(6.0 * x[i] * x[j] * x[k] * self.mat_a3_coef[i][j][k]);
+                            })
+                            .count();
+                        vec_a3_coef.push(3.0 * x[i] * x[i] * x[j] * self.mat_a3_coef[i][i][j]);
+                        vec_a3_coef.push(3.0 * x[i] * x[j] * x[j] * self.mat_a3_coef[i][j][j]);
+                    })
+                    .count();
+                vec_a3_coef.push(x[i].powi(3) * self.mat_a3_coef[i][i][i]);
+            })
+            .count();
+        Self {
+            x: x.to_owned(),
+            vec_a2_coef,
+            vec_a3_coef,
+            ..self.clone()
+        }
+    }
+    fn mu_qq(&mut self, temp: f64, rho_num: f64, eta: f64) -> Vec<f64> {
+        self.td_flash(temp, rho_num);
+        let coef_a2 = self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+            / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a2: Vec<f64> = self
+            .mat_a2_coef
+            .iter()
+            .enumerate()
+            .map(|(i, a2_coef_i)| {
+                2.0 * a2_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a2_coef_ij)| {
+                        self.x[j]
+                            * a2_coef_ij
+                            * (J2aTerm::new::<4>((self.m[i] * self.m[j]).sqrt()).t0d0(eta)
+                                + (self.epsilon[i] * self.epsilon[j]).sqrt() / self.temp
+                                    * J2bTerm::new::<4>((self.m[i] * self.m[j]).sqrt()).t0d0(eta))
+                    })
+                    .sum::<f64>()
+                    * self.dens1temp2
+            })
+            .collect();
+        let coef_a3 = self.a2t0d0(eta).powi(2) / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a3: Vec<f64> = self
+            .mat_a3_coef
+            .iter()
+            .enumerate()
+            .map(|(i, a3_coef_i)| {
+                3.0 * a3_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a3_coef_ij)| {
+                        self.x[j]
+                            * a3_coef_ij
+                                .iter()
+                                .enumerate()
+                                .map(|(k, a3_coef_ijk)| {
+                                    self.x[k]
+                                        * a3_coef_ijk
+                                        * J3cTerm::new::<4>(
+                                            (self.m[i] * self.m[j] * self.m[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        zip(a2, a3)
+            .map(move |(a2, a3)| coef_a2 * a2 + coef_a3 * a3)
+            .collect()
+    }
 }
 /// PddTerm
+#[derive(Clone)]
 struct PddTerm {
     temp: f64,
     dens1temp2: f64, // dens^1 / temp^2
     dens2temp3: f64, // dens^2 / temp^3
-    epsilon_ij: Vec<f64>,
-    a2_coef: Vec<f64>,
-    a3_coef: Vec<f64>,
-    j2a: Vec<J2aTerm>,
-    j2b: Vec<J2bTerm>,
-    j3c: Vec<J3cTerm>,
+    // a2term
+    vec_epsilon_ij: Vec<f64>,
+    vec_a2_coef: Vec<f64>,
+    vec_j2a: Vec<J2aTerm>,
+    vec_j2b: Vec<J2bTerm>,
+    // a3term
+    vec_a3_coef: Vec<f64>,
+    vec_j3c: Vec<J3cTerm>,
+    // calc mu_k
+    x: Vec<f64>,
+    m: Vec<f64>,
+    epsilon: Vec<f64>, // for mat_epsilon_ij
+    mat_a2_coef: Vec<Vec<f64>>,
+    mat_a3_coef: Vec<Vec<Vec<f64>>>,
     a2t0d0: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d1: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d2: (f64, f64), // cached variables -> macro_rules! fn_polar
@@ -1893,75 +2147,107 @@ struct PddTerm {
 }
 fn_polar!(PddTerm);
 impl PddTerm {
-    pub fn new(x: &[f64], m: &[f64], sigma: &[f64], epsilon: &[f64], u: &[f64]) -> Self {
-        let n = x.len();
-        let u2_plus: Vec<f64> = x
+    fn new(x: &[f64], m: &[f64], sigma: &[f64], epsilon: &[f64], mu: &[f64]) -> Self {
+        let mu2_plus: Vec<f64> = mu
             .iter()
-            .zip(m.iter())
-            .zip(u.iter())
-            .map(|((x, m), u)| x / m / K * u.powi(2) * 1E-19)
+            .zip(m)
+            .map(|(mu, m)| mu.powi(2) * 1E-19 / m / K)
             .collect();
-        let mut epsilon_ij: Vec<f64> = Vec::new();
-        let mut a2_coef: Vec<f64> = Vec::new();
-        let mut j2a: Vec<J2aTerm> = Vec::new();
-        let mut j2b: Vec<J2bTerm> = Vec::new();
-        let _ = (0..n)
+        let m: Vec<f64> = m.iter().map(|m| m.min(2.0)).collect();
+        let mat_a2_coef: Vec<Vec<f64>> = mu2_plus
+            .iter()
+            .zip(sigma)
+            .map(|(mu2_i, sigma_i)| {
+                mu2_plus
+                    .iter()
+                    .zip(sigma)
+                    .map(|(mu2_j, sigma_j)| -8.0 * PI * mu2_i * mu2_j / (sigma_i + sigma_j).powi(3))
+                    .collect()
+            })
+            .collect();
+        let mat_a3_coef: Vec<Vec<Vec<f64>>> = mu2_plus
+            .iter()
+            .zip(sigma)
+            .map(|(mu2_i, sigma_i)| {
+                mu2_plus
+                    .iter()
+                    .zip(sigma)
+                    .map(|(mu2_j, sigma_j)| {
+                        mu2_plus
+                            .iter()
+                            .zip(sigma)
+                            .map(|(mu2_k, sigma_k)| {
+                                -32.0 / 3.0 * PI2 * mu2_i * mu2_j * mu2_k
+                                    / ((sigma_i + sigma_j)
+                                        * (sigma_i + sigma_k)
+                                        * (sigma_j + sigma_k))
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let mut vec_epsilon_ij: Vec<f64> = Vec::new();
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let mut vec_j2a: Vec<J2aTerm> = Vec::new();
+        let mut vec_j2b: Vec<J2bTerm> = Vec::new();
+        let _ = (0..x.len())
             .map(|i| {
                 let _ = (0..i)
                     .map(|j| {
-                        epsilon_ij.push((epsilon[i] * epsilon[j]).sqrt());
-                        a2_coef.push(
-                            -16.0 * PI * u2_plus[i] * u2_plus[j] / (sigma[i] + sigma[j]).powi(3),
-                        );
-                        let m_ij = (m[i] * m[j]).sqrt().min(2.0);
-                        j2a.push(J2aTerm::new::<2>(m_ij));
-                        j2b.push(J2bTerm::new::<2>(m_ij));
+                        vec_epsilon_ij.push((epsilon[i] * epsilon[j]).sqrt());
+                        vec_a2_coef.push(2.0 * x[i] * x[j] * mat_a2_coef[i][j]);
+                        let m_ij = (m[i] * m[j]).sqrt();
+                        vec_j2a.push(J2aTerm::new::<2>(m_ij));
+                        vec_j2b.push(J2bTerm::new::<2>(m_ij));
                     })
                     .count();
-                epsilon_ij.push(epsilon[i]);
-                a2_coef.push(-PI * u2_plus[i].powi(2) / sigma[i].powi(3));
-                j2a.push(J2aTerm::new::<2>(m[i].min(2.0)));
-                j2b.push(J2bTerm::new::<2>(m[i].min(2.0)));
+                vec_epsilon_ij.push(epsilon[i]);
+                vec_a2_coef.push(x[i] * x[i] * mat_a2_coef[i][i]);
+                vec_j2a.push(J2aTerm::new::<2>(m[i]));
+                vec_j2b.push(J2bTerm::new::<2>(m[i]));
             })
             .count();
-        let mut a3_coef: Vec<f64> = Vec::new();
-        let mut j3c: Vec<J3cTerm> = Vec::new();
-        let _ = (0..n)
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let mut vec_j3c: Vec<J3cTerm> = Vec::new();
+        let _ = (0..x.len())
             .map(|i| {
                 let _ = (0..i)
                     .map(|j| {
                         let _ = (0..j)
                             .map(|k| {
-                                a3_coef.push(
-                                    -64.0 * PI2 * u2_plus[i] * u2_plus[j] * u2_plus[k]
-                                        / (sigma[i] + sigma[j])
-                                        / (sigma[i] + sigma[k])
-                                        / (sigma[j] + sigma[k]),
-                                );
-                                j3c.push(J3cTerm::new::<2>((m[i] * m[j] * m[k]).cbrt().min(2.0)));
+                                vec_a3_coef.push(6.0 * x[i] * x[j] * x[k] * mat_a3_coef[i][j][k]);
+                                vec_j3c.push(J3cTerm::new::<2>((m[i] * m[j] * m[k]).cbrt()));
                             })
                             .count();
-                        a3_coef.push(
-                            -32.0 * PI2 * u2_plus[i] * u2_plus[j].powi(2)
-                                / ((sigma[i] + sigma[j]).powi(2) * sigma[j]),
-                        );
-                        j3c.push(J3cTerm::new::<2>((m[i] * m[j] * m[j]).cbrt().min(2.0)));
+                        vec_a3_coef.push(3.0 * x[i] * x[i] * x[j] * mat_a3_coef[i][i][j]);
+                        vec_j3c.push(J3cTerm::new::<2>((m[i] * m[i] * m[j]).cbrt()));
+                        vec_a3_coef.push(3.0 * x[i] * x[j] * x[j] * mat_a3_coef[i][j][j]);
+                        vec_j3c.push(J3cTerm::new::<2>((m[i] * m[j] * m[j]).cbrt()));
                     })
                     .count();
-                a3_coef.push(-4.0 / 3.0 * PI2 * u2_plus[i].powi(3) / sigma[i].powi(3));
-                j3c.push(J3cTerm::new::<2>(m[i].min(2.0)));
+                vec_a3_coef.push(x[i].powi(3) * mat_a3_coef[i][i][i]);
+                vec_j3c.push(J3cTerm::new::<2>(m[i]));
             })
             .count();
         Self {
             temp: 0.0,
             dens1temp2: 0.0,
             dens2temp3: 0.0,
-            epsilon_ij,
-            a2_coef,
-            a3_coef,
-            j2a,
-            j2b,
-            j3c,
+            // a2term
+            vec_epsilon_ij,
+            vec_a2_coef,
+            vec_j2a,
+            vec_j2b,
+            // a3term
+            vec_a3_coef,
+            vec_j3c,
+            // calc mu_k
+            x: x.to_owned(),
+            m: m.to_owned(),
+            epsilon: epsilon.to_owned(),
+            mat_a2_coef,
+            mat_a3_coef,
             a2t0d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d1: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d2: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
@@ -1984,19 +2270,124 @@ impl PddTerm {
             a3t2d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
         }
     }
+    fn new_fracs(&self, x: &[f64]) -> Self {
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let _ = (0..x.len())
+            .map(|i| {
+                let _ = (0..i)
+                    .map(|j| {
+                        vec_a2_coef.push(2.0 * x[i] * x[j] * self.mat_a2_coef[i][j]);
+                    })
+                    .count();
+                vec_a2_coef.push(x[i] * x[i] * self.mat_a2_coef[i][i]);
+            })
+            .count();
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let _ = (0..x.len())
+            .map(|i| {
+                let _ = (0..i)
+                    .map(|j| {
+                        let _ = (0..j)
+                            .map(|k| {
+                                vec_a3_coef
+                                    .push(6.0 * x[i] * x[j] * x[k] * self.mat_a3_coef[i][j][k]);
+                            })
+                            .count();
+                        vec_a3_coef.push(3.0 * x[i] * x[i] * x[j] * self.mat_a3_coef[i][i][j]);
+                        vec_a3_coef.push(3.0 * x[i] * x[j] * x[j] * self.mat_a3_coef[i][j][j]);
+                    })
+                    .count();
+                vec_a3_coef.push(x[i].powi(3) * self.mat_a3_coef[i][i][i]);
+            })
+            .count();
+        Self {
+            x: x.to_owned(),
+            vec_a2_coef,
+            vec_a3_coef,
+            ..self.clone()
+        }
+    }
+    fn mu_dd(&mut self, temp: f64, rho_num: f64, eta: f64) -> Vec<f64> {
+        self.td_flash(temp, rho_num);
+        let coef_a2 = self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+            / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a2: Vec<f64> = self
+            .mat_a2_coef
+            .iter()
+            .enumerate()
+            .map(|(i, a2_coef_i)| {
+                2.0 * a2_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a2_coef_ij)| {
+                        self.x[j]
+                            * a2_coef_ij
+                            * (J2aTerm::new::<2>((self.m[i] * self.m[j]).sqrt()).t0d0(eta)
+                                + (self.epsilon[i] * self.epsilon[j]).sqrt() / self.temp
+                                    * J2bTerm::new::<2>((self.m[i] * self.m[j]).sqrt()).t0d0(eta))
+                    })
+                    .sum::<f64>()
+                    * self.dens1temp2
+            })
+            .collect();
+        let coef_a3 = self.a2t0d0(eta).powi(2) / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a3: Vec<f64> = self
+            .mat_a3_coef
+            .iter()
+            .enumerate()
+            .map(|(i, a3_coef_i)| {
+                3.0 * a3_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a3_coef_ij)| {
+                        self.x[j]
+                            * a3_coef_ij
+                                .iter()
+                                .enumerate()
+                                .map(|(k, a3_coef_ijk)| {
+                                    self.x[k]
+                                        * a3_coef_ijk
+                                        * J3cTerm::new::<2>(
+                                            (self.m[i] * self.m[j] * self.m[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        zip(a2, a3)
+            .map(move |(a2, a3)| coef_a2 * a2 + coef_a3 * a3)
+            .collect()
+    }
 }
 /// PdqTerm
 const ALPHA: f64 = 1.19374;
+#[derive(Clone)]
 struct PdqTerm {
     temp: f64,
     dens1temp2: f64, // dens^1 / temp^2
     dens2temp3: f64, // dens^2 / temp^3
-    epsilon_ij: Vec<f64>,
-    a2_coef: Vec<f64>,
-    a3_coef: Vec<f64>,
-    j2a: Vec<J2aTerm>,
-    j2b: Vec<J2bTerm>,
-    j3c: Vec<J3cTerm>,
+    // a2term
+    vec_epsilon_ij: Vec<f64>,
+    vec_a2_coef: Vec<f64>,
+    vec_j2a: Vec<J2aTerm>,
+    vec_j2b: Vec<J2bTerm>,
+    // a3term
+    vec_a3_coef: Vec<f64>,
+    vec_j3c: Vec<J3cTerm>,
+    // calc mu_k
+    x_dd: Vec<f64>,
+    x_qq: Vec<f64>,
+    m_dd: Vec<f64>,
+    m_qq: Vec<f64>,
+    epsilon_dd: Vec<f64>, // for mat_epsilon_ij
+    epsilon_qq: Vec<f64>, // for mat_epsilon_ij
+    mat_a2_coef: Vec<Vec<f64>>,
+    mat_a3_coef_ddq: Vec<Vec<Vec<f64>>>,
+    mat_a3_coef_dqq: Vec<Vec<Vec<f64>>>,
     a2t0d0: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d1: (f64, f64), // cached variables -> macro_rules! fn_polar
     a2t0d2: (f64, f64), // cached variables -> macro_rules! fn_polar
@@ -2020,120 +2411,165 @@ struct PdqTerm {
 }
 fn_polar!(PdqTerm);
 impl PdqTerm {
-    #[allow(clippy::too_many_arguments)]
     fn new(
-        x_q: &[f64],
-        m_q: &[f64],
-        sigma_q: &[f64],
-        epsilon_q: &[f64],
-        p_q: &[f64],
-        x_d: &[f64],
-        m_d: &[f64],
-        sigma_d: &[f64],
-        epsilon_d: &[f64],
-        p_d: &[f64],
+        (x_dd, x_qq): (&[f64], &[f64]),
+        (m_dd, m_qq): (&[f64], &[f64]),
+        (sigma_dd, sigma_qq): (&[f64], &[f64]),
+        (epsilon_dd, epsilon_qq): (&[f64], &[f64]),
+        (mu, q): (&[f64], &[f64]),
     ) -> Self {
-        let q2_plus: Vec<f64> = x_q
+        let mu2_plus: Vec<f64> = mu
             .iter()
-            .zip(m_q.iter())
-            .zip(p_q.iter())
-            .map(|((x, m), q)| x / m / K * q.powi(2) * 1E-19)
+            .zip(m_dd.iter())
+            .map(|(mu, m)| mu.powi(2) * 1E-19 / m / K)
             .collect();
-        let q2_len = q2_plus.len();
-        let u2_plus: Vec<f64> = x_d
+        let m_dd: Vec<f64> = m_dd.iter().map(|m| m.min(2.0)).collect();
+        let q2_plus: Vec<f64> = q
             .iter()
-            .zip(m_d.iter())
-            .zip(p_d.iter())
-            .map(|((x, m), u)| x / m / K * u.powi(2) * 1E-19)
+            .zip(m_qq.iter())
+            .map(|(q, m)| q.powi(2) * 1E-19 / m / K)
             .collect();
-        let u2_len = u2_plus.len();
-        let mut epsilon_ij: Vec<f64> = Vec::new();
-        let mut a2_coef: Vec<f64> = Vec::new();
-        let mut j2a: Vec<J2aTerm> = Vec::new();
-        let mut j2b: Vec<J2bTerm> = Vec::new();
-        let _ = (0..u2_len).map(|i| {
-            let _ = (0..q2_len).map(|j| {
-                epsilon_ij.push((epsilon_d[i] * epsilon_q[j]).sqrt());
-                a2_coef
-                    .push(-72.0 * PI * u2_plus[i] * q2_plus[j] / (sigma_d[i] + sigma_q[j]).powi(5));
-                let m_ij = (m_d[i] * m_q[j]).sqrt().min(2.0);
-                j2a.push(J2aTerm::new::<3>(m_ij));
-                j2b.push(J2bTerm::new::<3>(m_ij));
-            });
-        });
-        let mut a3_coef: Vec<f64> = Vec::new();
-        let mut j3c: Vec<J3cTerm> = Vec::new();
-        let _ = (0..q2_len)
-            .map(|k| {
-                let _ = (0..u2_len)
-                    .map(|i| {
-                        let _ = (0..i)
-                            .map(|j| {
-                                a3_coef.push(
-                                    -128.0
-                                        * (u2_plus[i] * sigma_d[i])
-                                        * (u2_plus[j] * sigma_d[j])
-                                        * (q2_plus[k] / sigma_q[k])
-                                        / ((sigma_d[i] + sigma_d[j])
-                                            * (sigma_d[i] + sigma_q[k])
-                                            * (sigma_d[j] + sigma_q[k]))
-                                            .powi(2),
-                                );
-                                j3c.push(J3cTerm::new::<3>(
-                                    (m_d[i] * m_d[j] * m_q[k]).cbrt().min(2.0),
-                                ));
+        let m_qq: Vec<f64> = m_qq.iter().map(|m| m.min(2.0)).collect();
+        let mat_a2_coef: Vec<Vec<f64>> = mu2_plus
+            .iter()
+            .zip(sigma_dd)
+            .map(|(mu2_i, sigma_i)| {
+                q2_plus
+                    .iter()
+                    .zip(sigma_qq)
+                    .map(|(q2_j, sigma_j)| -72.0 * PI * mu2_i * q2_j / (sigma_i + sigma_j).powi(5))
+                    .collect()
+            })
+            .collect();
+        let mat_a3_coef_ddq: Vec<Vec<Vec<f64>>> = mu2_plus
+            .iter()
+            .zip(sigma_dd)
+            .map(|(mu2_i, sigma_i)| {
+                mu2_plus
+                    .iter()
+                    .zip(sigma_dd)
+                    .map(|(mu2_j, sigma_j)| {
+                        q2_plus
+                            .iter()
+                            .zip(sigma_qq)
+                            .map(|(q2_k, sigma_k)| {
+                                -64.0 * (mu2_i * sigma_i) * (mu2_j * sigma_j) * (q2_k / sigma_k)
+                                    / ((sigma_i + sigma_j)
+                                        * (sigma_i + sigma_k)
+                                        * (sigma_j + sigma_k))
+                                        .powi(2)
                             })
-                            .count();
-                        a3_coef.push(
-                            -16.0 * (u2_plus[i] * sigma_d[i]).powi(2) * (q2_plus[k] / sigma_q[k])
-                                / sigma_d[i].powi(2)
-                                / (sigma_d[i] + sigma_q[k]).powi(4),
-                        );
-                        j3c.push(J3cTerm::new::<3>(
-                            (m_d[i] * m_d[i] * m_q[k]).cbrt().min(2.0),
-                        ));
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let mat_a3_coef_dqq: Vec<Vec<Vec<f64>>> = mu2_plus
+            .iter()
+            .zip(sigma_dd)
+            .map(|(mu2_i, sigma_i)| {
+                q2_plus
+                    .iter()
+                    .zip(sigma_qq)
+                    .map(|(q2_j, sigma_j)| {
+                        q2_plus
+                            .iter()
+                            .zip(sigma_qq)
+                            .map(|(q2_k, sigma_k)| {
+                                -64.0
+                                    * ALPHA
+                                    * (mu2_i * sigma_i)
+                                    * (q2_j / sigma_j)
+                                    * (q2_k / sigma_k)
+                                    / ((sigma_i + sigma_j)
+                                        * (sigma_i + sigma_k)
+                                        * (sigma_j + sigma_k))
+                                        .powi(2)
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect();
+        let mut vec_epsilon_ij: Vec<f64> = Vec::new();
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let mut vec_j2a: Vec<J2aTerm> = Vec::new();
+        let mut vec_j2b: Vec<J2bTerm> = Vec::new();
+        let _ = (0..x_dd.len())
+            .map(|i| {
+                let _ = (0..x_qq.len())
+                    .map(|j| {
+                        vec_epsilon_ij.push((epsilon_dd[i] * epsilon_qq[j]).sqrt());
+                        vec_a2_coef.push(x_dd[i] * x_qq[j] * mat_a2_coef[i][j]);
+                        let m_ij = (m_dd[i] * m_qq[j]).sqrt();
+                        vec_j2a.push(J2aTerm::new::<3>(m_ij));
+                        vec_j2b.push(J2bTerm::new::<3>(m_ij));
                     })
                     .count();
             })
             .count();
-        let _ = (0..u2_len).map(|i| {
-            let _ = (0..q2_len).map(|j| {
-                let _ = (0..j).map(|k| {
-                    a3_coef.push(
-                        -128.0
-                            * ALPHA
-                            * (u2_plus[i] * sigma_d[i])
-                            * (q2_plus[j] / sigma_q[j])
-                            * (q2_plus[k] / sigma_q[k])
-                            / ((sigma_d[i] + sigma_q[j])
-                                * (sigma_d[i] + sigma_q[k])
-                                * (sigma_q[j] + sigma_q[k]))
-                                .powi(2),
-                    );
-                    j3c.push(J3cTerm::new::<3>(
-                        (m_d[i] * m_q[j] * m_q[k]).cbrt().min(2.0),
-                    ));
-                });
-                a3_coef.push(
-                    -16.0 * ALPHA * (u2_plus[i] * sigma_d[i]) * (q2_plus[j] / sigma_q[j]).powi(2)
-                        / (sigma_d[i] + sigma_q[i]).powi(4)
-                        / sigma_q[j].powi(2),
-                );
-                j3c.push(J3cTerm::new::<3>(
-                    (m_d[i] * m_q[j] * m_q[j]).cbrt().min(2.0),
-                ));
-            });
-        });
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let mut vec_j3c: Vec<J3cTerm> = Vec::new();
+        let _ = (0..x_qq.len())
+            .map(|k| {
+                let _ = (0..x_dd.len())
+                    .map(|i| {
+                        let _ = (0..i)
+                            .map(|j| {
+                                vec_a3_coef.push(
+                                    2.0 * x_dd[i] * x_dd[j] * x_qq[k] * mat_a3_coef_ddq[i][j][k],
+                                );
+                                vec_j3c
+                                    .push(J3cTerm::new::<3>((m_dd[i] * m_dd[j] * m_qq[k]).cbrt()));
+                            })
+                            .count();
+                        vec_a3_coef.push(x_dd[i] * x_dd[i] * x_qq[k] * mat_a3_coef_ddq[i][i][k]);
+                        vec_j3c.push(J3cTerm::new::<3>((m_dd[i] * m_dd[i] * m_qq[k]).cbrt()));
+                    })
+                    .count();
+            })
+            .count();
+        let _ = (0..x_dd.len())
+            .map(|i| {
+                let _ = (0..x_qq.len())
+                    .map(|j| {
+                        let _ = (0..j)
+                            .map(|k| {
+                                vec_a3_coef.push(
+                                    2.0 * x_dd[i] * x_qq[j] * x_qq[k] * mat_a3_coef_dqq[i][j][k],
+                                );
+                                vec_j3c
+                                    .push(J3cTerm::new::<3>((m_dd[i] * m_qq[j] * m_qq[k]).cbrt()));
+                            })
+                            .count();
+                        vec_a3_coef.push(x_dd[i] * x_qq[j] * x_qq[j] * mat_a3_coef_dqq[i][j][j]);
+                        vec_j3c.push(J3cTerm::new::<3>((m_dd[i] * m_qq[j] * m_qq[j]).cbrt()));
+                    })
+                    .count();
+            })
+            .count();
         Self {
             temp: 0.0,
             dens1temp2: 0.0,
             dens2temp3: 0.0,
-            epsilon_ij,
-            a2_coef,
-            a3_coef,
-            j2a,
-            j2b,
-            j3c,
+            // a2term
+            vec_epsilon_ij,
+            vec_a2_coef,
+            vec_j2a,
+            vec_j2b,
+            // a3term
+            vec_a3_coef,
+            vec_j3c,
+            // calc mu_k
+            x_dd: x_dd.to_owned(),
+            x_qq: x_qq.to_owned(),
+            m_dd: m_dd.to_owned(),
+            m_qq: m_qq.to_owned(),
+            epsilon_dd: epsilon_dd.to_owned(),
+            epsilon_qq: epsilon_qq.to_owned(),
+            mat_a2_coef,
+            mat_a3_coef_ddq,
+            mat_a3_coef_dqq,
             a2t0d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d1: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a2t0d2: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
@@ -2155,5 +2591,227 @@ impl PdqTerm {
             a3t1d3: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
             a3t2d0: (0.0, 0.0), // cached variables -> macro_rules! fn_polar
         }
+    }
+    fn new_fracs(&self, (x_dd, x_qq): (&[f64], &[f64])) -> Self {
+        let mut vec_a2_coef: Vec<f64> = Vec::new();
+        let _ = (0..x_dd.len())
+            .map(|i| {
+                let _ = (0..x_qq.len())
+                    .map(|j| {
+                        vec_a2_coef.push(x_dd[i] * x_qq[j] * self.mat_a2_coef[i][j]);
+                    })
+                    .count();
+            })
+            .count();
+        let mut vec_a3_coef: Vec<f64> = Vec::new();
+        let _ = (0..x_qq.len())
+            .map(|k| {
+                let _ = (0..x_dd.len())
+                    .map(|i| {
+                        let _ = (0..i)
+                            .map(|j| {
+                                vec_a3_coef.push(
+                                    2.0 * x_dd[i]
+                                        * x_dd[j]
+                                        * x_qq[k]
+                                        * self.mat_a3_coef_ddq[i][j][k],
+                                );
+                            })
+                            .count();
+                        vec_a3_coef
+                            .push(x_dd[i] * x_dd[i] * x_qq[k] * self.mat_a3_coef_ddq[i][i][k]);
+                    })
+                    .count();
+            })
+            .count();
+        let _ = (0..x_dd.len())
+            .map(|i| {
+                let _ = (0..x_qq.len())
+                    .map(|j| {
+                        let _ = (0..j)
+                            .map(|k| {
+                                vec_a3_coef.push(
+                                    2.0 * x_dd[i]
+                                        * x_qq[j]
+                                        * x_qq[k]
+                                        * self.mat_a3_coef_dqq[i][j][k],
+                                );
+                            })
+                            .count();
+                        vec_a3_coef
+                            .push(x_dd[i] * x_qq[j] * x_qq[j] * self.mat_a3_coef_dqq[i][j][j]);
+                    })
+                    .count();
+            })
+            .count();
+        Self {
+            x_dd: x_dd.to_owned(),
+            x_qq: x_qq.to_owned(),
+            vec_a2_coef,
+            vec_a3_coef,
+            ..self.clone()
+        }
+    }
+    fn mu_dd(&mut self, temp: f64, rho_num: f64, eta: f64) -> Vec<f64> {
+        self.td_flash(temp, rho_num);
+        let coef_a2 = self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+            / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a2: Vec<f64> = self
+            .mat_a2_coef
+            .iter()
+            .enumerate()
+            .map(|(i, a2_coef_i)| {
+                a2_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a2_coef_ij)| {
+                        self.x_qq[j]
+                            * a2_coef_ij
+                            * (J2aTerm::new::<3>((self.m_dd[i] * self.m_qq[j]).sqrt()).t0d0(eta)
+                                + (self.epsilon_dd[i] * self.epsilon_qq[j]).sqrt() / self.temp
+                                    * J2bTerm::new::<3>((self.m_dd[i] * self.m_qq[j]).sqrt())
+                                        .t0d0(eta))
+                    })
+                    .sum::<f64>()
+                    * self.dens1temp2
+            })
+            .collect();
+        let coef_a3 = self.a2t0d0(eta).powi(2) / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a3_ddq: Vec<f64> = self
+            .mat_a3_coef_ddq
+            .iter()
+            .enumerate()
+            .map(|(i, mat_a3_coef_i)| {
+                2.0 * mat_a3_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a3_coef_ij)| {
+                        self.x_dd[j]
+                            * a3_coef_ij
+                                .iter()
+                                .enumerate()
+                                .map(|(k, a3_coef_ijk)| {
+                                    self.x_qq[k]
+                                        * a3_coef_ijk
+                                        * J3cTerm::new::<3>(
+                                            (self.m_dd[i] * self.m_dd[j] * self.m_qq[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        let a3_dqq: Vec<f64> = self
+            .mat_a3_coef_dqq
+            .iter()
+            .enumerate()
+            .map(|(i, mat_a3_coef_i)| {
+                mat_a3_coef_i
+                    .iter()
+                    .enumerate()
+                    .map(|(j, a3_coef_ij)| {
+                        self.x_qq[j]
+                            * a3_coef_ij
+                                .iter()
+                                .enumerate()
+                                .map(|(k, a3_coef_ijk)| {
+                                    self.x_qq[k]
+                                        * a3_coef_ijk
+                                        * J3cTerm::new::<3>(
+                                            (self.m_dd[i] * self.m_qq[j] * self.m_qq[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        a2.into_iter()
+            .zip(a3_ddq)
+            .zip(a3_dqq)
+            .map(move |((a2, a3_ddq), a3_dqq)| coef_a2 * a2 + coef_a3 * (a3_ddq + a3_dqq))
+            .collect()
+    }
+    fn mu_qq(&mut self, temp: f64, rho_num: f64, eta: f64) -> Vec<f64> {
+        self.td_flash(temp, rho_num);
+        let coef_a2 = self.a2t0d0(eta) * (self.a2t0d0(eta) - 2.0 * self.a3t0d0(eta))
+            / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a2: Vec<f64> = (0..self.mat_a2_coef[0].len())
+            .map(|j| {
+                self.mat_a2_coef
+                    .iter()
+                    .enumerate()
+                    .map(|(i, mat_a2_coef_i)| {
+                        self.x_dd[i]
+                            * mat_a2_coef_i[j]
+                            * (J2aTerm::new::<3>((self.m_dd[i] * self.m_qq[j]).sqrt()).t0d0(eta)
+                                + (self.epsilon_dd[i] * self.epsilon_qq[j]).sqrt() / self.temp
+                                    * J2bTerm::new::<3>((self.m_dd[i] * self.m_qq[j]).sqrt())
+                                        .t0d0(eta))
+                    })
+                    .sum::<f64>()
+                    * self.dens1temp2
+            })
+            .collect();
+        let coef_a3 = self.a2t0d0(eta).powi(2) / (self.a2t0d0(eta) - self.a3t0d0(eta)).powi(2);
+        let a3_ddq: Vec<f64> = (0..self.mat_a3_coef_ddq[0].len())
+            .map(|k| {
+                self.mat_a3_coef_ddq
+                    .iter()
+                    .enumerate()
+                    .map(|(i, mat_a3_coef_i)| {
+                        self.x_dd[i]
+                            * mat_a3_coef_i
+                                .iter()
+                                .enumerate()
+                                .map(|(j, mat_a3_coef_ij)| {
+                                    self.x_dd[j]
+                                        * mat_a3_coef_ij[k]
+                                        * J3cTerm::new::<3>(
+                                            (self.m_dd[i] * self.m_dd[j] * self.m_qq[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        let a3_dqq: Vec<f64> = (0..self.mat_a3_coef_dqq[0].len())
+            .map(|k| {
+                2.0 * self
+                    .mat_a3_coef_dqq
+                    .iter()
+                    .enumerate()
+                    .map(|(i, mat_a3_coef_i)| {
+                        self.x_dd[i]
+                            * mat_a3_coef_i
+                                .iter()
+                                .enumerate()
+                                .map(|(j, mat_a3_coef_ij)| {
+                                    self.x_qq[j]
+                                        * mat_a3_coef_ij[k]
+                                        * J3cTerm::new::<3>(
+                                            (self.m_dd[i] * self.m_qq[j] * self.m_qq[k]).cbrt(),
+                                        )
+                                        .t0d0(eta)
+                                })
+                                .sum::<f64>()
+                    })
+                    .sum::<f64>()
+                    * self.dens2temp3
+            })
+            .collect();
+        a2.into_iter()
+            .zip(a3_ddq)
+            .zip(a3_dqq)
+            .map(move |((a2, a3_ddq), a3_dqq)| coef_a2 * a2 + coef_a3 * (a3_ddq + a3_dqq))
+            .collect()
     }
 }

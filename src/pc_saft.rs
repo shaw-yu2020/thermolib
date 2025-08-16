@@ -74,5 +74,9 @@ mod tests {
         let mut fluid = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9);
         fluid.set_2B_assoc_term(0.035176, 2899.5, 1.0, 1.0, 1.0);
         _fn_test!(fluid);
+        // PcSaftYglPure::CH3OH
+        let mut fluid = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9);
+        fluid.set_ygl_assoc_term(0.035176, 2899.5, 1.0);
+        _fn_test!(fluid);
     }
 }
