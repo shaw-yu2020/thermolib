@@ -4,20 +4,30 @@ const FRAC_RE30_NA: f64 = R / FRAC_NA_1E30;
 #[macro_use]
 mod macros;
 mod assoc_pure;
+mod assoc_term;
 mod disp_term;
 mod gii_term;
 mod hs_term;
+mod pc_saft_gly_mix2;
 mod pc_saft_gly_pure;
+mod pc_saft_mix2;
 mod pc_saft_pure;
+mod pc_saft_ygl_pure;
 mod polar_term;
+mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
+use assoc_term::{AssocGlyTerm, AssocTerm, AssocType};
 use disp_term::DispTerm;
-use gii_term::GiiPure;
-use hs_term::HsPure;
+use gii_term::{GiiPure, GiiTerm};
+use hs_term::{HsPure, HsTerm};
 use polar_term::PolarTerm;
 // public
+pub use pc_saft_gly_mix2::PcSaftGlyMix2;
 pub use pc_saft_gly_pure::PcSaftGlyPure;
+pub use pc_saft_mix2::PcSaftMix2;
 pub use pc_saft_pure::PcSaftPure;
+pub use pc_saft_ygl_pure::PcSaftYglPure;
+pub use s_pc_saft_mix2::SPcSaftMix2;
 /// PcSaftError
 use thiserror::Error;
 #[derive(Debug, Error)]
@@ -32,6 +42,12 @@ enum PcSaftErr {
     OnlyInSinglePhase,
     #[error("property only in double phase")]
     OnlyInDoublePhase,
+    #[error("tpz_flash diverge")]
+    NotConvForTPZ,
+    #[error("tx_flash diverge")]
+    NotConvForTX,
+    #[error("ty_flash diverge")]
+    NotConvForTY,
 }
 #[cfg(test)]
 mod tests {
@@ -57,6 +73,10 @@ mod tests {
         // PcSaftGlyPure::CH3OH
         let mut fluid = PcSaftGlyPure::new_fluid(1.5255, 3.23, 188.9);
         fluid.set_2B_assoc_term(0.035176, 2899.5, 1.0, 1.0, 1.0);
+        _fn_test!(fluid);
+        // PcSaftYglPure::CH3OH
+        let mut fluid = PcSaftYglPure::new_fluid(1.5255, 3.23, 188.9);
+        fluid.set_ygl_assoc_term(0.035176, 2899.5, 1.0);
         _fn_test!(fluid);
     }
 }

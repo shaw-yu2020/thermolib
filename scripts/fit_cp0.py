@@ -55,6 +55,40 @@ def orca():
     return
 
 
+def methanol():
+    # B3LYP cc-pVT(+d)Z opt freq => sclZPE=0.9886
+    """
+    ! B3LYP cc-pVT(+d)Z opt freq noautostart miniprint nopop
+    %maxcore     1000
+    %pal nprocs 4 end
+    * xyz   0   1
+    C      0.0000    0.0000    0.0000
+    H      0.0000    1.0088   -0.3567
+    H      0.8737   -0.5044   -0.3567
+    H     -0.8737   -0.5044   -0.3567
+    O      0.0000    0.0000    1.4300
+    H      0.0000   -0.9049    1.7505
+    *
+    """
+    # D:\ORCA_6.0.0\orca methanol.inp > methanol.out
+    return True, np.array(
+        [
+            301.36,
+            1045.32,
+            1082.54,
+            1169.73,
+            1374.99,
+            1480.80,
+            1495.03,
+            1510.50,
+            2982.37,
+            3024.46,
+            3098.68,
+            3825.56,
+        ]
+    )
+
+
 def calc_cp0(temp, freq_plus):
     """calculate isobaric heat capacity"""
     vi = np.array([freq_plus[1:]]).transpose()
@@ -81,6 +115,7 @@ def main():
     # input parameters: temperature range
     temp = list(range(200, 2000, 10))
 
+    nm, wave = methanol()
     freq = C * wave * 100  # vibration frequencies (s^-1)(Hz)
     freq_plus = np.append([4 if nm else 3.5], freq)
     cp0 = calc_cp0(temp, freq_plus)

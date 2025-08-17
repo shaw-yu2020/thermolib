@@ -515,6 +515,7 @@ macro_rules! fn_calc_prop {
             (FRAC_RE30_NA * temp)
                 * (1.0 + 2.0 * self.r_t0d1(temp, rho_num) + self.r_t0d2(temp, rho_num))
         }
+        #[allow(dead_code)]
         fn calc_p_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
             FRAC_RE30_NA * temp / rho_num
                 * (2.0 * self.r_t0d1(temp, rho_num)
@@ -655,6 +656,234 @@ macro_rules! fn_check_derivatives {
                 println!("[t1d0 -> t2d0] diff ={:e}", val_diff);
             } else {
                 compare_val(val_calc, val_diff);
+            }
+        }
+    };
+}
+macro_rules! fn_check_derivatives_mix {
+    () => {
+        pub fn check_derivatives(&mut self, print_val: bool) {
+            let (t, d) = (self.temp, self.rho_num);
+            if print_val {
+                println!("[t0d0 == t0d0] t0d0 ={}", self.r_t0d0(t, d));
+            }
+            let compare_val = |val_calc: f64, val_diff: f64| {
+                assert_eq!(
+                    format!("{:.8e}", &val_calc.abs()),
+                    format!("{:.8e}", &val_diff.abs())
+                )
+            };
+            // derivative for density
+            let val_calc = self.r_t0d1(t, d) / d;
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d0(t, dx), d);
+            if print_val {
+                println!("[t0d1 => t0d1] t0d1 ={:e}", val_calc);
+                println!("[t0d0 -> t0d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for density+density
+            let val_calc = self.r_t0d2(t, d) / d.powi(2);
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d1(t, dx) / dx, d);
+            if print_val {
+                println!("[t0d2 == t0d2] t0d2 ={:e}", val_calc);
+                println!("[t0d1 -> t0d2] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for density+density+density
+            let val_calc = self.r_t0d3(t, d) / d.powi(3);
+            let val_diff = romberg_diff(|dx: f64| self.r_t0d2(t, dx) / dx.powi(2), d);
+            if print_val {
+                println!("[t0d3 == t0d3] t0d3 ={:e}", val_calc);
+                println!("[t0d2 -> t0d3] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature
+            let val_calc = self.r_t1d0(t, d) / t;
+            let val_diff = romberg_diff(|tx: f64| self.r_t0d0(tx, d), t);
+            if print_val {
+                println!("[t1d0 == t1d0] t1d0 ={:e}", val_calc);
+                println!("[t0d0 -> t1d0] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature+density
+            let val_calc = self.r_t1d1(t, d) / t / d;
+            let val_diff = romberg_diff(|dx: f64| self.r_t1d0(t, dx) / t, d);
+            if print_val {
+                println!("[t1d1 == t1d1] t1d1 ={:e}", val_calc);
+                println!("[t1d0 -> t1d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            let val_diff = romberg_diff(|tx: f64| self.r_t0d1(tx, d) / d, t);
+            if print_val {
+                println!("[t1d1 == t1d1] t1d1 ={:e}", val_calc);
+                println!("[t0d1 -> t1d1] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+            // derivative for temperature+temperature
+            let val_calc = self.r_t2d0(t, d) / t.powi(2);
+            let val_diff = romberg_diff(|tx: f64| self.r_t1d0(tx, d) / tx, t);
+            if print_val {
+                println!("[t2d0 == t2d0] t2d0 ={:e}", val_calc);
+                println!("[t1d0 -> t2d0] diff ={:e}", val_diff);
+            } else {
+                compare_val(val_calc, val_diff);
+            }
+        }
+    };
+}
+/// macro_rules! fn_tpz_flash_mix2
+macro_rules! fn_tpz_flash_mix2 {
+    ($name:ty) => {
+        #[cfg_attr(feature = "with_pyo3", pymethods)]
+        impl $name {
+            pub fn tpz_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<(f64, f64)> {
+                let ps = self.guess_ps(temp);
+                let mut k = [ps[0] / pres, ps[1] / pres];
+                let mut z = brent_zero(
+                    |z0| {
+                        z0 * (k[0] - 1.0) / (1.0 + k[0]) + (1.0 - z0) * (k[1] - 1.0) / (1.0 + k[1])
+                    },
+                    0.0,
+                    1.0,
+                ); // alpha = 0.5
+                let mut x = [2.0 * z / (1.0 + k[0]), 2.0 * (1.0 - z) / (1.0 + k[1])];
+                let mut y = [k[0] * x[0], k[1] * x[1]];
+                let mut v_new = self.calc_ln_k(temp, pres, x, y); // volatility parameters
+                let mut v_old = v_new; // volatility parameters
+                for _i in 0..100 {
+                    k = [v_new[0].exp(), v_new[1].exp()];
+                    z = brent_zero(
+                        |z0| {
+                            z0 * (k[0] - 1.0) / (1.0 + k[0])
+                                + (1.0 - z0) * (k[1] - 1.0) / (1.0 + k[1])
+                        },
+                        0.0,
+                        1.0,
+                    );
+                    x = [2.0 * z / (1.0 + k[0]), 2.0 * (1.0 - z) / (1.0 + k[1])];
+                    y = [k[0] * x[0], k[1] * x[1]];
+                    v_new = self.calc_ln_k(temp, pres, x, y);
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
+                    if (v_new[0] - v_old[0]).abs().max((v_new[1] - v_old[1]).abs()) < 1E-9 {
+                        return Ok((x[0], y[0]));
+                    }
+                    v_old = v_new
+                }
+                Err(anyhow!(PcSaftErr::NotConvForTPZ))
+            }
+        }
+    };
+}
+/// macro_rules! fn_tx_flash_mix2
+macro_rules! fn_tx_flash_mix2 {
+    ($name:ty) => {
+        #[cfg_attr(feature = "with_pyo3", pymethods)]
+        impl $name {
+            pub fn tx_flash(&mut self, temp: f64, x: f64) -> anyhow::Result<(f64, f64)> {
+                if x <= 0.0 || x >= 1.0 {
+                    return Err(anyhow!(PcSaftErr::NotConvForTX));
+                }
+                let x = [x, 1.0 - x];
+                let ps = self.guess_ps(temp);
+                let mut pres = ps[0] * x[0] + ps[1] * x[1];
+                let mut y = [ps[0] / pres * x[0], ps[1] / pres * x[1]];
+                // init B,A,v
+                let mut ln_k = self.calc_ln_k(temp, pres, x, y);
+                let mut ln_kb = y[0] * ln_k[0] + y[1] * ln_k[1];
+                let ln_k1 = self.calc_ln_k(temp, pres + 10.0, x, y);
+                let ln_kb1 = y[0] * ln_k1[0] + y[1] * ln_k1[1];
+                let b_new = (ln_kb - ln_kb1) / (pres / (pres + 10.0)).ln();
+                let mut a_new = ln_kb - b_new * pres.ln();
+                let mut a_old = a_new;
+                let mut v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                let mut v_old = v_new;
+                for _i in 0..100 {
+                    let v_exp = [v_new[0].exp(), v_new[1].exp()];
+                    ln_kb = -(v_exp[0] * x[0] + v_exp[1] * x[1]).ln();
+                    pres = ((ln_kb - a_new) / b_new).exp();
+                    a_new = ln_kb - b_new * pres.ln();
+                    y = [
+                        v_exp[0] * x[0] / (v_exp[0] * x[0] + v_exp[1] * x[1]),
+                        v_exp[1] * x[1] / (v_exp[0] * x[0] + v_exp[1] * x[1]),
+                    ];
+                    ln_k = self.calc_ln_k(temp, pres, x, y);
+                    v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
+                    if (a_new - a_old)
+                        .abs()
+                        .max((v_new[0] - v_old[0]).abs())
+                        .max((v_new[1] - v_old[1]).abs())
+                        < 1E-9
+                    {
+                        return Ok((pres, y[0]));
+                    }
+                    a_old = a_new;
+                    v_old = v_new;
+                }
+                Err(anyhow!(PcSaftErr::NotConvForTX))
+            }
+        }
+    };
+}
+/// macro_rules! fn_ty_flash_mix2
+macro_rules! fn_ty_flash_mix2 {
+    ($name:ty) => {
+        #[cfg_attr(feature = "with_pyo3", pymethods)]
+        impl $name {
+            pub fn ty_flash(&mut self, temp: f64, y: f64) -> anyhow::Result<(f64, f64)> {
+                if y <= 0.0 || y >= 1.0 {
+                    return Err(anyhow!(PcSaftErr::NotConvForTY));
+                }
+                let y = [y, 1.0 - y];
+                let ps = self.guess_ps(temp);
+                let mut pres = (y[0] / ps[0] + y[1] / ps[1]).recip();
+                let mut x = [y[0] / ps[0] * pres, y[1] / ps[1] * pres];
+                // init B,A,v
+                let mut ln_k = self.calc_ln_k(temp, pres, x, y);
+                let mut ln_kb = x[0] * ln_k[0] + x[1] * ln_k[1];
+                let ln_k1 = self.calc_ln_k(temp, pres + 10.0, x, y);
+                let ln_kb1 = x[0] * ln_k1[0] + x[1] * ln_k1[1];
+                let b_new = (ln_kb - ln_kb1) / (pres / (pres + 10.0)).ln();
+                let mut a_new = ln_kb - b_new * pres.ln();
+                let mut a_old = a_new;
+                let mut v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                let mut v_old = v_new;
+                for _i in 0..100 {
+                    let v_exp = [v_new[0].exp(), v_new[1].exp()];
+                    ln_kb = (y[0] / v_exp[0] + y[1] / v_exp[1]).ln();
+                    pres = ((ln_kb - a_new) / b_new).exp();
+                    a_new = ln_kb - b_new * pres.ln();
+                    x = [
+                        y[0] / v_exp[0] / (y[0] / v_exp[0] + y[1] / v_exp[1]),
+                        y[1] / v_exp[1] / (y[0] / v_exp[0] + y[1] / v_exp[1]),
+                    ];
+                    ln_k = self.calc_ln_k(temp, pres, x, y);
+                    v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
+                    if (a_new - a_old)
+                        .abs()
+                        .max((v_new[0] - v_old[0]).abs())
+                        .max((v_new[1] - v_old[1]).abs())
+                        < 1E-9
+                    {
+                        return Ok((pres, x[0]));
+                    }
+                    a_old = a_new;
+                    v_old = v_new;
+                }
+                Err(anyhow!(PcSaftErr::NotConvForTY))
             }
         }
     };
