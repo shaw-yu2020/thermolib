@@ -325,11 +325,11 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
-        molefracs=np.asarray([0.2, 0.8]),
+        molefracs=np.asarray([0.5, 0.5]),
         temperature=298.15 * si.KELVIN,
         pressure=0.1e6 * si.PASCAL,
     )
-    if np.round(state.density / (si.MOL / si.METER**3)) != 14545:  # true=41?
+    if np.round(state.density / (si.MOL / si.METER**3)) != 41:
         print("Error in tp_flash :: rho() # CO2_QQ+ACETONE_DD")
     bubble = PhaseEquilibrium.bubble_point(
         eos, 298.15 * si.KELVIN, np.array([0.5, 0.5])

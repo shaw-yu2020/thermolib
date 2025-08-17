@@ -769,11 +769,11 @@ macro_rules! fn_tpz_flash_mix2 {
                     x = [2.0 * z / (1.0 + k[0]), 2.0 * (1.0 - z) / (1.0 + k[1])];
                     y = [k[0] * x[0], k[1] * x[1]];
                     v_new = self.calc_ln_k(temp, pres, x, y);
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
                     if (v_new[0] - v_old[0]).abs().max((v_new[1] - v_old[1]).abs()) < 1E-9 {
                         return Ok((x[0], y[0]));
-                    }
-                    if (x[0] - y[0]).abs() < 1E-9 {
-                        break;
                     }
                     v_old = v_new
                 }
@@ -816,6 +816,9 @@ macro_rules! fn_tx_flash_mix2 {
                     ];
                     ln_k = self.calc_ln_k(temp, pres, x, y);
                     v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
                     if (a_new - a_old)
                         .abs()
                         .max((v_new[0] - v_old[0]).abs())
@@ -823,9 +826,6 @@ macro_rules! fn_tx_flash_mix2 {
                         < 1E-9
                     {
                         return Ok((pres, y[0]));
-                    }
-                    if (x[0] - y[0]).abs() < 1E-9 {
-                        break;
                     }
                     a_old = a_new;
                     v_old = v_new;
@@ -869,6 +869,9 @@ macro_rules! fn_ty_flash_mix2 {
                     ];
                     ln_k = self.calc_ln_k(temp, pres, x, y);
                     v_new = [ln_k[0] - ln_kb, ln_k[1] - ln_kb];
+                    if v_new[0].is_nan() || v_new[1].is_nan() || (x[0] - y[0]).abs() < 1E-9 {
+                        break;
+                    }
                     if (a_new - a_old)
                         .abs()
                         .max((v_new[0] - v_old[0]).abs())
@@ -876,9 +879,6 @@ macro_rules! fn_ty_flash_mix2 {
                         < 1E-9
                     {
                         return Ok((pres, x[0]));
-                    }
-                    if (x[0] - y[0]).abs() < 1E-9 {
-                        break;
                     }
                     a_old = a_new;
                     v_old = v_new;

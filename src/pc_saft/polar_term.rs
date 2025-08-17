@@ -2453,7 +2453,9 @@ impl PdqTerm {
                             .iter()
                             .zip(sigma_qq)
                             .map(|(q2_k, sigma_k)| {
-                                -64.0 * (mu2_i * sigma_i) * (mu2_j * sigma_j) * (q2_k / sigma_k)
+                                // this sign is different from publication
+                                // but we think the right sign is positive
+                                64.0 * (mu2_i * sigma_i) * (mu2_j * sigma_j) * (q2_k / sigma_k)
                                     / ((sigma_i + sigma_j)
                                         * (sigma_i + sigma_k)
                                         * (sigma_j + sigma_k))
@@ -2476,8 +2478,9 @@ impl PdqTerm {
                             .iter()
                             .zip(sigma_qq)
                             .map(|(q2_k, sigma_k)| {
-                                -64.0
-                                    * ALPHA
+                                // this sign is different from publication
+                                // but we think the right sign is positive
+                                64.0 * ALPHA
                                     * (mu2_i * sigma_i)
                                     * (q2_j / sigma_j)
                                     * (q2_k / sigma_k)

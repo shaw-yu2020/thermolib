@@ -105,10 +105,10 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_6};
 /// fluids.set_polar_term([4.4, 2.88], [4, 2]);
 /// fluids.tp_flash(298.15, 0.1e6).unwrap();
 /// assert_eq!(fluids.rho().unwrap().round(), 41.0);
-/// // let py = fluids.tx_flash(298.15, 0.5).unwrap(); // todo!()
-/// // assert_eq!((py.1 * 1e5).round() / 1e5, 0.98973); // todo!()
-/// // let px = fluids.ty_flash(298.15, 0.5).unwrap(); // todo!()
-/// // assert_eq!((px.1 * 1e5).round() / 1e5, 0.00688); // todo!()
+/// let py = fluids.tx_flash(298.15, 0.5).unwrap();
+/// assert_eq!((py.1 * 1e5).round() / 1e5, 0.98973);
+/// let px = fluids.ty_flash(298.15, 0.5).unwrap();
+/// assert_eq!((px.1 * 1e5).round() / 1e5, 0.00688);
 /// ```
 #[cfg_attr(feature = "with_pyo3", pyclass)]
 pub struct PcSaftMix2 {
