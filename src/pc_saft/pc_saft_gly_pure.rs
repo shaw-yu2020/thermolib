@@ -1,5 +1,5 @@
 use super::PcSaftErr;
-use super::{AssocGlyPure, DispTerm, GiiPure, HsPure};
+use super::{AssocGlyPure, DispTerm, GiiPure, HsPure, PolarTerm};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use crate::algorithms::{brent_zero, romberg_diff};
 use anyhow::anyhow;
@@ -28,6 +28,7 @@ pub struct PcSaftGlyPure {
     gii: GiiPure,                // GiiPure
     disp: DispTerm,              // DispTerm
     assoc: Option<AssocGlyPure>, // AssocPure
+    polar: Option<PolarTerm>,    // PolarTerm
     // state
     temp: f64,
     rho_num: f64,
@@ -59,7 +60,8 @@ impl PcSaftGlyPure {
                 m.powi(2) * epsilon * sigma3,
                 m.powi(2) * epsilon.powi(2) * sigma3,
             ), // DispTerm
-            assoc: None,                // AssocTerm
+            assoc: None,                // AssocPure
+            polar: None,                // PolarTerm
             // state
             temp: 1.0,
             rho_num: 1.0,
@@ -121,6 +123,26 @@ impl PcSaftGlyPure {
             c0,
             c1,
             c2,
+        ))
+    }
+    pub fn set_QQ_polar_term(&mut self, Q: f64) {
+        self.polar = Some(PolarTerm::new(
+            &[1.0],
+            &[self.m],
+            &[self.sigma3.cbrt()],
+            &[self.epsilon],
+            &[Q],
+            &[4],
+        ));
+    }
+    pub fn set_DD_polar_term(&mut self, u: f64) {
+        self.polar = Some(PolarTerm::new(
+            &[1.0],
+            &[self.m],
+            &[self.sigma3.cbrt()],
+            &[self.epsilon],
+            &[u],
+            &[2],
         ))
     }
 }
@@ -186,6 +208,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t0d0(temp, rho_num, eta))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t0d0(temp, rho_num, eta))
     }
     fn r_t0d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta = self.eta0_coef(temp) * rho_num;
@@ -196,6 +222,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t0d1(temp, rho_num, eta))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t0d1(temp, rho_num, eta))
     }
     fn r_t0d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta = self.eta0_coef(temp) * rho_num;
@@ -206,6 +236,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t0d2(temp, rho_num, eta))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t0d2(temp, rho_num, eta))
     }
     fn r_t0d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta = self.eta0_coef(temp) * rho_num;
@@ -216,6 +250,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t0d3(temp, rho_num, eta))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t0d3(temp, rho_num, eta))
     }
     fn r_t0d4(&mut self, temp: f64, rho_num: f64) -> f64 {
         let eta = self.eta0_coef(temp) * rho_num;
@@ -226,6 +264,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t0d4(temp, rho_num, eta))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t0d4(temp, rho_num, eta))
     }
     fn r_t1d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         let (eta, eta1) = (
@@ -239,6 +281,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t1d0(temp, rho_num, eta, eta1))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t1d0(temp, rho_num, eta, eta1))
     }
     fn r_t1d1(&mut self, temp: f64, rho_num: f64) -> f64 {
         let (eta, eta1) = (
@@ -252,6 +298,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t1d1(temp, rho_num, eta, eta1))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t1d1(temp, rho_num, eta, eta1))
     }
     fn r_t1d2(&mut self, temp: f64, rho_num: f64) -> f64 {
         let (eta, eta1) = (
@@ -265,6 +315,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t1d2(temp, rho_num, eta, eta1))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t1d2(temp, rho_num, eta, eta1))
     }
     fn r_t1d3(&mut self, temp: f64, rho_num: f64) -> f64 {
         let (eta, eta1) = (
@@ -278,6 +332,10 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t1d3(temp, rho_num, eta, eta1))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t1d3(temp, rho_num, eta, eta1))
     }
     fn r_t2d0(&mut self, temp: f64, rho_num: f64) -> f64 {
         let (eta, eta1, eta2) = (
@@ -292,5 +350,9 @@ impl PcSaftGlyPure {
                 .assoc
                 .as_mut()
                 .map_or(0.0, |a| a.t2d0(temp, rho_num, eta, eta1, eta2))
+            + self
+                .polar
+                .as_mut()
+                .map_or(0.0, |p| p.t2d0(temp, rho_num, eta, eta1, eta2))
     }
 }
