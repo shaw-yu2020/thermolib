@@ -4,44 +4,167 @@ import numpy as np
 import si_units as si  # pylint: disable=E0401
 
 
-from feos.pcsaft import PcSaftRecord  # pylint: disable=E0401,E0611
-from feos.pcsaft import PcSaftParameters  # pylint: disable=E0401,E0611
-from feos.eos import EquationOfState  # pylint: disable=E0401,E0611
-from feos.eos import State  # pylint: disable=E0401,E0611
-from feos.eos import PhaseEquilibrium  # pylint: disable=E0401,E0611
+from feos import Identifier, PureRecord, Parameters  # pylint: disable=E0401,E0611
+from feos import EquationOfState, State, PhaseEquilibrium  # pylint: disable=E0401,E0611
 
 
-SO2 = PcSaftRecord(2.8611, 2.6826, 205.35)  # sulfur_dioxide
-H2O_2B = PcSaftRecord(
-    1.0656, 3.0007, 366.51, kappa_ab=0.034868, epsilon_k_ab=2500.7, na=1, nb=1
+SO2 = PureRecord(
+    Identifier(name="sulfur dioxide"),
+    molarweight=64.045,
+    m=2.8611,
+    sigma=2.6826,
+    epsilon_k=205.35,
+)  # sulfur_dioxide
+H2O_2B = PureRecord(
+    Identifier(name="water"),
+    molarweight=18.015,
+    m=1.0656,
+    sigma=3.0007,
+    epsilon_k=366.51,
+    association_sites=[
+        {
+            "kappa_ab": 0.034868,
+            "epsilon_k_ab": 2500.7,
+            "na": 1,
+            "nb": 1,
+        }
+    ],
 )  # water
-H2O_3B = PcSaftRecord(
-    1.0656, 3.0007, 366.51, kappa_ab=0.034868, epsilon_k_ab=2500.7, na=1, nb=2
+H2O_3B = PureRecord(
+    Identifier(name="water"),
+    molarweight=18.015,
+    m=1.0656,
+    sigma=3.0007,
+    epsilon_k=366.51,
+    association_sites=[
+        {
+            "kappa_ab": 0.034868,
+            "epsilon_k_ab": 2500.7,
+            "na": 1,
+            "nb": 2,
+        }
+    ],
 )  # water
-H2O_4C = PcSaftRecord(
-    1.0656, 3.0007, 366.51, kappa_ab=0.034868, epsilon_k_ab=2500.7, na=2, nb=2
+H2O_4C = PureRecord(
+    Identifier(name="water"),
+    molarweight=18.015,
+    m=1.0656,
+    sigma=3.0007,
+    epsilon_k=366.51,
+    association_sites=[
+        {
+            "kappa_ab": 0.034868,
+            "epsilon_k_ab": 2500.7,
+            "na": 2,
+            "nb": 2,
+        }
+    ],
 )  # water
-CO2_QQ = PcSaftRecord(1.5131, 3.1869, 163.33, q=4.4)  # carbon_dioxide
-ACETONE_DD = PcSaftRecord(2.7447, 3.2742, 232.99, mu=2.88)  # acetone
-CH3OH_2B = PcSaftRecord(
-    1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=1
+CO2_QQ = PureRecord(
+    Identifier(name="carbon dioxide"),
+    molarweight=44.01,
+    m=1.5131,
+    sigma=3.1869,
+    epsilon_k=163.33,
+    q=4.4,
+)  # carbon_dioxide
+ACETONE_DD = PureRecord(
+    Identifier(name="acetone"),
+    molarweight=58.08,
+    m=2.7447,
+    sigma=3.2742,
+    epsilon_k=232.99,
+    mu=2.88,
+)  # acetone
+CH3OH_2B = PureRecord(
+    Identifier(name="methanol"),
+    molarweight=32.042,
+    m=1.5255,
+    sigma=3.2300,
+    epsilon_k=188.90,
+    association_sites=[
+        {
+            "kappa_ab": 0.035176,
+            "epsilon_k_ab": 2899.5,
+            "na": 1,
+            "nb": 1,
+        }
+    ],
 )  # methanol
-CH3OH_3B = PcSaftRecord(
-    1.5255, 3.2300, 188.90, kappa_ab=0.035176, epsilon_k_ab=2899.5, na=1, nb=2
+CH3OH_3B = PureRecord(
+    Identifier(name="methanol"),
+    molarweight=32.042,
+    m=1.5255,
+    sigma=3.2300,
+    epsilon_k=188.90,
+    association_sites=[
+        {
+            "kappa_ab": 0.035176,
+            "epsilon_k_ab": 2899.5,
+            "na": 1,
+            "nb": 2,
+        }
+    ],
 )  # methanol
-CH4 = PcSaftRecord(1.0000, 3.7039, 150.03)  # methane (Gross and Sadowski 2001)
-C2H6 = PcSaftRecord(1.6069, 3.5206, 191.42)  # ethane (Gross and Sadowski 2001)
-CO2 = PcSaftRecord(2.0729, 2.7852, 169.21)  # carbon_dioxide
-CL2_QQ = PcSaftRecord(1.4682, 3.4480, 269.67, q=3.0724)  # chlorine
-C6H6_QQ = PcSaftRecord(2.2463, 3.7852, 296.24, q=5.5907)  # benzene
-BUTANONE_DD = PcSaftRecord(2.9835, 3.4239, 244.99, mu=2.78)  # butanone
-PROPANAL_DD = PcSaftRecord(2.6001, 3.2872, 235.21, mu=2.72)  # propanal
+CH4 = PureRecord(
+    Identifier(name="methane"),
+    molarweight=16.043,
+    m=1.0000,
+    sigma=3.7039,
+    epsilon_k=150.03,
+)  # methane (Gross and Sadowski 2001)
+C2H6 = PureRecord(
+    Identifier(name="ethane"),
+    molarweight=30.07,
+    m=1.6069,
+    sigma=3.5206,
+    epsilon_k=191.42,
+)  # ethane (Gross and Sadowski 2001)
+CO2 = PureRecord(
+    Identifier(name="carbon dioxide"),
+    molarweight=44.01,
+    m=2.0729,
+    sigma=2.7852,
+    epsilon_k=169.21,
+)  # carbon_dioxide
+CL2_QQ = PureRecord(
+    Identifier(name="chlorine"),
+    molarweight=70.905,
+    m=1.4682,
+    sigma=3.4480,
+    epsilon_k=269.67,
+    q=3.0724,
+)  # chlorine
+C6H6_QQ = PureRecord(
+    Identifier(name="benzene"),
+    molarweight=78.114,
+    m=2.2463,
+    sigma=3.7852,
+    epsilon_k=296.24,
+    q=5.5907,
+)  # benzene
+BUTANONE_DD = PureRecord(
+    Identifier(name="butanone"),
+    molarweight=72.107,
+    m=2.9835,
+    sigma=3.4239,
+    epsilon_k=244.99,
+    mu=2.78,
+)  # butanone
+PROPANAL_DD = PureRecord(
+    Identifier(name="propanal"),
+    molarweight=58.08,
+    m=2.6001,
+    sigma=3.2872,
+    epsilon_k=235.21,
+    mu=2.72,
+)  # propanal
 
 
 def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many-branches
     """test_pc_saft_pure"""
     # SO2
-    parameters = PcSaftParameters.from_model_records([SO2])
+    parameters = Parameters.new_pure(SO2)
     eos = EquationOfState.pcsaft(parameters)
     critical_point = State.critical_point(eos)
     if np.round(critical_point.temperature / si.KELVIN) != 438:
@@ -77,7 +200,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 41:
         print("Error in tp_flash :: rho() # SO2")
     # H2O_2B
-    parameters = PcSaftParameters.from_model_records([H2O_2B])
+    parameters = Parameters.new_pure(H2O_2B)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -87,7 +210,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 51179:
         print("Error in tp_flash :: rho() # H20_2B")
     # H2O_3B
-    parameters = PcSaftParameters.from_model_records([H2O_3B])
+    parameters = Parameters.new_pure(H2O_3B)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -97,7 +220,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 51371:
         print("Error in tp_flash :: rho() # H20_3B")
     # H2O_4C
-    parameters = PcSaftParameters.from_model_records([H2O_4C])
+    parameters = Parameters.new_pure(H2O_4C)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -107,7 +230,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 55670:
         print("Error in tp_flash :: rho() # H20_4C")
     # CO2_QQ
-    parameters = PcSaftParameters.from_model_records([CO2_QQ])
+    parameters = Parameters.new_pure(CO2_QQ)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -115,9 +238,9 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
         pressure=0.1e6 * si.PASCAL,
     )
     if np.round(state.density / (si.MOL / si.METER**3)) != 41:
-        print("Error in tp_flash :: rho() # CO2")
+        print("Error in tp_flash :: rho() # CO2_QQ")
     # ACETONE_DD
-    parameters = PcSaftParameters.from_model_records([ACETONE_DD])
+    parameters = Parameters.new_pure(ACETONE_DD)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -127,7 +250,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 13337:
         print("Error in tp_flash :: rho() # ACEONE_DD")
     # CH3OH_2B
-    parameters = PcSaftParameters.from_model_records([CH3OH_2B])
+    parameters = Parameters.new_pure(CH3OH_2B)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -138,7 +261,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(state.density / (si.MOL / si.METER**3)) != 24676:
         print("Error in tp_flash :: rho() # CH3OH_2B")
     # CH3OH_3B
-    parameters = PcSaftParameters.from_model_records([CH3OH_3B])
+    parameters = Parameters.new_pure(CH3OH_3B)
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -153,7 +276,7 @@ def test_pc_saft_pure():  # pylint: disable=too-many-statements,disable=too-many
 def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many-branches
     """test_pc_saft_mix2"""
     # CH4+C2H6
-    parameters = PcSaftParameters.from_model_records([CH4, C2H6])
+    parameters = Parameters.new_binary([CH4, C2H6])
     eos = EquationOfState.pcsaft(parameters)
     temp = 199.92 * si.KELVIN
     # check tx_flash
@@ -207,7 +330,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e4) / 1e4 != 0.7474:
         print(f"Error in ty_flash :: y = {0.9461}, # CH4+C2H6")
     # CH4+C2H6
-    parameters = PcSaftParameters.from_model_records([CH4, C2H6])
+    parameters = Parameters.new_binary([CH4, C2H6])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -226,7 +349,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.04226:
         print(f"Error in ty_flash :: y = {0.5}, # CH4+C2H6")
     # CO2+CH3OH_2B
-    parameters = PcSaftParameters.from_model_records([CO2, CH3OH_2B])
+    parameters = Parameters.new_binary([CO2, CH3OH_2B])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -245,7 +368,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.00143:
         print(f"Error in ty_flash :: y = {0.5}, # CO2+CH3OH_2B")
     # CO2_QQ+CH3OH_2B
-    parameters = PcSaftParameters.from_model_records([CO2_QQ, CH3OH_2B])
+    parameters = Parameters.new_binary([CO2_QQ, CH3OH_2B])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -264,7 +387,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.00061:
         print(f"Error in ty_flash :: y = {0.5}, # CO2_QQ+CH3OH_2B")
     # ACETONE_DD+CH3OH_2B
-    parameters = PcSaftParameters.from_model_records([ACETONE_DD, CH3OH_2B])
+    parameters = Parameters.new_binary([ACETONE_DD, CH3OH_2B])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -283,7 +406,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.06152:
         print(f"Error in ty_flash :: y = {0.5}, # ACETONE_DD+CH3OH_2B")
     # Cl2_QQ+C6H6_QQ
-    parameters = PcSaftParameters.from_model_records([CL2_QQ, C6H6_QQ])
+    parameters = Parameters.new_binary([CL2_QQ, C6H6_QQ])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -291,18 +414,18 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
         temperature=298.15 * si.KELVIN,
         pressure=0.1e6 * si.PASCAL,
     )
-    if np.round(state.density / (si.MOL / si.METER**3)) != 14187:  # true=14137
+    if np.round(state.density / (si.MOL / si.METER**3)) != 14137:
         print("Error in tp_flash :: rho() # Cl2_QQ+C6H6_QQ")
     bubble = PhaseEquilibrium.bubble_point(
         eos, 298.15 * si.KELVIN, np.array([0.5, 0.5])
     )
-    if np.round(bubble.vapor.molefracs[0] * 1e5) / 1e5 != 0.97885:  # true=0.97915
+    if np.round(bubble.vapor.molefracs[0] * 1e5) / 1e5 != 0.97915:
         print(f"Error in tx_flash :: x = {0.5}, # Cl2_QQ+C6H6_QQ")
     dew = PhaseEquilibrium.dew_point(eos, 298.15 * si.KELVIN, np.array([0.5, 0.5]))
-    if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.02334:  # true=0.02098
+    if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.02098:
         print(f"Error in ty_flash :: y = {0.5}, # Cl2_QQ+C6H6_QQ")
     # BUTANONE_DD+PROPANAL_DD
-    parameters = PcSaftParameters.from_model_records([BUTANONE_DD, PROPANAL_DD])
+    parameters = Parameters.new_binary([BUTANONE_DD, PROPANAL_DD])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
@@ -321,7 +444,7 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
     if np.round(dew.liquid.molefracs[0] * 1e5) / 1e5 != 0.78066:
         print(f"Error in ty_flash :: y = {0.5}, # BUTANONE_DD+PROPANAL_DD")
     # CO2_QQ+ACETONE_DD
-    parameters = PcSaftParameters.from_model_records([CO2_QQ, ACETONE_DD])
+    parameters = Parameters.new_binary([CO2_QQ, ACETONE_DD])
     eos = EquationOfState.pcsaft(parameters)
     state = State(
         eos,
