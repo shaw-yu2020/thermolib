@@ -1,9 +1,7 @@
 """pc_saft_mix2"""
 
-from feos.pcsaft import PcSaftRecord  # pylint: disable=E0401,E0611
-from feos.pcsaft import PcSaftParameters  # pylint: disable=E0401,E0611
-from feos.eos import EquationOfState  # pylint: disable=E0401,E0611
-from feos.eos import PhaseEquilibrium  # pylint: disable=E0401,E0611
+from feos import Identifier, PureRecord, Parameters  # pylint: disable=E0401,E0611
+from feos import EquationOfState, State, PhaseEquilibrium  # pylint: disable=E0401,E0611
 
 
 from thermolib import PcSaftMix2  # pylint:disable=no-name-in-module
@@ -19,9 +17,23 @@ plt.rcParams["ytick.direction"] = "in"
 
 
 # feos
-CO2_QQ = PcSaftRecord(1.5131, 3.1869, 163.33, q=4.4)  # carbon_dioxide
-ACETONE_DD = PcSaftRecord(2.7447, 3.2742, 232.99, mu=2.88)  # acetone
-parameters = PcSaftParameters.from_model_records([CO2_QQ, ACETONE_DD])
+CO2_QQ = PureRecord(
+    Identifier(name="carbon dioxide"),
+    molarweight=44.01,
+    m=1.5131,
+    sigma=3.1869,
+    epsilon_k=163.33,
+    q=4.4,
+)  # carbon_dioxide
+ACETONE_DD = PureRecord(
+    Identifier(name="acetone"),
+    molarweight=58.08,
+    m=2.7447,
+    sigma=3.2742,
+    epsilon_k=232.99,
+    mu=2.88,
+)  # acetone
+parameters = Parameters.new_binary([CO2_QQ, ACETONE_DD])
 eos = EquationOfState.pcsaft(parameters)
 
 
