@@ -2,7 +2,129 @@
 macro_rules! fn_vec {
     ($name:ty) => {
         #[cfg_attr(feature = "with_pyo3", pymethods)]
-        impl $name {}
+        impl $name {
+            pub fn vec_ps(&mut self, vec_temp: Vec<f64>) -> Vec<f64> {
+                vec_temp
+                    .into_iter()
+                    .map(|t| {
+                        if self.t_flash(t).is_err() {
+                            println!("vec_ps::t_flash diverge in {} K", t);
+                            f64::NAN // p_s()
+                        } else {
+                            self.p_s().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_rhov(&mut self, vec_temp: Vec<f64>) -> Vec<f64> {
+                vec_temp
+                    .into_iter()
+                    .map(|t| {
+                        if self.t_flash(t).is_err() {
+                            println!("vec_rhov::t_flash diverge in {} K", t);
+                            f64::NAN // rho_v()
+                        } else {
+                            self.rho_v().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_rhol(&mut self, vec_temp: Vec<f64>) -> Vec<f64> {
+                vec_temp
+                    .into_iter()
+                    .map(|t| {
+                        if self.t_flash(t).is_err() {
+                            println!("vec_rhol::t_flash diverge in {} K", t);
+                            f64::NAN // rho_l()
+                        } else {
+                            self.rho_l().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_tp_rho(&mut self, vec_temp: Vec<f64>, vec_pres: Vec<f64>) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_pres)
+                    .map(|(t, p)| {
+                        if self.tp_flash(t, p).is_err() {
+                            println!("tp_flash diverge in {} K {} Pa", t, p);
+                            f64::NAN // rho()
+                        } else {
+                            self.rho().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_tp_cv(&mut self, vec_temp: Vec<f64>, vec_pres: Vec<f64>) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_pres)
+                    .map(|(t, p)| {
+                        if self.tp_flash(t, p).is_err() {
+                            println!("tp_flash diverge in {} K {} Pa", t, p);
+                            f64::NAN // cv()
+                        } else {
+                            self.cv().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_tp_cp(&mut self, vec_temp: Vec<f64>, vec_pres: Vec<f64>) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_pres)
+                    .map(|(t, p)| {
+                        if self.tp_flash(t, p).is_err() {
+                            println!("tp_flash diverge in {} K {} Pa", t, p);
+                            f64::NAN // cp()
+                        } else {
+                            self.cp().unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_tp_w(
+                &mut self,
+                vec_temp: Vec<f64>,
+                vec_pres: Vec<f64>,
+                molar_mass: f64,
+            ) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_pres)
+                    .map(|(t, p)| {
+                        if self.tp_flash(t, p).is_err() {
+                            println!("tp_flash diverge in {} K {} Pa", t, p);
+                            f64::NAN // w()
+                        } else {
+                            self.w(molar_mass).unwrap()
+                        }
+                    })
+                    .collect()
+            }
+            pub fn vec_td_cv(&mut self, vec_temp: Vec<f64>, vec_dens: Vec<f64>) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_dens)
+                    .map(|(t, d)| {
+                        self.td_unchecked(t, d);
+                        self.cv().unwrap()
+                    })
+                    .collect()
+            }
+            pub fn vec_td_cp(&mut self, vec_temp: Vec<f64>, vec_dens: Vec<f64>) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_dens)
+                    .map(|(t, d)| {
+                        self.td_unchecked(t, d);
+                        self.cp().unwrap()
+                    })
+                    .collect()
+            }
+            pub fn vec_td_w(
+                &mut self,
+                vec_temp: Vec<f64>,
+                vec_dens: Vec<f64>,
+                molar_mass: f64,
+            ) -> Vec<f64> {
+                std::iter::zip(vec_temp, vec_dens)
+                    .map(|(t, d)| {
+                        self.td_unchecked(t, d);
+                        self.w(molar_mass).unwrap()
+                    })
+                    .collect()
+            }
+        }
     };
 }
 /// macro_rules! fn_c_flash
