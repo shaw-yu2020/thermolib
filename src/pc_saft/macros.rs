@@ -289,6 +289,15 @@ macro_rules! fn_single_prop {
             pub fn print_derivatives(&mut self) {
                 self.check_derivatives(true);
             }
+            pub fn rho_max(&mut self, temp: f64) -> f64 {
+                // 0.7405 = PI / ( 3.0 * sqrt(2.0) )
+                0.7405 / self.eta0_coef(temp) / FRAC_NA_1E30
+            }
+            pub fn td_unchecked(&mut self, temp: f64, dens: f64) {
+                self.temp = temp;
+                self.rho_num = dens * FRAC_NA_1E30;
+                self.is_single_phase = true;
+            }
             #[allow(non_snake_case)]
             pub fn T(&self) -> anyhow::Result<f64> {
                 if self.is_single_phase {
@@ -744,21 +753,34 @@ macro_rules! fn_tpz_flash_mix2 {
         impl $name {
             pub fn tpz_flash(&mut self, temp: f64, pres: f64) -> anyhow::Result<(f64, f64)> {
                 let ps = self.guess_ps(temp);
-                let mut k = [ps[0] / pres, ps[1] / pres];
-                let mut z = brent_zero(
+                let k = [ps[0] / pres, ps[1] / pres];
+                let z = brent_zero(
                     |z0| {
                         z0 * (k[0] - 1.0) / (1.0 + k[0]) + (1.0 - z0) * (k[1] - 1.0) / (1.0 + k[1])
                     },
                     0.0,
                     1.0,
                 ); // alpha = 0.5
-                let mut x = [2.0 * z / (1.0 + k[0]), 2.0 * (1.0 - z) / (1.0 + k[1])];
-                let mut y = [k[0] * x[0], k[1] * x[1]];
+                self.tpz_with_initialization(
+                    temp,
+                    pres,
+                    2.0 * z / (1.0 + k[0]),
+                    2.0 * z / (1.0 / k[0] + 1.0),
+                )
+            }
+            pub fn tpz_with_initialization(
+                &mut self,
+                temp: f64,
+                pres: f64,
+                x: f64,
+                y: f64,
+            ) -> anyhow::Result<(f64, f64)> {
+                let (mut x, mut y) = ([x, 1.0 - x], [y, 1.0 - y]);
                 let mut v_new = self.calc_ln_k(temp, pres, x, y); // volatility parameters
                 let mut v_old = v_new; // volatility parameters
                 for _i in 0..100 {
-                    k = [v_new[0].exp(), v_new[1].exp()];
-                    z = brent_zero(
+                    let k = [v_new[0].exp(), v_new[1].exp()];
+                    let z = brent_zero(
                         |z0| {
                             z0 * (k[0] - 1.0) / (1.0 + k[0])
                                 + (1.0 - z0) * (k[1] - 1.0) / (1.0 + k[1])
