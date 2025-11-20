@@ -27,6 +27,7 @@ pub struct SPcSaftMix2 {
     eta0_mu_k: (f64, [f64; 2]),
     is_single_phase: bool,
     // critical point
+    fluids: Option<[PcSaftPure; 2]>,
     omega1: Option<[f64; 2]>,
     temp_c: [f64; 2],
     pres_c: [f64; 2],
@@ -83,6 +84,10 @@ impl SPcSaftMix2 {
             eta0_mu_k: (0.0, [0.0, 0.0]),
             is_single_phase: true,
             // critical point
+            fluids: Some([
+                PcSaftPure::new_fluid(m[0], sigma[0], epsilon[0]),
+                PcSaftPure::new_fluid(m[1], sigma[1], epsilon[1]),
+            ]),
             omega1: None,
             temp_c: [0.0, 0.0],
             pres_c: [0.0, 0.0],
@@ -102,6 +107,7 @@ impl SPcSaftMix2 {
                     + x[1].powi(2) * self.m2e2s3_coef[1]
                     + x[0] * x[1] * self.m2e2s3_coef[2],
             ),
+            fluids: None,
             ..*self
         }
     }
@@ -316,19 +322,25 @@ impl SPcSaftMix2 {
     }
     fn guess_ps(&mut self, temp: f64) -> [f64; 2] {
         if self.omega1.is_none() {
-            let mut fluid = [
-                PcSaftPure::new_fluid(self.m[0], self.sigma[0], self.epsilon[0]),
-                PcSaftPure::new_fluid(self.m[1], self.sigma[1], self.epsilon[1]),
+            self.fluids.as_mut().unwrap()[0].c_flash().unwrap();
+            self.fluids.as_mut().unwrap()[1].c_flash().unwrap();
+            self.temp_c = [
+                self.fluids.as_mut().unwrap()[0].T().unwrap(),
+                self.fluids.as_mut().unwrap()[1].T().unwrap(),
             ];
-            fluid[0].c_flash().unwrap();
-            fluid[1].c_flash().unwrap();
-            self.temp_c = [fluid[0].T().unwrap(), fluid[1].T().unwrap()];
-            self.pres_c = [fluid[0].p().unwrap(), fluid[1].p().unwrap()];
-            fluid[0].t_flash(0.7 * self.temp_c[0]).unwrap();
-            fluid[1].t_flash(0.7 * self.temp_c[1]).unwrap();
+            self.pres_c = [
+                self.fluids.as_mut().unwrap()[0].p().unwrap(),
+                self.fluids.as_mut().unwrap()[1].p().unwrap(),
+            ];
+            self.fluids.as_mut().unwrap()[0]
+                .t_flash(0.7 * self.temp_c[0])
+                .unwrap();
+            self.fluids.as_mut().unwrap()[1]
+                .t_flash(0.7 * self.temp_c[1])
+                .unwrap();
             self.omega1 = Some([
-                -(fluid[0].p_s().unwrap() / self.pres_c[0]).log10(),
-                -(fluid[1].p_s().unwrap() / self.pres_c[1]).log10(),
+                -(self.fluids.as_mut().unwrap()[0].p_s().unwrap() / self.pres_c[0]).log10(),
+                -(self.fluids.as_mut().unwrap()[1].p_s().unwrap() / self.pres_c[1]).log10(),
             ]);
         }
         [

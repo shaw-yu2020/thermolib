@@ -39,13 +39,6 @@ pub struct AssocTerm {
 }
 #[allow(non_snake_case)]
 impl AssocTerm {
-    pub fn parameters(&self) -> (AssocType, f64, f64) {
-        (
-            self.assoc_type.clone(),
-            self.kappa_AB_sigma3,
-            self.epsilon_AB,
-        )
-    }
     pub fn new_1_term(x: f64, kappa_AB_sigma3: f64, epsilon_AB: f64) -> Self {
         Self {
             gii: GiiTerm::new(&[0.0]),
@@ -147,16 +140,6 @@ pub struct AssocGlyTerm {
 }
 #[allow(non_snake_case)]
 impl AssocGlyTerm {
-    pub fn parameters(&self) -> (AssocType, f64, f64, f64, f64, f64) {
-        (
-            self.assoc_type.clone(),
-            self.kappa_AB_sigma3,
-            self.epsilon_AB,
-            self.c0,
-            self.c1,
-            self.c2,
-        )
-    }
     pub fn new_1_term(
         x: f64,
         kappa_AB_sigma3: f64,

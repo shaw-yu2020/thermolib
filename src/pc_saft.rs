@@ -16,7 +16,7 @@ mod pc_saft_ygl_pure;
 mod polar_term;
 mod s_pc_saft_mix2;
 use assoc_pure::{AssocGlyPure, AssocPure};
-use assoc_term::{AssocGlyTerm, AssocTerm, AssocType};
+use assoc_term::{AssocGlyTerm, AssocTerm};
 use disp_term::DispTerm;
 use gii_term::{GiiPure, GiiTerm};
 use hs_term::{HsPure, HsTerm};
@@ -42,6 +42,8 @@ enum PcSaftErr {
     OnlyInSinglePhase,
     #[error("property only in double phase")]
     OnlyInDoublePhase,
+    #[error("t2pxy_flash diverge")]
+    NotConvForT2PXY,
     #[error("tpz_flash diverge")]
     NotConvForTPZ,
     #[error("tx_flash diverge")]

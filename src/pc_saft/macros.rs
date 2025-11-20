@@ -813,7 +813,7 @@ macro_rules! fn_tpz_flash_mix2 {
                 let (mut x, mut y) = ([x, 1.0 - x], [y, 1.0 - y]);
                 let mut v_new = self.calc_ln_k(temp, pres, x, y); // volatility parameters
                 let mut v_old = v_new; // volatility parameters
-                for _i in 0..100 {
+                for _i in 0..1000 {
                     let k = [v_new[0].exp(), v_new[1].exp()];
                     let z = brent_zero(
                         |z0| {
@@ -835,6 +835,92 @@ macro_rules! fn_tpz_flash_mix2 {
                     v_old = v_new
                 }
                 Err(anyhow!(PcSaftErr::NotConvForTPZ))
+            }
+            pub fn t2pxy_phase_diagram(
+                &mut self,
+                temp: f64,
+            ) -> anyhow::Result<Vec<(f64, f64, f64)>> {
+                let _ps = self.guess_ps(temp); // shit-code hhh
+                if temp < self.temp_c[0] && temp < self.temp_c[1] {
+                    self.fluids.as_mut().unwrap()[0].t_flash(temp).unwrap();
+                    self.fluids.as_mut().unwrap()[1].t_flash(temp).unwrap();
+                    let ps_right = self.fluids.as_mut().unwrap()[0].p_s().unwrap();
+                    let ps_left = self.fluids.as_mut().unwrap()[1].p_s().unwrap();
+                    let mut pxy = vec![(ps_left, 0f64, 0f64)]; // left point
+                    let (mut x, mut y) = self.tpz_flash(temp, (ps_right - ps_left) / 2.0).unwrap();
+                    let ps_step = (ps_right - ps_left) / 1000f64;
+                    for i in 1..=19 {
+                        let pres = ps_left + i as f64 * ps_step;
+                        (x, y) = self.tpz_with_initialization(temp, pres, x, y).unwrap();
+                        pxy.push((pres, x, y));
+                    }
+                    let ps_step = (ps_right - ps_left) / 50f64;
+                    for i in 1..=49 {
+                        let pres = ps_left + i as f64 * ps_step;
+                        (x, y) = self.tpz_with_initialization(temp, pres, x, y).unwrap();
+                        pxy.push((pres, x, y));
+                    }
+                    let ps_step = (ps_right - ps_left) / 1000f64;
+                    for i in 1..=19 {
+                        let pres = ps_left + (490.0 + i as f64) * ps_step;
+                        (x, y) = self.tpz_with_initialization(temp, pres, x, y).unwrap();
+                        pxy.push((pres, x, y));
+                    }
+                    pxy.push((ps_right, 1.0, 1.0)); // right point
+                    Ok(pxy)
+                } else if temp < self.temp_c[0] {
+                    self.fluids.as_mut().unwrap()[0].t_flash(temp).unwrap();
+                    let (mut p, mut x, mut y) =
+                        (self.fluids.as_mut().unwrap()[0].p_s().unwrap(), 1.0, 1.0);
+                    let mut pxy = vec![(p, x, y)]; // right point
+                    (x, y) = self.tpz_flash(temp, p + 102400.0).unwrap();
+                    let (mut p_step, mut x_step, mut y_step) = (102400.0, x - 1.0, y - 1.0);
+                    while p_step >= 100.0 {
+                        match self.tpz_with_initialization(
+                            temp,
+                            p + p_step,
+                            x + 0.96 * x_step,
+                            y + 0.96 * y_step,
+                        ) {
+                            Ok((x_new, y_new)) => {
+                                (x_step, y_step) = (x_new - x, y_new - y);
+                                (p, x, y) = (p + p_step, x_new, y_new);
+                                pxy.push((p, x, y));
+                            }
+                            Err(_) => {
+                                p_step /= 4.0;
+                            }
+                        }
+                    }
+                    Ok(pxy)
+                } else if temp < self.temp_c[1] {
+                    self.fluids.as_mut().unwrap()[1].t_flash(temp).unwrap();
+                    let (mut p, mut x, mut y) =
+                        (self.fluids.as_mut().unwrap()[1].p_s().unwrap(), 0.0, 0.0);
+                    let mut pxy = vec![(p, x, y)]; // left point
+                    (x, y) = self.tpz_flash(temp, p + 102400.0).unwrap();
+                    let (mut p_step, mut x_step, mut y_step) = (102400.0, x, y);
+                    while p_step >= 100.0 {
+                        match self.tpz_with_initialization(
+                            temp,
+                            p + p_step,
+                            x + 0.96 * x_step,
+                            y + 0.96 * y_step,
+                        ) {
+                            Ok((x_new, y_new)) => {
+                                (x_step, y_step) = (x_new - x, y_new - y);
+                                (p, x, y) = (p + p_step, x_new, y_new);
+                                pxy.push((p, x, y));
+                            }
+                            Err(_) => {
+                                p_step /= 4.0;
+                            }
+                        }
+                    }
+                    Ok(pxy)
+                } else {
+                    Err(anyhow!(PcSaftErr::NotConvForT2PXY))
+                }
             }
         }
     };

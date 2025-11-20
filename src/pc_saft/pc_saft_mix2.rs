@@ -1,5 +1,4 @@
-use super::{AssocTerm, AssocType};
-use super::{DispTerm, GiiTerm, HsTerm, PolarTerm};
+use super::{AssocTerm, DispTerm, GiiTerm, HsTerm, PolarTerm};
 use super::{FRAC_NA_1E30, FRAC_RE30_NA, R};
 use super::{PcSaftErr, PcSaftPure};
 use crate::algorithms::{brent_zero, romberg_diff};
@@ -117,14 +116,12 @@ pub struct PcSaftMix2 {
     m1: [f64; 2],
     sigma: [f64; 2],
     epsilon: [f64; 2],
-    hs: HsTerm,               // HsTerm
-    gii: GiiTerm,             // GiiTerm
-    disp: DispTerm,           // DispTerm
-    assoc: Option<AssocTerm>, // AssocTerm
+    hs: HsTerm,     // HsTerm
+    gii: GiiTerm,   // GiiTerm
+    disp: DispTerm, // DispTerm
     n_assoc: usize,
+    assoc: Option<AssocTerm>, // AssocTerm
     polar: Option<PolarTerm>, // PolarTerm
-    p: [f64; 2],
-    n: [i32; 2],
     m2e1s3_coef: [f64; 3],
     m2e2s3_coef: [f64; 3],
     // state
@@ -142,6 +139,7 @@ pub struct PcSaftMix2 {
     zeta3_mu_k: (f64, [f64; 2]),
     is_single_phase: bool,
     // critical point
+    fluids: Option<[PcSaftPure; 2]>,
     omega1: Option<[f64; 2]>,
     temp_c: [f64; 2],
     pres_c: [f64; 2],
@@ -187,11 +185,9 @@ impl PcSaftMix2 {
                     + x[1].powi(2) * m2e2s3_coef[1]
                     + x[0] * x[1] * m2e2s3_coef[2],
             ),
-            assoc: None,
             n_assoc: 0,
+            assoc: None,
             polar: None,
-            p: [0.0, 0.0],
-            n: [0, 0],
             m2e1s3_coef,
             m2e2s3_coef,
             // state
@@ -209,6 +205,10 @@ impl PcSaftMix2 {
             zeta3_mu_k: (0.0, [0.0, 0.0]),
             is_single_phase: true,
             // critical point
+            fluids: Some([
+                PcSaftPure::new_fluid(m[0], sigma[0], epsilon[0]),
+                PcSaftPure::new_fluid(m[1], sigma[1], epsilon[1]),
+            ]),
             omega1: None,
             temp_c: [0.0, 0.0],
             pres_c: [0.0, 0.0],
@@ -230,6 +230,7 @@ impl PcSaftMix2 {
             ),
             polar: self.polar.as_ref().map(|p| p.new_fracs(&x)),
             assoc: self.assoc.as_ref().map(|a| a.new_x_frac(x[self.n_assoc])),
+            fluids: None,
             ..*self
         }
     }
@@ -249,6 +250,7 @@ impl PcSaftMix2 {
             kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
         ));
+        self.fluids.as_mut().unwrap()[self.n_assoc].set_1_assoc_term(kappa_AB, epsilon_AB);
     }
     pub fn set_2B_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
         self.n_assoc = if n == 1 { 1 } else { 0 };
@@ -256,7 +258,8 @@ impl PcSaftMix2 {
             self.x[self.n_assoc],
             kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
-        ))
+        ));
+        self.fluids.as_mut().unwrap()[self.n_assoc].set_2B_assoc_term(kappa_AB, epsilon_AB);
     }
     pub fn set_3B_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
         self.n_assoc = if n == 1 { 1 } else { 0 };
@@ -264,7 +267,8 @@ impl PcSaftMix2 {
             self.x[self.n_assoc],
             kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
-        ))
+        ));
+        self.fluids.as_mut().unwrap()[self.n_assoc].set_3B_assoc_term(kappa_AB, epsilon_AB);
     }
     pub fn set_4C_assoc_term(&mut self, n: usize, kappa_AB: f64, epsilon_AB: f64) {
         self.n_assoc = if n == 1 { 1 } else { 0 };
@@ -272,11 +276,10 @@ impl PcSaftMix2 {
             self.x[self.n_assoc],
             kappa_AB * self.sigma[self.n_assoc].powi(3),
             epsilon_AB,
-        ))
+        ));
+        self.fluids.as_mut().unwrap()[self.n_assoc].set_4C_assoc_term(kappa_AB, epsilon_AB);
     }
     pub fn set_polar_term(&mut self, p: [f64; 2], n: [i32; 2]) {
-        self.p = [p[0], p[1]];
-        self.n = [n[0], n[1]];
         self.polar = Some(PolarTerm::new(
             &self.x,
             &self.m,
@@ -284,7 +287,17 @@ impl PcSaftMix2 {
             &self.epsilon,
             &p,
             &n,
-        ))
+        ));
+        match n[0] {
+            2_i32 => self.fluids.as_mut().unwrap()[0].set_DD_polar_term(p[0]),
+            4_i32 => self.fluids.as_mut().unwrap()[0].set_QQ_polar_term(p[0]),
+            _ => (),
+        }
+        match n[1] {
+            2_i32 => self.fluids.as_mut().unwrap()[1].set_DD_polar_term(p[1]),
+            4_i32 => self.fluids.as_mut().unwrap()[1].set_QQ_polar_term(p[1]),
+            _ => (),
+        }
     }
 }
 fn_tpz_flash_mix2!(PcSaftMix2);
@@ -708,50 +721,25 @@ impl PcSaftMix2 {
     #[allow(non_snake_case)]
     fn guess_ps(&mut self, temp: f64) -> [f64; 2] {
         if self.omega1.is_none() {
-            let mut fluid = [
-                PcSaftPure::new_fluid(self.m[0], self.sigma[0], self.epsilon[0]),
-                PcSaftPure::new_fluid(self.m[1], self.sigma[1], self.epsilon[1]),
+            self.fluids.as_mut().unwrap()[0].c_flash().unwrap();
+            self.fluids.as_mut().unwrap()[1].c_flash().unwrap();
+            self.temp_c = [
+                self.fluids.as_mut().unwrap()[0].T().unwrap(),
+                self.fluids.as_mut().unwrap()[1].T().unwrap(),
             ];
-            if let Some(a) = &self.assoc {
-                let (assoc_type, kappa_AB_sigma3, epsilon_AB) = a.parameters();
-                match assoc_type {
-                    AssocType::Type1 => fluid[self.n_assoc].set_1_assoc_term(
-                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
-                        epsilon_AB,
-                    ),
-                    AssocType::Type2B => fluid[self.n_assoc].set_2B_assoc_term(
-                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
-                        epsilon_AB,
-                    ),
-                    AssocType::Type3B => fluid[self.n_assoc].set_3B_assoc_term(
-                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
-                        epsilon_AB,
-                    ),
-                    AssocType::Type4C => fluid[self.n_assoc].set_4C_assoc_term(
-                        kappa_AB_sigma3 / self.sigma[self.n_assoc].powi(3),
-                        epsilon_AB,
-                    ),
-                }
-            }
-            match &self.n[0] {
-                2 => fluid[0].set_DD_polar_term(self.p[0]),
-                4 => fluid[0].set_QQ_polar_term(self.p[0]),
-                _ => (),
-            }
-            match &self.n[1] {
-                2 => fluid[1].set_DD_polar_term(self.p[1]),
-                4 => fluid[1].set_QQ_polar_term(self.p[1]),
-                _ => (),
-            }
-            fluid[0].c_flash().unwrap();
-            fluid[1].c_flash().unwrap();
-            self.temp_c = [fluid[0].T().unwrap(), fluid[1].T().unwrap()];
-            self.pres_c = [fluid[0].p().unwrap(), fluid[1].p().unwrap()];
-            fluid[0].t_flash(0.7 * self.temp_c[0]).unwrap();
-            fluid[1].t_flash(0.7 * self.temp_c[1]).unwrap();
+            self.pres_c = [
+                self.fluids.as_mut().unwrap()[0].p().unwrap(),
+                self.fluids.as_mut().unwrap()[1].p().unwrap(),
+            ];
+            self.fluids.as_mut().unwrap()[0]
+                .t_flash(0.7 * self.temp_c[0])
+                .unwrap();
+            self.fluids.as_mut().unwrap()[1]
+                .t_flash(0.7 * self.temp_c[1])
+                .unwrap();
             self.omega1 = Some([
-                -(fluid[0].p_s().unwrap() / self.pres_c[0]).log10(),
-                -(fluid[1].p_s().unwrap() / self.pres_c[1]).log10(),
+                -(self.fluids.as_mut().unwrap()[0].p_s().unwrap() / self.pres_c[0]).log10(),
+                -(self.fluids.as_mut().unwrap()[1].p_s().unwrap() / self.pres_c[1]).log10(),
             ]);
         }
         [
