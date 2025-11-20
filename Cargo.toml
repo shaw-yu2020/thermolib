@@ -1,6 +1,6 @@
 [package]
 name = "thermolib"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2024"
 license = "MIT"
 description = "An open-source library for the calculation of fluid properties."
@@ -12,7 +12,7 @@ thiserror = "2.0"
 
 [dependencies.pyo3]
 version = "0.23.5"
-features = ["multiple-pymethods", "extension-module", "abi3-py39", "anyhow"]
+features = ["multiple-pymethods", "extension-module", "abi3-py310", "anyhow"]
 
 [lib]
 name = "thermolib"
