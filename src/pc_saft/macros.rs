@@ -862,7 +862,7 @@ macro_rules! fn_tpz_flash_mix2 {
                     }
                     let ps_step = (ps_right - ps_left) / 1000f64;
                     for i in 1..=19 {
-                        let pres = ps_left + (490.0 + i as f64) * ps_step;
+                        let pres = ps_left + (980.0 + i as f64) * ps_step;
                         (x, y) = self.tpz_with_initialization(temp, pres, x, y).unwrap();
                         pxy.push((pres, x, y));
                     }
