@@ -191,6 +191,27 @@ impl PcSaftGlyMix2 {
     pub fn new_py(x: [f64; 2], m: [f64; 2], sigma: [f64; 2], epsilon: [f64; 2], kij: f64) -> Self {
         Self::new_fluid(x, m, sigma, epsilon, kij)
     }
+    pub fn set_kij(&mut self, kij: f64) {
+        self.m2e1s3_coef[2] = 2.0
+            * (self.m[0] * self.m[1])
+            * ((self.epsilon[0] * self.epsilon[1]).sqrt() * (1.0 - kij))
+            * ((self.sigma[0] + self.sigma[1]).powi(3) / 8.0);
+        self.m2e2s3_coef[2] = 2.0
+            * (self.m[0] * self.m[1])
+            * (self.epsilon[0] * self.epsilon[1] * (1.0 - kij).powi(2))
+            * ((self.sigma[0] + self.sigma[1]).powi(3) / 8.0);
+        self.disp = DispTerm::new(
+            self.x[0] * self.m[0] + self.x[1] * self.m[1],
+            self.x[0].powi(2) * self.m2e1s3_coef[0]
+                + self.x[1].powi(2) * self.m2e1s3_coef[1]
+                + self.x[0] * self.x[1] * self.m2e1s3_coef[2],
+            self.x[0].powi(2) * self.m2e2s3_coef[0]
+                + self.x[1].powi(2) * self.m2e2s3_coef[1]
+                + self.x[0] * self.x[1] * self.m2e2s3_coef[2],
+        );
+        // todo!(self.assoc);
+        // todo!(self.polar);
+    }
     pub fn set_1_assoc_term(
         &mut self,
         n: usize,
