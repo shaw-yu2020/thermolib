@@ -1,11 +1,20 @@
 """test_feos"""
 
 import numpy as np
+
+
 import si_units as si  # pylint: disable=E0401
 
 
 from feos import Identifier, PureRecord, Parameters  # pylint: disable=E0401,E0611
 from feos import EquationOfState, State, PhaseEquilibrium  # pylint: disable=E0401,E0611
+from feos import PhaseDiagram  # pylint: disable=E0401,E0611
+
+
+from thermolib import PcSaftGlyMix2  # pylint: disable=E0401,E0611
+
+
+import matplotlib.pyplot as plt
 
 
 SO2 = PureRecord(
@@ -464,10 +473,52 @@ def test_pc_saft_mix2():  # pylint: disable=too-many-statements,disable=too-many
         print(f"Error in ty_flash :: y = {0.5}, # CO2_QQ+ACETONE_DD")
 
 
+def test_phase_diagram():
+    """test_phase_diagram"""
+    fluid = PcSaftGlyMix2(
+        [0.5, 0.5],
+        [1.5131, 1.5255],
+        [3.1869, 3.2300],
+        [163.33, 188.90],
+        0.0,
+    )
+    fluid.set_2B_assoc_term(1, 0.035176, 2899.5, 1, 1, 1)  # AssocTerm
+    fluid.set_polar_term([4.4, 0.0], [4, 0])  # PolarTerm
+    parameters = Parameters.new_binary([CO2_QQ, CH3OH_2B])
+    eos = EquationOfState.pcsaft(parameters)  # CO2_QQ+CH3OH_2B
+    temp_list = [298, 323, 348, 373, 423, 473]
+    color_list = ["b", "g", "r", "c", "m", "y", "k", "w"]
+    for temp, color in zip(temp_list, color_list):
+        print(f"Plot temp = {temp}, # CO2_QQ+CH3OH_2B")
+        pxy = np.array(fluid.t2pxy_phase_diagram(temp))
+        plt.plot(pxy[:, 1], pxy[:, 0] / 1e6, color=color)
+        plt.plot(pxy[:, 2], pxy[:, 0] / 1e6, color=color)
+        out = PhaseDiagram.binary_vle(eos, temp * si.KELVIN)
+        plt.scatter(
+            np.array(out.liquid.molefracs).T[0],
+            out.liquid.pressure / si.PASCAL / 1e6,
+            color=color,
+            s=10,
+        )
+        plt.scatter(
+            np.array(out.vapor.molefracs).T[0],
+            out.vapor.pressure / si.PASCAL / 1e6,
+            color=color,
+            s=10,
+            label=f"{temp}",
+        )
+    plt.title("TestPhaseDiagram")
+    plt.xlabel("X(CO2)")
+    plt.ylabel("P(MPa)")
+    plt.legend()
+    plt.show()
+
+
 def main():
     """main"""
     test_pc_saft_pure()
     test_pc_saft_mix2()
+    test_phase_diagram()
 
 
 if __name__ == "__main__":
