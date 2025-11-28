@@ -99,9 +99,17 @@ def gross_nbutanol():
     return fluid
 
 
+def CO2_QQ():  # pylint: disable=invalid-name
+    """CO2_QQ"""
+    m, sigma, epsilon = 1.5131, 3.1869, 163.33  # m,sigma,epsilon
+    fluid = PcSaftGlyPure(m, sigma, epsilon)
+    fluid.set_QQ_polar_term(4.4)
+    return fluid
+
+
 def main():
     """main function"""
-    fluid = g2b_methanol()
+    fluid = CO2_QQ()
     fluid.c_flash()
     crit_t, crit_p, crit_rho = fluid.T(), fluid.p(), fluid.rho()
     for temp in range(math.floor(0.6 * crit_t), math.ceil(crit_t)):
