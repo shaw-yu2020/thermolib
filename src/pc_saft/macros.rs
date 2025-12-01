@@ -813,7 +813,7 @@ macro_rules! fn_tpz_flash_mix2 {
                 let (mut x, mut y) = ([x, 1.0 - x], [y, 1.0 - y]);
                 let mut v_new = self.calc_ln_k(temp, pres, x, y); // volatility parameters
                 let mut v_old = v_new; // volatility parameters
-                for _i in 0..1000 {
+                for _i in 1..=1000 {
                     let k = [v_new[0].exp(), v_new[1].exp()];
                     let z = brent_zero(
                         |z0| {
@@ -875,21 +875,58 @@ macro_rules! fn_tpz_flash_mix2 {
                     let mut pxy = vec![(p, x, y)]; // right point
                     (x, y) = self.tpz_flash(temp, p + 102400.0).unwrap();
                     let (mut p_step, mut x_step, mut y_step) = (102400.0, x - 1.0, y - 1.0);
-                    while p_step >= 100.0 {
-                        match self.tpz_with_initialization(
-                            temp,
-                            p + p_step,
-                            x + 0.96 * x_step,
-                            y + 0.96 * y_step,
-                        ) {
-                            Ok((x_new, y_new)) => {
-                                (x_step, y_step) = (x_new - x, y_new - y);
-                                (p, x, y) = (p + p_step, x_new, y_new);
-                                pxy.push((p, x, y));
+                    let mut index = vec![0]; // 102400 25600 6400 1600 len()
+                    loop {
+                        loop {
+                            match self.tpz_with_initialization(
+                                temp,
+                                p + p_step,
+                                x + 0.96 * x_step,
+                                y + 0.96 * y_step,
+                            ) {
+                                Ok((x_new, y_new)) => {
+                                    (x_step, y_step) = (x_new - x, y_new - y);
+                                    (p, x, y) = (p + p_step, x_new, y_new);
+                                    pxy.push((p, x, y));
+                                }
+                                Err(_) => {
+                                    break;
+                                }
                             }
-                            Err(_) => {
-                                p_step /= 4.0;
+                        }
+                        p_step /= 4.0;
+                        x_step /= 4.0;
+                        y_step /= 4.0;
+                        index.push(pxy.len());
+                        if p_step < 1000.0 {
+                            break;
+                        }
+                    }
+                    index.reverse();
+                    for i in 0..=index.len() - 2 {
+                        if index[i] - index[i + 1] >= 5 {
+                            let index0 = index[i] - 5;
+                            let (mut p_xy, mut add_xy, mut sub_xy) = ([0.0; 5], [0.0; 5], [0.0; 5]);
+                            for i in 0..5 {
+                                p_xy[i] = pxy[index0 + i].0;
+                                add_xy[i] = pxy[index0 + i].1 + pxy[index0 + i].2;
+                                sub_xy[i] = pxy[index0 + i].1 - pxy[index0 + i].2;
                             }
+                            let (add0, add1) = crate::algorithms::poly1fit(&add_xy, &p_xy);
+                            let (sub0, sub1, sub2) = crate::algorithms::poly2fit(&sub_xy, &p_xy);
+                            let sub_step = sub_xy.last().unwrap() / 10.0;
+                            for i in 1..=9 {
+                                let subi = (10.0 - i as f64) * sub_step;
+                                let pres = sub0 + sub1 * subi + sub2 * subi * subi;
+                                let addi = (pres - add0) / add1;
+                                pxy.push((pres, (addi + subi) / 2.0, (addi - subi) / 2.0));
+                            }
+                            pxy.push((
+                                sub0,
+                                (sub0 - add0) / add1 / 2.0,
+                                (sub0 - add0) / add1 / 2.0,
+                            ));
+                            return Ok(pxy);
                         }
                     }
                     Ok(pxy)
@@ -900,21 +937,58 @@ macro_rules! fn_tpz_flash_mix2 {
                     let mut pxy = vec![(p, x, y)]; // left point
                     (x, y) = self.tpz_flash(temp, p + 102400.0).unwrap();
                     let (mut p_step, mut x_step, mut y_step) = (102400.0, x, y);
-                    while p_step >= 100.0 {
-                        match self.tpz_with_initialization(
-                            temp,
-                            p + p_step,
-                            x + 0.96 * x_step,
-                            y + 0.96 * y_step,
-                        ) {
-                            Ok((x_new, y_new)) => {
-                                (x_step, y_step) = (x_new - x, y_new - y);
-                                (p, x, y) = (p + p_step, x_new, y_new);
-                                pxy.push((p, x, y));
+                    let mut index = vec![0]; // 102400 25600 6400 1600 len()
+                    loop {
+                        loop {
+                            match self.tpz_with_initialization(
+                                temp,
+                                p + p_step,
+                                x + 0.96 * x_step,
+                                y + 0.96 * y_step,
+                            ) {
+                                Ok((x_new, y_new)) => {
+                                    (x_step, y_step) = (x_new - x, y_new - y);
+                                    (p, x, y) = (p + p_step, x_new, y_new);
+                                    pxy.push((p, x, y));
+                                }
+                                Err(_) => {
+                                    break;
+                                }
                             }
-                            Err(_) => {
-                                p_step /= 4.0;
+                        }
+                        p_step /= 4.0;
+                        x_step /= 4.0;
+                        y_step /= 4.0;
+                        index.push(pxy.len());
+                        if p_step < 1000.0 {
+                            break;
+                        }
+                    }
+                    index.reverse();
+                    for i in 0..=index.len() - 2 {
+                        if index[i] - index[i + 1] >= 5 {
+                            let index0 = index[i] - 5;
+                            let (mut p_xy, mut add_xy, mut sub_xy) = ([0.0; 5], [0.0; 5], [0.0; 5]);
+                            for i in 0..5 {
+                                p_xy[i] = pxy[index0 + i].0;
+                                add_xy[i] = pxy[index0 + i].1 + pxy[index0 + i].2;
+                                sub_xy[i] = pxy[index0 + i].1 - pxy[index0 + i].2;
                             }
+                            let (add0, add1) = crate::algorithms::poly1fit(&add_xy, &p_xy);
+                            let (sub0, sub1, sub2) = crate::algorithms::poly2fit(&sub_xy, &p_xy);
+                            let sub_step = sub_xy.last().unwrap() / 10.0;
+                            for i in 1..=9 {
+                                let subi = (10.0 - i as f64) * sub_step;
+                                let pres = sub0 + sub1 * subi + sub2 * subi * subi;
+                                let addi = (pres - add0) / add1;
+                                pxy.push((pres, (addi + subi) / 2.0, (addi - subi) / 2.0));
+                            }
+                            pxy.push((
+                                sub0,
+                                (sub0 - add0) / add1 / 2.0,
+                                (sub0 - add0) / add1 / 2.0,
+                            ));
+                            return Ok(pxy);
                         }
                     }
                     Ok(pxy)

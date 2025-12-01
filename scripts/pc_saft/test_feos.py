@@ -507,6 +507,8 @@ def test_phase_diagram():
             s=10,
             label=f"{temp}",
         )
+        plt.scatter(pxy[-1, 1], pxy[-1, 0] / 1e6, color=color, marker="+")
+        plt.scatter(pxy[-1, 2], pxy[-1, 0] / 1e6, color=color, marker="+")
     plt.title("TestPhaseDiagram")
     plt.xlabel("X(CO2)")
     plt.ylabel("P(MPa)")
