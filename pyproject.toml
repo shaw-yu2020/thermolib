@@ -6,6 +6,14 @@ build-backend = "maturin"
 name = "thermolib"
 dynamic = ["version"]
 requires-python = ">=3.10"
+dependencies = [
+    "feos>=0.9.1",
+    "si-units>=0.11.0",
+    "matplotlib>=3.10.7",
+    "numpy>=2.2.6",
+    "sympy>=1.14.0",
+    "scipy>=1.15.3",
+]
 
 [tool.maturin]
 bindings = "pyo3"
