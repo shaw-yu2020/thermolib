@@ -96,6 +96,164 @@ where
     }
     fx[N_DIM - 1][N_DIM - 1]
 }
+/// y = c0 + c1 * x
+/// s = min{ 0.5 * sum[ ( c0 + c1 * xi - yi )^2 ] }
+///
+/// ds/dc0 = sum[ ( c0 + c1 * xi - yi ) ]
+///        = c0 * n + c1 * sum(xi) - sum(yi)
+/// ds/dc1 = sum[ ( c0 + c1 * xi - yi ) * xi ]
+///        = c0 * sum(xi) + c1 * sum(xi*xi) - sum(yi*xi)
+///
+/// | n       sum(xi)    | |c0| = | sum(yi)    |
+/// | sum(xi) sum(xi*xi) | |c1| = | sum(yi*xi) |
+///
+/// ci = | n       sum(xi)    |
+///      | sum(xi) sum(xi*xi) | = n*sum(xi*xi) - sum(xi)*sum(xi)
+///
+/// c0 = | sum(yi)    sum(xi)    |
+///      | sum(yi*xi) sum(xi*xi) | / ci
+/// c1 = | n       sum(yi)    |
+///      | sum(xi) sum(yi*xi) | / ci
+///
+/// c0 = frac{ sum(yi)*sum(xi*xi) - sum(yi*xi)*sum(xi) }
+///          { n*sum(xi*xi) - sum(xi)*sum(xi) }
+/// c1 = frac{ n*sum(yi*xi) - sum(xi)*sum(yi) }
+///          { n*sum(xi*xi) - sum(xi)*sum(xi) }
+///
+pub fn poly1fit(x: &[f64], y: &[f64]) -> (f64, f64) {
+    let (mut sum_xi, mut sum_xixi) = (0.0, 0.0);
+    let (mut sum_yi, mut sum_yixi) = (0.0, 0.0);
+    let num: f64 = (0..usize::min(x.len(), y.len()))
+        .map(|i| {
+            sum_xi += x[i];
+            sum_yi += y[i];
+            sum_xixi += x[i] * x[i];
+            sum_yixi += y[i] * x[i];
+        })
+        .count() as f64;
+    let ci = num * sum_xixi - sum_xi * sum_xi;
+    if ci.abs() > 0.01 {
+        (
+            (sum_yi * sum_xixi - sum_yixi * sum_xi) / ci,
+            (num * sum_yixi - sum_xi * sum_yi) / ci,
+        )
+    } else {
+        let ata = vec![vec![num, sum_xi], vec![sum_xi, sum_xixi]];
+        let atb = vec![sum_yi, sum_yixi];
+        let result = solve_equ(ata, atb);
+        (result[0], result[1])
+    }
+}
+/// y = c0 + c1 * x + c2 * x * x
+/// s = min{ 0.5 * sum[ ( c0 + c1 * xi + c2 * xi * xi - yi )^2 ] }
+///
+/// ds/dc0 = sum[ ( c0 + c1 * xi + c2 * xi * xi - yi ) ]
+///        = c0 * n + c1 * sum(xi) + c2 * sum(xi*xi) - sum(yi)
+/// ds/dc1 = sum[ ( c0 + c1 * xi + c2 * xi * xi - yi ) * xi ]
+///        = c0 * sum(xi) + c1 * sum(xi*xi) + c2 * sum(xi*xi*xi) - sum(yi*xi)
+/// ds/dc2 = sum[ ( c0 + c1 * xi + c2 * xi * xi - yi ) * xi * xi ]
+///        = c0 * sum(xi*xi) + c1 * sum(xi*xi*xi) + c2 * sum(xi*xi*xi*xi) - sum(yi*xi*xi)
+///
+/// | n          sum(xi)       sum(xi*xi)       | |c0| = | sum(yi)       |
+/// | sum(xi)    sum(xi*xi)    sum(xi*xi*xi)    | |c1| = | sum(yi*xi)    |
+/// | sum(xi*xi) sum(xi*xi*xi) sum(xi*xi*xi*xi) | |c2| = | sum(yi*xi*xi) |
+///
+/// ci = | n          sum(xi)       sum(xi*xi)       |
+///      | sum(xi)    sum(xi*xi)    sum(xi*xi*xi)    |
+///      | sum(xi*xi) sum(xi*xi*xi) sum(xi*xi*xi*xi) |
+///    = n*[ sum(xi*xi)*sum(xi*xi*xi*xi) - sum(xi*xi*xi)*sum(xi*xi*xi) ]
+///    + sum(xi)*[ sum(xi*xi*xi)*sum(xi*xi) - sum(xi)*sum(xi*xi*xi*xi) ]
+///    + sum(xi*xi)*[ sum(xi)*sum(xi*xi*xi) - sum(xi*xi)*sum(xi*xi) ]
+///
+/// c0 = | sum(yi)       sum(xi)       sum(xi*xi)       |
+///      | sum(yi*xi)    sum(xi*xi)    sum(xi*xi*xi)    |
+///      | sum(yi*xi*xi) sum(xi*xi*xi) sum(xi*xi*xi*xi) |
+/// c1 = | n          sum(yi)       sum(xi*xi)       |
+///      | sum(xi)    sum(yi*xi)    sum(xi*xi*xi)    |
+///      | sum(xi*xi) sum(yi*xi*xi) sum(xi*xi*xi*xi) |
+/// c2 = | n          sum(xi)       sum(yi)       |
+///      | sum(xi)    sum(xi*xi)    sum(yi*xi)    |
+///      | sum(xi*xi) sum(xi*xi*xi) sum(yi*xi*xi) |
+///
+pub fn poly2fit(x: &[f64], y: &[f64]) -> (f64, f64, f64) {
+    let (mut sum_x1, mut sum_x2, mut sum_x3, mut sum_x4) = (0.0, 0.0, 0.0, 0.0);
+    let (mut sum_y1x0, mut sum_y1x1, mut sum_y1x2) = (0.0, 0.0, 0.0);
+    let num: f64 = (0..usize::min(x.len(), y.len()))
+        .map(|i| {
+            let (x1, x2) = (x[i], x[i] * x[i]);
+            sum_x1 += x1;
+            sum_x2 += x2;
+            sum_x3 += x1 * x2;
+            sum_x4 += x2 * x2;
+            sum_y1x0 += y[i];
+            sum_y1x1 += y[i] * x1;
+            sum_y1x2 += y[i] * x2;
+        })
+        .count() as f64;
+    let ci = num * (sum_x2 * sum_x4 - sum_x3 * sum_x3)
+        + sum_x1 * (sum_x3 * sum_x2 - sum_x1 * sum_x4)
+        + sum_x2 * (sum_x1 * sum_x3 - sum_x2 * sum_x2);
+    if ci.abs() > 0.01 {
+        (
+            (sum_y1x0 * (sum_x2 * sum_x4 - sum_x3 * sum_x3)
+                + sum_y1x1 * (sum_x3 * sum_x2 - sum_x1 * sum_x4)
+                + sum_y1x2 * (sum_x1 * sum_x3 - sum_x2 * sum_x2))
+                / ci,
+            (num * (sum_y1x1 * sum_x4 - sum_y1x2 * sum_x3)
+                + sum_x1 * (sum_y1x2 * sum_x2 - sum_y1x0 * sum_x4)
+                + sum_x2 * (sum_y1x0 * sum_x3 - sum_y1x1 * sum_x2))
+                / ci,
+            (num * (sum_x2 * sum_y1x2 - sum_x3 * sum_y1x1)
+                + sum_x1 * (sum_x3 * sum_y1x0 - sum_x1 * sum_y1x2)
+                + sum_x2 * (sum_x1 * sum_y1x1 - sum_x2 * sum_y1x0))
+                / ci,
+        )
+    } else {
+        let ata = vec![
+            vec![num, sum_x1, sum_x2],
+            vec![sum_x1, sum_x2, sum_x3],
+            vec![sum_x2, sum_x3, sum_x4],
+        ];
+        let atb = vec![sum_y1x0, sum_y1x1, sum_y1x2];
+        let result = solve_equ(ata, atb);
+        (result[0], result[1], result[2])
+    }
+}
+/// Solver -> Ax=b
+fn solve_equ(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Vec<f64> {
+    let n = a.len();
+    let (mut index, mut scale);
+    for k in 0..n {
+        index = k;
+        for i in k + 1..n {
+            if a[i][k] > a[index][k] {
+                index = i;
+            }
+        }
+        if index > k {
+            a.swap(k, index);
+            b.swap(k, index);
+        }
+        for i in k + 1..n {
+            scale = a[i][k] / a[k][k];
+            for j in k..n {
+                a[i][j] -= scale * a[k][j];
+            }
+            b[i] -= scale * b[k];
+        }
+    }
+    let mut x = vec![0.0; b.len()];
+    for k in (0..n).rev() {
+        x[k] = (b[k]
+            - a[k][k + 1..]
+                .iter()
+                .zip(x[k + 1..].iter())
+                .map(|(aj, xj)| aj * xj)
+                .sum::<f64>())
+            / a[k][k];
+    }
+    x
+}
 /// unit test
 #[cfg(test)]
 mod tests {
@@ -128,5 +286,20 @@ mod tests {
         let (df0, digits) = (22026.46579, 10_f64.powi(5));
         let df1 = romberg_diff(|x: f64| x.exp(), 10.0);
         assert_eq!(df0, (df1 * digits).round() / digits);
+        // test poly1fit -> y = 1 + 3 * x
+        let (c0, c1) = poly1fit(
+            &vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            &vec![4.0, 7.0, 10.0, 13.0, 16.0],
+        );
+        assert_eq!(c0, 1.0);
+        assert_eq!(c1, 3.0);
+        // test poly2fit -> y = 1 + 3 * x + 5 * x * x
+        let (c0, c1, c2) = poly2fit(
+            &vec![1.0, 2.0, 3.0, 4.0, 5.0],
+            &vec![9.0, 27.0, 55.0, 93.0, 141.0],
+        );
+        assert_eq!(c0, 1.0);
+        assert_eq!(c1, 3.0);
+        assert_eq!(c2, 5.0);
     }
 }
