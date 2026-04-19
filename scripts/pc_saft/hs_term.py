@@ -1,6 +1,6 @@
 """HsTerm"""
 
-import sympy as sp
+import sympy as sp  # pylint: disable=import-error
 
 
 z0, z1, z2, z3 = sp.symbols("z0,z1,z2,z3")

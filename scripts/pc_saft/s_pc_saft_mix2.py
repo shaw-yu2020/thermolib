@@ -1,12 +1,12 @@
 """s_pc_saft_mix2"""
 
-from thermolib import SPcSaftMix2  # pylint:disable=no-name-in-module
+import numpy as np  # pylint: disable=import-error
 
 
-import numpy as np
+import matplotlib.pyplot as plt  # pylint: disable=import-error
 
 
-import matplotlib.pyplot as plt
+from thermolib import SPcSaftMix2  # # pylint: disable=import-error,no-name-in-module
 
 
 fluids = SPcSaftMix2(

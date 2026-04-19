@@ -1,6 +1,6 @@
 """C_term"""
 
-import sympy as sp
+import sympy as sp  # pylint: disable=import-error
 
 
 n = sp.symbols("n")

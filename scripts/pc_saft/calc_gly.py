@@ -1,7 +1,7 @@
 """PcSaftGlyPure"""
 
 import math
-from thermolib import PcSaftGlyPure  # pylint: disable=no-name-in-module
+from thermolib import PcSaftGlyPure  # pylint: disable=import-error,no-name-in-module
 
 
 def g2b_methanol():

@@ -1,7 +1,7 @@
 """brent_zero"""
 
 import sys
-import numpy as np
+import numpy as np  # pylint: disable=import-error
 
 
 EPS = np.sqrt(sys.float_info.epsilon)

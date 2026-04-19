@@ -1,6 +1,8 @@
 """test_feos"""
 
-import numpy as np
+import numpy as np  # pylint: disable=import-error
+
+import matplotlib.pyplot as plt  # pylint: disable=import-error
 
 
 import si_units as si  # pylint: disable=E0401
@@ -12,9 +14,6 @@ from feos import PhaseDiagram  # pylint: disable=E0401,E0611
 
 
 from thermolib import PcSaftGlyMix2  # pylint: disable=E0401,E0611
-
-
-import matplotlib.pyplot as plt
 
 
 SO2 = PureRecord(

@@ -1,38 +1,23 @@
 """pc_saft_mix2"""
 
-from feos import Identifier, PureRecord, Parameters  # pylint: disable=E0401,E0611
-from feos import EquationOfState, State, PhaseEquilibrium  # pylint: disable=E0401,E0611
+from feos import Parameters, EquationOfState, PhaseEquilibrium  # pylint: disable=E0401
 
 
-from thermolib import PcSaftMix2  # pylint:disable=no-name-in-module
+from test_feos import CO2_QQ, ACETONE_DD  # pylint: disable=import-error
 
 
-import numpy as np
-import si_units as si
-import matplotlib.pyplot as plt
+import numpy as np  # pylint: disable=import-error
+import si_units as si  # pylint: disable=import-error
+import matplotlib.pyplot as plt  # pylint: disable=import-error
+
+
+from thermolib import PcSaftMix2  # # pylint: disable=import-error,no-name-in-module
 
 
 plt.rcParams["xtick.direction"] = "in"
 plt.rcParams["ytick.direction"] = "in"
 
 
-# feos
-CO2_QQ = PureRecord(
-    Identifier(name="carbon dioxide"),
-    molarweight=44.01,
-    m=1.5131,
-    sigma=3.1869,
-    epsilon_k=163.33,
-    q=4.4,
-)  # carbon_dioxide
-ACETONE_DD = PureRecord(
-    Identifier(name="acetone"),
-    molarweight=58.08,
-    m=2.7447,
-    sigma=3.2742,
-    epsilon_k=232.99,
-    mu=2.88,
-)  # acetone
 parameters = Parameters.new_binary([CO2_QQ, ACETONE_DD])
 eos = EquationOfState.pcsaft(parameters)
 

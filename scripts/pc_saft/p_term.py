@@ -1,6 +1,6 @@
 """PolarTerm"""
 
-import sympy as sp
+import sympy as sp  # pylint: disable=import-error
 
 
 a2, a3 = sp.symbols("a_2 a_3")
