@@ -20,6 +20,7 @@ features = ["with_pyo3"]
 
 [dependency-groups]
 dev = [
+    "maturin>=1.14.1",
     "ruff>=0.15.20",
 ]
 
