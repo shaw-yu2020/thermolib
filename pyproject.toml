@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.5,<2.0"]
+requires = ["maturin>=1.14,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -7,15 +7,19 @@ name = "thermolib"
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    "feos>=0.9.1",
-    "si-units>=0.11.0",
-    "matplotlib>=3.10.7",
+    "feos>=0.9.5",
+    "matplotlib>=3.10.9",
     "numpy>=2.2.6",
-    "sympy>=1.14.0",
     "scipy>=1.15.3",
+    "sympy>=1.14.0",
 ]
 
 [tool.maturin]
 bindings = "pyo3"
 features = ["with_pyo3"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.20",
+]
 

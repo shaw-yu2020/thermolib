@@ -1,17 +1,17 @@
 """pc_saft_mix2"""
 
-from feos import Parameters, EquationOfState, PhaseEquilibrium  # pylint: disable=E0401
+from feos import Parameters, EquationOfState, PhaseEquilibrium
 
 
-from test_feos import CO2_QQ, ACETONE_DD  # pylint: disable=import-error
+from test_feos import CO2_QQ, ACETONE_DD
 
 
-import numpy as np  # pylint: disable=import-error
-import si_units as si  # pylint: disable=import-error
-import matplotlib.pyplot as plt  # pylint: disable=import-error
+import numpy as np
+import si_units as si
+import matplotlib.pyplot as plt
 
 
-from thermolib import PcSaftMix2  # # pylint: disable=import-error,no-name-in-module
+from thermolib import PcSaftMix2
 
 
 plt.rcParams["xtick.direction"] = "in"

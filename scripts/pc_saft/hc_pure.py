@@ -1,8 +1,6 @@
-"""
-HcPure
-"""
+"""hc_pure"""
 
-import sympy as sp  # pylint: disable=import-error
+import sympy as sp
 
 
 eta = sp.symbols("eta")

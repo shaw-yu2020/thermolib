@@ -1,7 +1,7 @@
-"""giiz_gly"""
+"""gii_gly"""
 
-import numpy as np  # pylint: disable=import-error
-import matplotlib.pyplot as plt  # pylint: disable=import-error
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def gii(eta, f0, f1, f2):

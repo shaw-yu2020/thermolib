@@ -1,10 +1,8 @@
-"""
-Cp0
-"""
+"""fit_cp0"""
 
-import numpy as np  # pylint: disable=import-error
-import matplotlib.pyplot as plt  # pylint: disable=import-error
-from scipy.optimize import least_squares  # pylint: disable=import-error
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import least_squares
 
 
 # CODATA2018 constants: speed of light in vacuum

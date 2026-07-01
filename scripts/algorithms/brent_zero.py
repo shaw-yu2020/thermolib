@@ -1,13 +1,13 @@
 """brent_zero"""
 
 import sys
-import numpy as np  # pylint: disable=import-error
+import numpy as np
 
 
 EPS = np.sqrt(sys.float_info.epsilon)
 
 
-def brent_zero(f, a, b):  # pylint: disable=R0912
+def brent_zero(f, a, b):
     """brent_zero"""
     (fa, fb) = (f(a), f(b))
     (c, fc) = (a, fa)
@@ -68,7 +68,7 @@ def main():
     print("f(x) = 2 * x - exp(-x)")
     print(f"x = {brent_zero(lambda x: 2 * x - np.exp(-x), 0.0, 1.0):.10e}")
     print("f(x) = x * exp(-x)")
-    print(f"x = { brent_zero(lambda x: x * np.exp(-x), -1.0, 0.5):.10e}")
+    print(f"x = {brent_zero(lambda x: x * np.exp(-x), -1.0, 0.5):.10e}")
     print("f(x) = exp(x) - 1 / 100 / x / x")
     print(f"x = {brent_zero(lambda x: np.exp(x) - 1 / 100 / x / x, 0.0001, 20.0):.10e}")
     print("f(x) = (x + 3) * (x - 1) * (x - 1)")

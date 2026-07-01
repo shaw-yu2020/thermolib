@@ -679,10 +679,8 @@ impl PcSaftMix2 {
             .zip(self.disp.mu_k(
                 temp, rho_num, zeta3t0, &self.m, &zeta3_k, &m2e1s3_k, &m2e2s3_k,
             ))
-            .zip(if self.assoc.is_some() {
-                self.assoc
-                    .as_mut()
-                    .unwrap()
+            .zip(if let Some(assoc) = &mut self.assoc {
+                assoc
                     .mu_k(
                         temp,
                         rho_num,
@@ -697,10 +695,8 @@ impl PcSaftMix2 {
             } else {
                 vec![0.0, 0.0]
             })
-            .zip(if self.polar.is_some() {
-                self.polar
-                    .as_mut()
-                    .unwrap()
+            .zip(if let Some(polar) = &mut self.polar {
+                polar
                     .mu_k(temp, rho_num, zeta3t0, &zeta3_k)
                     .collect::<Vec<f64>>()
             } else {
