@@ -1,12 +1,12 @@
 """s_pc_saft_mix2"""
 
-import numpy as np  # pylint: disable=import-error
+import numpy as np
 
 
-import matplotlib.pyplot as plt  # pylint: disable=import-error
+import matplotlib.pyplot as plt
 
 
-from thermolib import SPcSaftMix2  # # pylint: disable=import-error,no-name-in-module
+from thermolib import SPcSaftMix2
 
 
 fluids = SPcSaftMix2(
@@ -42,7 +42,7 @@ for p in range(1, 61):
         xy = fluids.tpz_flash(TEMP, p * 1e5)
         xyp_tpz.append([xy[0], xy[1], p * 1e5])
     except RuntimeError:
-        print(f"tpz_flash diverge in {p*1e5} Pa")
+        print(f"tpz_flash diverge in {p * 1e5} Pa")
         continue
 xyp_tpz = np.array(xyp_tpz)
 
@@ -53,7 +53,7 @@ for x in range(0, 101):
         py = fluids.tx_flash(TEMP, x / 100)
         xyp_tx.append([x / 100, py[1], py[0]])
     except RuntimeError:
-        print(f"tx_flash diverge in x = {x/100}")
+        print(f"tx_flash diverge in x = {x / 100}")
         continue
 xyp_tx = np.array(xyp_tx)
 
@@ -64,7 +64,7 @@ for y in range(0, 101):
         px = fluids.ty_flash(TEMP, y / 100)
         xyp_ty.append([px[1], y / 100, px[0]])
     except RuntimeError:
-        print(f"ty_flash diverge in y = {y/100}")
+        print(f"ty_flash diverge in y = {y / 100}")
         continue
 xyp_ty = np.array(xyp_ty)
 

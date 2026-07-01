@@ -234,10 +234,11 @@ fn solve_equ(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Vec<f64> {
             a.swap(k, index);
             b.swap(k, index);
         }
+        let a_k = a[k].clone();
         for i in k + 1..n {
-            scale = a[i][k] / a[k][k];
-            for j in k..n {
-                a[i][j] -= scale * a[k][j];
+            scale = a[i][k] / a_k[k];
+            for (aij, akj) in a[i].iter_mut().zip(a_k.iter()).take(n).skip(k) {
+                *aij -= scale * akj;
             }
             b[i] -= scale * b[k];
         }

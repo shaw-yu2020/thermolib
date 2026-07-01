@@ -1,7 +1,7 @@
-"""PcSaftGlyPure"""
+"""calc_gly"""
 
 import math
-from thermolib import PcSaftGlyPure  # pylint: disable=import-error,no-name-in-module
+from thermolib import PcSaftGlyPure
 
 
 def g2b_methanol():
@@ -99,7 +99,7 @@ def gross_nbutanol():
     return fluid
 
 
-def CO2_QQ():  # pylint: disable=invalid-name
+def CO2_QQ():
     """CO2_QQ"""
     m, sigma, epsilon = 1.5131, 3.1869, 163.33  # m,sigma,epsilon
     fluid = PcSaftGlyPure(m, sigma, epsilon)
